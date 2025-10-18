@@ -5,15 +5,13 @@
 
 if (Get-Module -Name 'PSPublishModule' -ListAvailable) {
     Write-Verbose 'PSPublishModule is installed.'
-}
-else {
+} else {
     Write-Verbose 'PSPublishModule is not installed. Attempting installation.'
     try {
         Install-Module -Name Pester -AllowClobber -Scope CurrentUser -SkipPublisherCheck -Force
         Install-Module -Name PSScriptAnalyzer -AllowClobber -Scope CurrentUser -Force
         Install-Module -Name PSPublishModule -AllowClobber -Scope CurrentUser -Force
-    }
-    catch {
+    } catch {
         Write-Error "PSPublishModule installation failed. $_"
     }
 }
@@ -48,7 +46,8 @@ Build-Module -ModuleName 'Locksmith2' {
         'Microsoft.PowerShell.Archive',
         'Microsoft.PowerShell.Management',
         'Microsoft.PowerShell.Security',
-        'PowerShellGet'
+        'PowerShellGet',
+        'CimCmdlets'
     )
     foreach ($Module in $RequiredModules) {
         New-ConfigurationModule -Type ExternalModule -Name $Module
