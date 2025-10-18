@@ -33,7 +33,7 @@ Build-Module -ModuleName 'Locksmith2' {
         CompanyName          = 'Gilmour Technologies Ltd'
         Copyright            = "(c) 2025 - $CopyrightYear. All rights reserved."
         Description          = 'An AD CS toolkit for AD Admins, Defensive Security Professionals, and Filthy Red Teamers'
-        ProjectUri           = 'https://github.com/jakehildreth/Locksmith'
+        ProjectUri           = 'https://github.com/jakehildreth/Locksmith2'
         PowerShellVersion    = '5.1'
         Tags                 = @('Locksmith', 'Locksmith2', 'ActiveDirectory', 'ADCS', 'CA', 'Certificate', 'CertificateAuthority', 'CertificateServices', 'PKI', 'X509', 'Windows')
     }
