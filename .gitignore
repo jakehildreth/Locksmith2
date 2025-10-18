@@ -1,0 +1,32 @@
+Artefacts/*
+Docs/Examples/Output/*
+Ignore/*
+.local/*
+Lib/Core/*
+Lib/Default/*
+Lib/Standard/*
+ReleasedUnpacked/*
+Releases/*
+Sources/.vs
+Sources/*/.vs
+Sources/*/obj
+Sources/*/bin
+Sources/*/*/obj
+Sources/*/*/bin
+Sources/packages/*
+
+### Visual Studio
+.vs/*
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+!.vscode/*.code-snippets
+
+### Module Output
+
+
+### OS Files
+.DS_Store
+Thumbs.db
