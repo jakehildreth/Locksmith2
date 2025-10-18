@@ -10,8 +10,8 @@ This checklist contains all tasks required to complete the Minimum Viable Produc
 
 ### 1. Module Infrastructure
 **Impact: Critical** - Foundation for everything else
-- [ ] Organize module structure and update manifest (.psd1) and root module (.psm1) with proper function exports
-- [ ] Bundle all third-party modules (PSSQLite, PwshSpectreConsole, PSWriteHTML, PSCertutil) in distribution
+- [x] Organize module structure and update manifest (.psd1) and root module (.psm1) with proper function exports
+- [?] Bundle all third-party modules (PSSQLite, PwshSpectreConsole, PSWriteHTML, PSCertutil) in distribution
 - [ ] Update Build-Module.ps1 with version management and dependency checking
 
 ### 2. Core Detections
