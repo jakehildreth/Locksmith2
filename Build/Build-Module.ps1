@@ -1,15 +1,41 @@
-﻿Build-Module -ModuleName 'Locksmith2' {
+﻿param (
+    # A CalVer string if you need to manually override the default yyyy.M.d version string.
+    [string]$CalVer
+)
+
+if (Get-Module -Name 'PSPublishModule' -ListAvailable) {
+    Write-Verbose 'PSPublishModule is installed.'
+}
+else {
+    Write-Verbose 'PSPublishModule is not installed. Attempting installation.'
+    try {
+        Install-Module -Name Pester -AllowClobber -Scope CurrentUser -SkipPublisherCheck -Force
+        Install-Module -Name PSScriptAnalyzer -AllowClobber -Scope CurrentUser -Force
+        Install-Module -Name PSPublishModule -AllowClobber -Scope CurrentUser -Force
+    }
+    catch {
+        Write-Error "PSPublishModule installation failed. $_"
+    }
+}
+
+Update-Module -Name PSPublishModule
+Import-Module -Name PSPublishModule -Force
+
+$CopyrightYear = if ($Calver) { $CalVer.Split('.')[0] } else { (Get-Date -Format yyyy) }
+
+Build-Module -ModuleName 'Locksmith2' {
     # Usual defaults as per standard module
     $Manifest = [ordered] @{
-        ModuleVersion          = '1.0.0'
-        CompatiblePSEditions   = @('Desktop', 'Core')
-        GUID                   = 'e32f7d0d-2b10-4db2-b776-a193958e3d69'
-        Author                 = 'Author'
-        CompanyName            = 'CompanyName'
-        Copyright              = "(c) 2011 - $((Get-Date).Year) Author @ CompanyName. All rights reserved."
-        Description            = 'Simple project Locksmith2'
-        PowerShellVersion      = '5.1'
-        Tags                   = @('Windows', 'MacOS', 'Linux')
+        ModuleVersion        = if ($Calver) { $CalVer } else { (Get-Date -Format yyyy.M.d) }
+        CompatiblePSEditions = @('Desktop', 'Core')
+        GUID                 = 'e32f7d0d-2b10-4db2-b776-a193958e3d69'
+        Author               = 'Jake Hildreth'
+        CompanyName          = 'Gilmour Technologies Ltd'
+        Copyright            = "(c) 2025 - $CopyrightYear. All rights reserved."
+        Description          = 'An AD CS toolkit for AD Admins, Defensive Security Professionals, and Filthy Red Teamers'
+        ProjectUri           = 'https://github.com/jakehildreth/Locksmith'
+        PowerShellVersion    = '5.1'
+        Tags                 = @('Locksmith', 'Locksmith2', 'ActiveDirectory', 'ADCS', 'CA', 'Certificate', 'CertificateAuthority', 'CertificateServices', 'PKI', 'X509', 'Windows')
     }
     New-ConfigurationManifest @Manifest
 
@@ -17,9 +43,9 @@
     #New-ConfigurationModule -Type RequiredModule -Name 'PSSharedGoods' -Guid 'Auto' -Version 'Latest'
 
     # Add external module dependencies, using loop for simplicity
-    #foreach ($Module in @('Microsoft.PowerShell.Utility', 'Microsoft.PowerShell.Archive', 'Microsoft.PowerShell.Management', 'Microsoft.PowerShell.Security')) {
-    #    New-ConfigurationModule -Type ExternalModule -Name $Module
-    #}
+    foreach ($Module in @('Microsoft.PowerShell.Utility', 'Microsoft.PowerShell.Archive', 'Microsoft.PowerShell.Management', 'Microsoft.PowerShell.Security')) {
+        New-ConfigurationModule -Type ExternalModule -Name $Module
+    }
 
     # Add approved modules, that can be used as a dependency, but only when specific function from those modules is used
     # And on that time only that function and dependant functions will be copied over
@@ -75,8 +101,8 @@
 
     New-ConfigurationBuild -Enable:$true -SignModule:$false -DeleteTargetModuleBeforeBuild -MergeModuleOnBuild -MergeFunctionsFromApprovedModules -DoNotAttemptToFixRelativePaths
 
-    #New-ConfigurationArtefact -Type Unpacked -Enable -Path "$PSScriptRoot\..\Artefacts\Unpacked" #-RequiredModulesPath "$PSScriptRoot\..\Artefacts\Modules"
-    #New-ConfigurationArtefact -Type Packed -Enable -Path "$PSScriptRoot\..\Artefacts\Packed" -IncludeTagName
+    New-ConfigurationArtefact -Type Unpacked -Enable -Path "$PSScriptRoot\..\Artefacts\Unpacked" #-RequiredModulesPath "$PSScriptRoot\..\Artefacts\Modules"
+    New-ConfigurationArtefact -Type Packed -Enable -Path "$PSScriptRoot\..\Artefacts\Packed" -IncludeTagName
 
     # global options for publishing to github/psgallery
     #New-ConfigurationPublish -Type PowerShellGallery -FilePath 'C:\Support\Important\PowerShellGalleryAPI.txt' -Enabled:$false

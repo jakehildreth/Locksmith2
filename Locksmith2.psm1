@@ -1,4 +1,4 @@
-# Get public and private function definition files.
+﻿# Get public and private function definition files.
 $Public = @( Get-ChildItem -Path $PSScriptRoot\Public\*.ps1 -ErrorAction SilentlyContinue -Recurse )
 $Private = @( Get-ChildItem -Path $PSScriptRoot\Private\*.ps1 -ErrorAction SilentlyContinue -Recurse )
 $Classes = @( Get-ChildItem -Path $PSScriptRoot\Classes\*.ps1 -ErrorAction SilentlyContinue -Recurse )
@@ -53,7 +53,7 @@ $Assembly = @(
     }
 )
 $FoundErrors = @(
-    Foreach ($Import in @($Assembly)) {
+    foreach ($Import in @($Assembly)) {
         try {
             Write-Verbose -Message $Import.FullName
             Add-Type -Path $Import.Fullname -ErrorAction Stop
@@ -77,10 +77,10 @@ $FoundErrors = @(
         }
     }
     #Dot source the files
-    Foreach ($Import in @($Classes + $Enums + $Private + $Public)) {
-        Try {
+    foreach ($Import in @($Classes + $Enums + $Private + $Public)) {
+        try {
             . $Import.Fullname
-        } Catch {
+        } catch {
             Write-Error -Message "Failed to import functions from $($import.Fullname): $_"
             $true
         }
