@@ -15,8 +15,8 @@ function Get-AdcsObjects {
         None
 
         .OUTPUTS
-        System.DirectoryServices.DirectoryEntry[]
-        Returns an array of DirectoryEntry objects from the Public Key Services container.
+        System.DirectoryServices.DirectoryEntry
+        Returns DirectoryEntry objects from the Public Key Services container via the pipeline.
 
         .EXAMPLE
         Get-AdcsObjects
@@ -40,16 +40,18 @@ function Get-AdcsObjects {
     # Get the configuration naming context
     if ($Server) {
         $rootDSE = [ADSI]"LDAP://$Server/RootDSE"
+        $Solution = 'Check the value provided for -Server.'
     } else {
         $rootDSE = [ADSI]"LDAP://RootDSE"
-        $Server = 'localhost. Please provide a value for -Server at runtime.'
+        $Server = 'localhost'
+        $Solution = 'Provide a value for -Server.'
     }
-    
-    if ($rootDSE.Name) {
-        $configNC = $rootDSE.configurationNamingContext
-    } else {
-        Write-Error "Could not connect to Active Directory forest: $Server"
-        exit
+    $configNC = $rootDSE.configurationNamingContext
+
+    # Getting configNC fails silently, so we have to check this manually instead of a try/catch
+    if ($null -eq $configNC){
+        Write-Error "Could not connect to Active Directory forest: $Server. $Solution"
+        return
     }
 
     try {
@@ -64,7 +66,6 @@ function Get-AdcsObjects {
         } else {
             $searcherDirectoryEntry = New-Object System.DirectoryServices.DirectoryEntry("LDAP://$searchBase")
         }
-        
         $searcher = New-Object System.DirectoryServices.DirectorySearcher($searcherDirectoryEntry)
         $searcher.Filter = "(objectClass=*)"  # Get all objects
         $searcher.SearchScope = [System.DirectoryServices.SearchScope]::Subtree  # Recursive search
@@ -73,20 +74,20 @@ function Get-AdcsObjects {
         # Get all results
         $searchResults = $searcher.FindAll()
         
-        $AdcsObjects = $searchResults | ForEach-Object {
+        # Convert paths into DirectoryEntry objects
+        $objectCount = 0
+        $searchResults | ForEach-Object {
             $objectDirectoryEntry = $_.GetDirectoryEntry()
             Write-Verbose "`nFound object: $($objectDirectoryEntry.distinguishedName)`nClass: $($objectDirectoryEntry.objectClass -join ', ')"
             $objectDirectoryEntry
+            $objectCount++
         }
-        
-        Write-Verbose "Found $($AdcsObjects.Count) total objects in the Public Key Services container and its subtree"
+        Write-Verbose "Found $objectCount total objects in the Public Key Services container and its subtree"
         
         # Clean up
         $searcher.Dispose()
         $searcherDirectoryEntry.Dispose()
         $searchResults.Dispose()
-        
-        $AdcsObjects
     } catch {
         Write-Error "Failed to retrieve objects from Public Key Services container: $_"
     }
