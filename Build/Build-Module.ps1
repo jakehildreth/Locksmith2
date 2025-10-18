@@ -43,7 +43,14 @@ Build-Module -ModuleName 'Locksmith2' {
     #New-ConfigurationModule -Type RequiredModule -Name 'PSSharedGoods' -Guid 'Auto' -Version 'Latest'
 
     # Add external module dependencies, using loop for simplicity
-    foreach ($Module in @('Microsoft.PowerShell.Utility', 'Microsoft.PowerShell.Archive', 'Microsoft.PowerShell.Management', 'Microsoft.PowerShell.Security')) {
+    $RequiredModules = @(
+        'Microsoft.PowerShell.Utility',
+        'Microsoft.PowerShell.Archive',
+        'Microsoft.PowerShell.Management',
+        'Microsoft.PowerShell.Security',
+        'PowerShellGet'
+    )
+    foreach ($Module in $RequiredModules) {
         New-ConfigurationModule -Type ExternalModule -Name $Module
     }
 

@@ -12,11 +12,11 @@
     PowerShellVersion    = '5.1'
     PrivateData          = @{
         PSData = @{
-            ExternalModuleDependencies = @('Microsoft.PowerShell.Utility', 'Microsoft.PowerShell.Archive', 'Microsoft.PowerShell.Management', 'Microsoft.PowerShell.Security')
-            ProjectUri                 = 'https://github.com/jakehildreth/Locksmith'
+            ExternalModuleDependencies = @('Microsoft.PowerShell.Utility', 'Microsoft.PowerShell.Archive', 'Microsoft.PowerShell.Management', 'Microsoft.PowerShell.Security', 'PowerShellGet')
+            ProjectUri                 = 'https://github.com/jakehildreth/Locksmith2'
             Tags                       = @('Locksmith', 'Locksmith2', 'ActiveDirectory', 'ADCS', 'CA', 'Certificate', 'CertificateAuthority', 'CertificateServices', 'PKI', 'X509', 'Windows')
         }
     }
-    RequiredModules      = @('Microsoft.PowerShell.Utility', 'Microsoft.PowerShell.Archive', 'Microsoft.PowerShell.Management', 'Microsoft.PowerShell.Security')
+    RequiredModules      = @('Microsoft.PowerShell.Utility', 'Microsoft.PowerShell.Archive', 'Microsoft.PowerShell.Management', 'Microsoft.PowerShell.Security', 'PowerShellGet')
     RootModule           = 'Locksmith2.psm1'
 }
