@@ -35,67 +35,59 @@ function Get-AdcsObjects {
         [string]$Server
     )
 
-    #requires -Version 7.4 -Modules Microsoft.PowerShell.Security
+    #requires -Version 5.1 -Modules Microsoft.PowerShell.Security
 
-    begin {
-        # Get the configuration naming context
-        try {
-            if ($Server) {
-                $rootDSE = [ADSI]"LDAP://$Server/RootDSE"
-            } else {
-                $rootDSE = [ADSI]"LDAP://RootDSE"
-            }
-            $configNC = $rootDSE.configurationNamingContext
-            Write-Verbose "Configuration Naming Context: $configNC"
-        }
-        catch {
-            Write-Error "Failed to connect to Active Directory: $_"
-        }
+    # Get the configuration naming context
+    if ($Server) {
+        $rootDSE = [ADSI]"LDAP://$Server/RootDSE"
+    } else {
+        $rootDSE = [ADSI]"LDAP://RootDSE"
+        $Server = 'localhost. Please provide a value for -Server at runtime.'
+    }
+    
+    if ($rootDSE.Name) {
+        $configNC = $rootDSE.configurationNamingContext
+    } else {
+        Write-Error "Could not connect to Active Directory forest: $Server"
+        exit
     }
 
-    process {
-        try {
-            # Build the LDAP search base for the Public Key Services container
-            $searchBase = "CN=Public Key Services,CN=Services,$configNC"
-            
-            Write-Verbose "Searching base: $searchBase"
-            
-            # Create DirectorySearcher for recursive search
-            if ($Server) {
-                $directoryEntry = New-Object System.DirectoryServices.DirectoryEntry("LDAP://$Server/$searchBase")
-            } else {
-                $directoryEntry = New-Object System.DirectoryServices.DirectoryEntry("LDAP://$searchBase")
-            }
-            
-            $searcher = New-Object System.DirectoryServices.DirectorySearcher($directoryEntry)
-            $searcher.Filter = "(objectClass=*)"  # Get all objects
-            $searcher.SearchScope = [System.DirectoryServices.SearchScope]::Subtree  # Recursive search
-            $searcher.PageSize = 1000  # Handle large result sets
-            
-            # Get all results
-            $searchResults = $searcher.FindAll()
-            $objects = @()
-            
-            foreach ($result in $searchResults) {
-                $obj = $result.GetDirectoryEntry()
-                $objects += $obj
-                Write-Verbose "Found object: $($obj.distinguishedName) (Class: $($obj.objectClass -join ', '))"
-            }
-            
-            Write-Verbose "Found $($objects.Count) total objects in the Public Key Services container and its subtree"
-            
-            # Clean up
-            $searcher.Dispose()
-            $directoryEntry.Dispose()
-            $searchResults.Dispose()
-            
-            return $objects
+    try {
+        # Build the LDAP search base for the Public Key Services container
+        $searchBase = "CN=Public Key Services,CN=Services,$configNC"
+        
+        Write-Verbose "Searching: $searchBase"
+        
+        # Create DirectorySearcher for recursive search
+        if ($Server) {
+            $searcherDirectoryEntry = New-Object System.DirectoryServices.DirectoryEntry("LDAP://$Server/$searchBase")
+        } else {
+            $searcherDirectoryEntry = New-Object System.DirectoryServices.DirectoryEntry("LDAP://$searchBase")
         }
-        catch {
-            Write-Error "Failed to retrieve objects from Public Key Services container: $_"
+        
+        $searcher = New-Object System.DirectoryServices.DirectorySearcher($searcherDirectoryEntry)
+        $searcher.Filter = "(objectClass=*)"  # Get all objects
+        $searcher.SearchScope = [System.DirectoryServices.SearchScope]::Subtree  # Recursive search
+        $searcher.PageSize = 1000  # Handle large result sets
+        
+        # Get all results
+        $searchResults = $searcher.FindAll()
+        
+        $AdcsObjects = $searchResults | ForEach-Object {
+            $objectDirectoryEntry = $_.GetDirectoryEntry()
+            Write-Verbose "`nFound object: $($objectDirectoryEntry.distinguishedName)`nClass: $($objectDirectoryEntry.objectClass -join ', ')"
+            $objectDirectoryEntry
         }
-    }
-
-    end {
+        
+        Write-Verbose "Found $($AdcsObjects.Count) total objects in the Public Key Services container and its subtree"
+        
+        # Clean up
+        $searcher.Dispose()
+        $searcherDirectoryEntry.Dispose()
+        $searchResults.Dispose()
+        
+        $AdcsObjects
+    } catch {
+        Write-Error "Failed to retrieve objects from Public Key Services container: $_"
     }
 }
