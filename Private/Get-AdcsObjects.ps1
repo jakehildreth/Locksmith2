@@ -49,7 +49,7 @@ function Get-AdcsObjects {
     $configNC = $rootDSE.configurationNamingContext
 
     # Getting configNC fails silently, so we have to check this manually instead of a try/catch
-    if ($null -eq $configNC){
+    if ($null -eq $configNC) {
         Write-Error "Could not connect to Active Directory forest: $Server. $Solution"
         return
     }
