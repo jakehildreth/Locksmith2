@@ -62,6 +62,9 @@ function Read-Choice {
         Pressing Enter without input uses the default option.
         Invalid input displays a yellow warning message with valid options.
     #>
+    
+    #requires -Version 5.1
+    
     [CmdletBinding()]
     [OutputType([string])]
     param(
@@ -90,19 +93,30 @@ function Read-Choice {
         }) -join '/'
     
     while ($true) {
-        $response = Read-Host "$Question [$optionsDisplay]"
-        
-        # Use default if no input provided
-        if ([string]::IsNullOrWhiteSpace($response)) {
+        try {
+            $response = Read-Host "$Question [$optionsDisplay]"
+            
+            # Use default if no input provided
+            if ([string]::IsNullOrWhiteSpace($response)) {
+                return $Default
+            }
+            
+            # Check if response matches an option (case-insensitive)
+            $match = $Options | Where-Object { $_ -eq $response }
+            if ($match) {
+                return $match
+            }
+            
+            Write-Warning "Invalid option. Please choose from: $($Options -join ', ')"
+        } catch {
+            $errorRecord = [System.Management.Automation.ErrorRecord]::new(
+                $_.Exception,
+                'PromptFailed',
+                [System.Management.Automation.ErrorCategory]::NotSpecified,
+                $Question
+            )
+            $PSCmdlet.WriteError($errorRecord)
             return $Default
         }
-        
-        # Check if response matches an option (case-insensitive)
-        $match = $Options | Where-Object { $_ -eq $response }
-        if ($match) {
-            return $match
-        }
-        
-        Write-Host "Invalid option. Please choose from: $($Options -join ', ')" -ForegroundColor Yellow
     }
 }
