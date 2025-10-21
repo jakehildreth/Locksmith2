@@ -50,7 +50,13 @@ function Get-AdcsObjects {
 
     # Getting configNC fails silently, so we have to check this manually instead of a try/catch
     if ($null -eq $configNC) {
-        Write-Error "Could not connect to Active Directory forest: $Server. $Solution"
+        $errorRecord = [System.Management.Automation.ErrorRecord]::new(
+            [System.Exception]::new("Could not connect to Active Directory forest: $Server. $Solution"),
+            'ADConnectionFailed',
+            [System.Management.Automation.ErrorCategory]::ConnectionError,
+            $Server
+        )
+        $PSCmdlet.WriteError($errorRecord)
         return
     }
 
@@ -89,6 +95,12 @@ function Get-AdcsObjects {
         $searcherDirectoryEntry.Dispose()
         $searchResults.Dispose()
     } catch {
-        Write-Error "Failed to retrieve objects from Public Key Services container: $_"
+        $errorRecord = [System.Management.Automation.ErrorRecord]::new(
+            $_.Exception,
+            'ADCSObjectRetrievalFailed',
+            [System.Management.Automation.ErrorCategory]::NotSpecified,
+            $searchBase
+        )
+        $PSCmdlet.WriteError($errorRecord)
     }
 }
