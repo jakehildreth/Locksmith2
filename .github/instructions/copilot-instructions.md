@@ -202,8 +202,16 @@ All detection functions should return consistent objects:
 - Use conventional commits format: `type(scope): message`
   - Types: feat, fix, docs, style, refactor, test, chore
   - Example: `feat(detection): add ESC13 detection`
+  - Example: `refactor(error-handling): use $PSCmdlet.WriteError in Get-AdcsObjects`
+  - Example: `fix(validation): add null check for module version in Test-IsLatestVersion`
+- **Never use vague messages** like "update XXXXX for internal improvements"
+  - ❌ Bad: `refactor: update functions for improvements`
+  - ❌ Bad: `chore: update error handling`
+  - ✅ Good: `refactor(error-handling): replace Write-Error with $PSCmdlet.WriteError in 8 functions`
+  - ✅ Good: `fix(pipeline): add ValueFromPipeline support to Test-IsModuleAvailable`
 - Keep commits atomic and focused
 - Update CHANGELOG.MD for user-facing changes
+- Be specific about what changed and why
 
 ### Compatibility Notes
 
