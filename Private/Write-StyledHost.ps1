@@ -62,7 +62,7 @@ function Write-StyledHost {
         [string]$Message
     )
 
-    #requires -Version 5
+    #requires -Version 5.1
 
     begin {
         Write-Verbose "[$(Get-Date -Format 'yyyy-MM-dd hh:mm:ss')] Starting $($MyInvocation.MyCommand) on $env:COMPUTERNAME..."
