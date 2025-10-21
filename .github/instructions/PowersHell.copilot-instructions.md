@@ -189,8 +189,6 @@ function Update-ResourceStatus {
 - **Message Streams:**
   - `Write-Verbose` for operational details with `-Verbose`
   - `Write-Warning` for warning conditions
-  - `Write-Error` for non-terminating errors
-  - `throw` for terminating errors
   - Avoid `Write-Host` except for user interface text
 
 - **Error Handling Pattern:**
@@ -199,9 +197,13 @@ function Update-ResourceStatus {
   - Return meaningful error messages
   - Use ErrorVariable when needed
   - Include proper terminating vs non-terminating error handling
-  - In advanced functions with `[CmdletBinding()]`, prefer `$PSCmdlet.WriteError()` over `Write-Error`
-  - In advanced functions with `[CmdletBinding()]`, prefer `$PSCmdlet.ThrowTerminatingError()` over `throw`
-  - Construct proper ErrorRecord objects with category, target, and exception details
+  - **In advanced functions with `[CmdletBinding()]`:**
+    - Prefer `$PSCmdlet.WriteError()` over `Write-Error` for non-terminating errors
+    - Prefer `$PSCmdlet.ThrowTerminatingError()` over `throw` for terminating errors
+    - Construct proper ErrorRecord objects with category, target, and exception details
+  - **In simple functions without `[CmdletBinding()]`:**
+    - Use `Write-Error` for non-terminating errors
+    - Use `throw` for terminating errors
 
 - **Non-Interactive Design:**
   - Accept input via parameters
