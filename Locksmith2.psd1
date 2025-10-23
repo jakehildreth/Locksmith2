@@ -8,7 +8,7 @@
     Description          = 'An AD CS toolkit for AD Admins, Defensive Security Professionals, and Filthy Red Teamers'
     FunctionsToExport    = @('Get-ModuleThatLoadedThisFunction', 'Invoke-Locksmith2')
     GUID                 = 'e32f7d0d-2b10-4db2-b776-a193958e3d69'
-    ModuleVersion        = '2025.10.19'
+    ModuleVersion        = '2025.10.23'
     PowerShellVersion    = '5.1'
     PrivateData          = @{
         PSData = @{
