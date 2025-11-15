@@ -32,46 +32,19 @@ function Get-AdcsObjects {
     [CmdletBinding()]
     param (
         [Parameter()]
-        [string]$Server
+        $RootDSE
     )
 
     #requires -Version 5.1 -Modules Microsoft.PowerShell.Security
 
-    # Get the configuration naming context
-    if ($Server) {
-        $rootDSE = [ADSI]"LDAP://$Server/RootDSE"
-        $Solution = 'Check the value provided for -Server.'
-    } else {
-        $rootDSE = [ADSI]"LDAP://RootDSE"
-        $Server = [System.Environment]::UserDomainName
-        $Solution = 'Provide a value for -Server.'
-    }
-    $configNC = $rootDSE.configurationNamingContext
-
-    # Getting configNC fails silently, so we have to check this manually instead of a try/catch
-    if ($null -eq $configNC) {
-        $errorRecord = [System.Management.Automation.ErrorRecord]::new(
-            [System.Exception]::new("Could not connect to Active Directory forest: $Server. $Solution"),
-            'ADConnectionFailed',
-            [System.Management.Automation.ErrorCategory]::ConnectionError,
-            $Server
-        )
-        $PSCmdlet.WriteError($errorRecord)
-        return
-    }
-
     try {
         # Build the LDAP search base for the Public Key Services container
-        $searchBase = "CN=Public Key Services,CN=Services,$configNC"
+        $searchBase = "CN=Public Key Services,CN=Services,$($RootDSE.configurationNamingContext)"
         
         Write-Verbose "Searching: $searchBase"
         
         # Create DirectorySearcher for recursive search
-        if ($Server) {
-            $searcherDirectoryEntry = New-Object System.DirectoryServices.DirectoryEntry("LDAP://$Server/$searchBase")
-        } else {
-            $searcherDirectoryEntry = New-Object System.DirectoryServices.DirectoryEntry("LDAP://$searchBase")
-        }
+        $searcherDirectoryEntry = New-Object System.DirectoryServices.DirectoryEntry("$($RootDSE.Parent)/$searchBase")
         $searcher = New-Object System.DirectoryServices.DirectorySearcher($searcherDirectoryEntry)
         $searcher.Filter = "(objectClass=*)"  # Get all objects
         $searcher.SearchScope = [System.DirectoryServices.SearchScope]::Subtree  # Recursive search
