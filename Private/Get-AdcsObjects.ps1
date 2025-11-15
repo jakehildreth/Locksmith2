@@ -43,7 +43,7 @@ function Get-AdcsObjects {
         $Solution = 'Check the value provided for -Server.'
     } else {
         $rootDSE = [ADSI]"LDAP://RootDSE"
-        $Server = 'localhost'
+        $Server = [System.Environment]::UserDomainName
         $Solution = 'Provide a value for -Server.'
     }
     $configNC = $rootDSE.configurationNamingContext
