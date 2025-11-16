@@ -41,7 +41,7 @@ function Get-AdcsObjects {
         # Build the LDAP search base for the Public Key Services container
         $searchBase = "CN=Public Key Services,CN=Services,$($RootDSE.configurationNamingContext)"
         
-        Write-Verbose "Searching: $searchBase"
+        Write-Verbose "Searching $searchBase for AD CS objects."
         
         # Create DirectorySearcher for recursive search
         $searcherDirectoryEntry = New-Object System.DirectoryServices.DirectoryEntry("$($RootDSE.Parent)/$searchBase")
