@@ -31,8 +31,8 @@ function Get-AdcsObjects {
     #>
     [CmdletBinding()]
     param (
-        [Parameter()]
-        $RootDSE
+        $RootDSE,
+        [System.Management.Automation.PSCredential]$Credential
     )
 
     #requires -Version 5.1 -Modules Microsoft.PowerShell.Security
@@ -44,7 +44,11 @@ function Get-AdcsObjects {
         Write-Verbose "Searching $searchBase for AD CS objects."
         
         # Create DirectorySearcher for recursive search
-        $searcherDirectoryEntry = New-Object System.DirectoryServices.DirectoryEntry("$($RootDSE.Parent)/$searchBase")
+        $searcherDirectoryEntry = New-Object System.DirectoryServices.DirectoryEntry(
+            "$($RootDSE.Parent)/$searchBase",
+            $Credential.UserName,
+            $Credential.GetNetworkCredential().Password
+        )
         $searcher = New-Object System.DirectoryServices.DirectorySearcher($searcherDirectoryEntry)
         $searcher.Filter = "(objectClass=*)"  # Get all objects
         $searcher.SearchScope = [System.DirectoryServices.SearchScope]::Subtree  # Recursive search
