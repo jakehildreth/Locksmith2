@@ -11,10 +11,6 @@ function Set-AuthenticationEKUExist {
         - 1.3.6.1.5.5.7.3.2: Client Authentication
         - 1.3.6.1.5.2.3.4: PKINIT Client Authentication (Kerberos)
         - 1.3.6.1.4.1.311.20.2.2: Smart Card Logon
-        - 2.5.29.37.0: Any Purpose
-        
-        Additionally, if the pKIExtendedKeyUsage attribute is not populated (empty or missing),
-        this indicates the template allows all purposes, including authentication.
         
         This is a critical check for ESC1 vulnerability detection in AD CS auditing, as templates
         that allow authentication combined with other risky settings can lead to privilege escalation.
@@ -28,8 +24,7 @@ function Set-AuthenticationEKUExist {
 
         .PARAMETER AuthenticationEKU
         An array of EKU OIDs that are considered authentication-related.
-        Default includes Client Authentication, PKINIT, Smart Card Logon, Any Purpose, and empty string.
-        The empty string represents templates with no EKU restrictions (all purposes allowed).
+        Default includes Client Authentication, PKINIT Client Authentication, and Smart Card Logon.
 
         .INPUTS
         System.DirectoryServices.DirectoryEntry[]
@@ -61,22 +56,8 @@ function Set-AuthenticationEKUExist {
         Get-AdcsObject -RootDSE $rootDSE | Set-AuthenticationEKUExist -AuthenticationEKU $customEKUs
         Uses a custom list of authentication EKUs to check templates.
 
-        .NOTES
-        Common Authentication EKU OIDs:
-        - 1.3.6.1.5.5.7.3.2: Client Authentication (TLS client auth)
-        - 1.3.6.1.5.2.3.4: PKINIT Client Authentication (Kerberos)
-        - 1.3.6.1.4.1.311.20.2.2: Smart Card Logon (Windows)
-        - 2.5.29.37.0: Any Purpose (all uses allowed)
-        
-        If pKIExtendedKeyUsage is empty/missing, the certificate can be used for any purpose,
-        including authentication. This is considered high-risk when combined with other
-        misconfigurations like allowing SAN specification.
-
         .LINK
         https://posts.specterops.io/certified-pre-owned-d95910965cd2
-        
-        .LINK
-        https://github.com/GhostPack/Certify
         
         .LINK
         https://learn.microsoft.com/en-us/windows/win32/seccrypto/extended-key-usage
@@ -91,8 +72,7 @@ function Set-AuthenticationEKUExist {
         [string[]]$AuthenticationEKU = @(
             '1.3.6.1.5.5.7.3.2',      # Client Authentication
             '1.3.6.1.5.2.3.4',        # PKINIT Client Authentication
-            '1.3.6.1.4.1.311.20.2.2', # Smart Card Logon
-            '2.5.29.37.0'             # Any Purpose
+            '1.3.6.1.4.1.311.20.2.2'  # Smart Card Logon
         )
     )
 
@@ -134,9 +114,7 @@ function Set-AuthenticationEKUExist {
                         Write-Verbose "No authentication EKUs found in template"
                     }
                 } else {
-                    # Empty or missing pKIExtendedKeyUsage means all purposes allowed (including authentication)
-                    $authenticationEKUExist = $true
-                    Write-Verbose "pKIExtendedKeyUsage is empty - template allows ALL purposes (including authentication)"
+                    Write-Verbose "pKIExtendedKeyUsage is empty. Template can be used for Any Purpose."
                 }
                 
                 # Add the AuthenticationEKUExist property to the object
