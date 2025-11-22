@@ -1,6 +1,8 @@
 ﻿param (
     # A CalVer string if you need to manually override the default yyyy.M.d version string.
-    [string]$CalVer
+    [string]$CalVer,
+    [switch]$PublishToPSGallery,
+    [string]$PSGalleryAPIPath
 )
 
 if (Get-Module -Name 'PSPublishModule' -ListAvailable) {
@@ -24,7 +26,7 @@ $CopyrightYear = if ($Calver) { $CalVer.Split('.')[0] } else { (Get-Date -Format
 Build-Module -ModuleName 'Locksmith2' {
     # Usual defaults as per standard module
     $Manifest = [ordered] @{
-        ModuleVersion        = if ($Calver) { $CalVer } else { (Get-Date -Format yyyy.M.d) }
+        ModuleVersion        = if ($Calver) { $CalVer } else { (Get-Date -Format yyyy.M.d.HHmm) }
         CompatiblePSEditions = @('Desktop', 'Core')
         GUID                 = 'e32f7d0d-2b10-4db2-b776-a193958e3d69'
         Author               = 'Jake Hildreth'
@@ -111,6 +113,8 @@ Build-Module -ModuleName 'Locksmith2' {
     New-ConfigurationArtefact -Type Packed -Enable -Path "$PSScriptRoot\..\Artefacts\Packed" -IncludeTagName
 
     # global options for publishing to github/psgallery
-    #New-ConfigurationPublish -Type PowerShellGallery -FilePath 'C:\Support\Important\PowerShellGalleryAPI.txt' -Enabled:$false
+    if($PublishToPSGallery) {   
+        New-ConfigurationPublish -Type PowerShellGallery -FilePath $PSGalleryAPIPath -Enabled:$true
+    }
     #New-ConfigurationPublish -Type GitHub -FilePath 'C:\Support\Important\GitHubAPI.txt' -UserName 'CompanyName' -Enabled:$false
 }
