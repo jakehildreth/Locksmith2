@@ -69,24 +69,30 @@ function Set-SANAllowed {
     #requires -Version 5.1
 
     begin {
-        Write-Verbose "Starting processing of AD CS objects for SAN flag detection..."
+        Write-Verbose "Identifying templates that permit the use of a Subject Alternative Name (SAN)..."
     }
 
     process {
-        $AdcsObject | ForEach-Object {
+        $AdcsObject | Where-Object SchemaClassName -eq pKICertificateTemplate | ForEach-Object {
             try {
-                $objectName = if ($_.Properties['name'].Count -gt 0) { $_.Properties['name'][0] } else { $_.distinguishedName }
-                Write-Verbose "Processing object: $objectName"
+                $objectName = if ($_.Properties.displayName.Count -gt 0) {
+                    $_.Properties.displayName[0] 
+                } elseif ($_.Properties.name.Count -gt 0) {
+                    $_.Properties.name[0]
+                } else {
+                    $_.Properties.distinguishedName[0]
+                }
+                Write-Verbose "Processing template: $objectName"
                 
                 $sanAllowed = $false
                 
                 # Check if the msPKI-Certificate-Name-Flag attribute exists
                 if ($_.Properties['msPKI-Certificate-Name-Flag'].Count -gt 0) {
-                    [int]$NameFlag = $_.'msPKI-Certificate-Name-Flag'[0]
-                    Write-Verbose "msPKI-Certificate-Name-Flag value: $NameFlag (0x$($NameFlag.ToString('X8')))"
+                    [int]$certificateNameFlag = $_.'msPKI-Certificate-Name-Flag'[0]
+                    Write-Verbose "msPKI-Certificate-Name-Flag value: $certificateNameFlag (0x$($certificateNameFlag.ToString('X8')))"
                     
                     # Bit 1 (0x00000001) = ENROLLEE_SUPPLIES_SUBJECT (SAN allowed)
-                    if ($NameFlag -band 1) {
+                    if ($certificateNameFlag -band 1) {
                         $sanAllowed = $true
                         Write-Verbose "SAN is ALLOWED (bit 1 is set)"
                     } else {
@@ -118,6 +124,6 @@ function Set-SANAllowed {
     }
 
     end {
-        Write-Verbose "Completed processing AD CS objects for SAN flag detection."
+        Write-Verbose "Done identifying templates that permit the use of a SAN."
     }
 }
