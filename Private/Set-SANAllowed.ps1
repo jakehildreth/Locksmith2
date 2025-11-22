@@ -87,7 +87,7 @@ function Set-SANAllowed {
                 $sanAllowed = $false
                 
                 # Check if the msPKI-Certificate-Name-Flag attribute exists
-                if ($_.Properties['msPKI-Certificate-Name-Flag'].Count -gt 0) {
+                if ($_.Properties.'msPKI-Certificate-Name-Flag'.Count -gt 0) {
                     [int]$certificateNameFlag = $_.'msPKI-Certificate-Name-Flag'[0]
                     Write-Verbose "msPKI-Certificate-Name-Flag value: $certificateNameFlag (0x$($certificateNameFlag.ToString('X8')))"
                     
