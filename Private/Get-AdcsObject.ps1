@@ -1,4 +1,4 @@
-function Get-AdcsObjects {
+function Get-AdcsObject {
     <#
         .SYNOPSIS
         Retrieves all objects from the Public Key Services Container in the Active Directory Configuration partition.
