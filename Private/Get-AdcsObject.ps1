@@ -31,6 +31,7 @@ function Get-AdcsObject {
     #>
     [CmdletBinding()]
     param (
+        [Parameter(Mandatory)]
         $RootDSE,
         [System.Management.Automation.PSCredential]$Credential
     )
