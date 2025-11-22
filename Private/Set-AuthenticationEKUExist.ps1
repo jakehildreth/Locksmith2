@@ -118,7 +118,7 @@ function Set-AuthenticationEKUExist {
                 
                 # Check if pKIExtendedKeyUsage attribute exists and has values
                 if ($_.Properties.pKIExtendedKeyUsage.Count -gt 0) {
-                    $ekuList = $_.Properties['pKIExtendedKeyUsage']
+                    $ekuList = $_.Properties.pKIExtendedKeyUsage
                     Write-Verbose "pKIExtendedKeyUsage contains $($ekuList.Count) EKU(s): $($ekuList -join ', ')"
                     
                     # Check if any of the Authentication EKUs are present
