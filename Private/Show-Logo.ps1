@@ -1,8 +1,8 @@
-function Show-Logo {
+﻿function Show-Logo {
     param (
-        [string]$Version = (Get-Date -Format yyyy.M.d.HHmm)
+        [string]$Version = (Get-Date -Format yyyy.M.d.Hmm)
     )
-    
+    Write-Host
     $logo = @"
 ██     ▄████▄ ▄█████ ██ ▄█▀ ▄█████ ██▄  ▄██ ██ ██████ ██  ██ ██    ▀██
 ██     ██  ██ ██     ████   ▀▀▀▄▄▄ ██ ▀▀ ██ ██   ██   ██████ ███▀  ▄██
