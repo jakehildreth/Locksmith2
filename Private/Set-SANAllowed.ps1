@@ -55,9 +55,6 @@ function Set-SANAllowed {
 
         .LINK
         https://posts.specterops.io/certified-pre-owned-d95910965cd2
-        
-        .LINK
-        https://github.com/GhostPack/Certify
     #>
     [CmdletBinding()]
     [OutputType([System.DirectoryServices.DirectoryEntry[]])]
