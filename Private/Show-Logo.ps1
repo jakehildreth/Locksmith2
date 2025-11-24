@@ -5,44 +5,50 @@
 
         .DESCRIPTION
         Renders the Locksmith 2 ASCII art logo with configurable foreground and background colors.
-        Displays a subtitle line containing copyright, URL, and version information.
+        Displays a subtitle line containing copyright (Gilmour Ltd), URL (https://locksmith.ad),
+        and version information, evenly spaced across the logo width.
         
-        If colors are not specified, random colors are selected ensuring the foreground and
-        background colors are different for readability.
+        The foreground color defaults to a random ConsoleColor, while the background defaults to Black.
+        If the foreground and background colors are the same, the foreground is automatically randomized
+        to ensure readability.
 
         .PARAMETER Version
         The version string to display. Defaults to current date/time in yyyy.M.d.Hmm format.
 
         .PARAMETER ForegroundColor
-        The foreground color for the logo. Must be one of: Black, DarkBlue, DarkGreen, DarkRed.
-        If not specified, a random safe color will be chosen.
+        The foreground color for the logo. Accepts any System.ConsoleColor value with tab completion.
+        Defaults to a random color.
 
         .PARAMETER BackgroundColor
-        The background color for the logo. Must be one of: Black, DarkBlue, DarkGreen, DarkRed.
-        If not specified, a random safe color will be chosen (different from foreground).
+        The background color for the logo. Accepts any System.ConsoleColor value with tab completion.
+        Defaults to Black.
 
         .INPUTS
         None
 
         .OUTPUTS
         None
-        Displays the logo to the console.
+        Displays the logo and subtitle to the console.
 
         .EXAMPLE
         Show-Logo
-        Displays the logo with random colors and current date/time version.
+        Displays the logo with a random foreground color, black background, and current version/timestamp.
 
         .EXAMPLE
-        Show-Logo -Version '2025.11.23.0700'
+        Show-Logo -Version '2025.11.24.0800'
         Displays the logo with a specific version string.
 
         .EXAMPLE
-        Show-Logo -ForegroundColor DarkGreen -BackgroundColor Black
+        Show-Logo -ForegroundColor Green -BackgroundColor DarkBlue
         Displays the logo with specific colors.
 
+        .EXAMPLE
+        Show-Logo -ForegroundColor Cyan
+        Displays the logo with cyan text on black background.
+
         .NOTES
-        The function automatically ensures UTF-8 encoding for proper display of block characters.
-        Safe colors are limited to those that display well in most terminal environments.
+        The function uses UTF-8 block characters for the logo border and requires proper console encoding.
+        All System.ConsoleColor values are supported with automatic tab completion.
     #>
     [CmdletBinding()]
     param (
@@ -50,6 +56,10 @@
         [System.ConsoleColor]$ForegroundColor = ([enum]::GetValues([System.ConsoleColor]) | Get-Random),
         [System.ConsoleColor]$BackgroundColor = 'Black'
     )
+    
+    $author = 'Jake Hildreth'
+    $by = "(c) $(Get-Date -Format yyyy) $author"
+    $url = 'https://locksmith.ad'
 
     while ($ForegroundColor -eq $BackgroundColor) {
         $ForegroundColor = [enum]::GetValues([System.ConsoleColor]) | Get-Random
@@ -69,9 +79,6 @@
     }
     
     $logoWidth = $logo[0].Length
-    $author = 'Gilmour Ltd'
-    $by = "(c) $(Get-Date -Format yyyy) $author"
-    $url = 'https://locksmith.ad'
     $versionString = "v$Version"
     $subtitleWidth = $by.Length + $url.Length + $versionString.Length
     $paddingTotal = $logoWidth - $subtitleWidth
