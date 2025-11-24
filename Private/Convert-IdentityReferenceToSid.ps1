@@ -64,6 +64,11 @@ function Convert-IdentityReferenceToSid {
         $RootDSE
     )
 
+    begin {
+        # Cache for performance (currently unused but kept for consistency with Convert-SidToIdentityReference)
+        $script:searchCache = @{}
+    }
+
     process {
         # If already a SID, return it
         if ($IdentityReference -is [System.Security.Principal.SecurityIdentifier]) {
@@ -127,49 +132,21 @@ function Convert-IdentityReferenceToSid {
                 
                 $gcSearcher.SearchRoot = $gcEntry
                 $gcSearcher.Filter = "(sAMAccountName=$samAccountName)"
-                $gcSearcher.PropertiesToLoad.Add('distinguishedName') | Out-Null
+                $gcSearcher.PropertiesToLoad.AddRange(@('distinguishedName', 'objectSid')) | Out-Null
                 $gcSearcher.SearchScope = [System.DirectoryServices.SearchScope]::Subtree
+                $gcSearcher.PageSize = 1000
 
                 try {
                     $gcResult = $gcSearcher.FindOne()
                     
-                    if ($gcResult) {
-                        # Found in GC, now get full object from specific domain
+                    if ($gcResult -and $gcResult.Properties['objectSid'].Count -gt 0) {
                         $distinguishedName = $gcResult.Properties['distinguishedName'][0]
+                        $sidBytes = $gcResult.Properties['objectSid'][0]
+                        $sid = New-Object System.Security.Principal.SecurityIdentifier($sidBytes, 0)
                         Write-Verbose "Found principal in GC at: $distinguishedName"
+                        Write-Verbose "Resolved '$IdentityReference' to SID '$($sid.Value)' via Global Catalog"
                         
-                        # Query the specific domain partition for full objectSid
-                        $domainSearcher = New-Object System.DirectoryServices.DirectorySearcher
-                        $domainPath = "LDAP://$server/$distinguishedName"
-                        
-                        $domainEntry = New-Object System.DirectoryServices.DirectoryEntry(
-                            $domainPath,
-                            $Credential.UserName,
-                            $Credential.GetNetworkCredential().Password
-                        )
-                        
-                        $domainSearcher.SearchRoot = $domainEntry
-                        $domainSearcher.Filter = "(objectClass=*)"
-                        $domainSearcher.PropertiesToLoad.Add('objectSid') | Out-Null
-                        $domainSearcher.SearchScope = [System.DirectoryServices.SearchScope]::Base
-                        
-                        $domainResult = $domainSearcher.FindOne()
-                        
-                        if ($domainResult -and $domainResult.Properties['objectSid'].Count -gt 0) {
-                            $sidBytes = $domainResult.Properties['objectSid'][0]
-                            $sid = New-Object System.Security.Principal.SecurityIdentifier($sidBytes, 0)
-                            Write-Verbose "Resolved '$IdentityReference' to SID '$($sid.Value)' via Global Catalog"
-                            
-                            if ($domainSearcher) { $domainSearcher.Dispose() }
-                            if ($domainEntry) { $domainEntry.Dispose() }
-                            if ($gcSearcher) { $gcSearcher.Dispose() }
-                            if ($gcEntry) { $gcEntry.Dispose() }
-                            
-                            return $sid
-                        }
-                        
-                        if ($domainSearcher) { $domainSearcher.Dispose() }
-                        if ($domainEntry) { $domainEntry.Dispose() }
+                        return $sid
                     }
                 } catch {
                     Write-Verbose "Global Catalog search failed, falling back to domain search: $_"
@@ -197,6 +174,7 @@ function Convert-IdentityReferenceToSid {
             $searcher.Filter = "(sAMAccountName=$samAccountName)"
             $searcher.PropertiesToLoad.Add('objectSid') | Out-Null
             $searcher.SearchScope = [System.DirectoryServices.SearchScope]::Subtree
+            $searcher.PageSize = 1000
 
             $result = $searcher.FindOne()
 
