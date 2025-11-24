@@ -11,5 +11,5 @@ Write-Host @"
 ██  ██                 ██
 ██▄ ▀▀ ▄████████  ██  ███
 █████████████████████████
-"@ -ForegroundColor ([enum]::GetValues(([System.ConsoleColor])) | Get-Random) -BackgroundColor Black
+"@ -ForegroundColor ([enum]::GetValues([System.ConsoleColor]) | Where-Object 'value__' -ne 0 | Get-Random) -BackgroundColor Black
 
