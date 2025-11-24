@@ -129,7 +129,7 @@
     }
     Write-Host $bottomLine -ForegroundColor $ForegroundColor -BackgroundColor $BackgroundColor -NoNewline
     if ($FullWidth) {
-        Write-Host $rightBottomBlocks -ForegroundColor $ForegroundColor -BackgroundColor $BackgroundColor -NoNewline
+        Write-Host $rightBottomBlocks -ForegroundColor $ForegroundColor -BackgroundColor $originalBackgroundColor -NoNewline
     }
     Write-Host '' -BackgroundColor $originalBackgroundColor
 }
