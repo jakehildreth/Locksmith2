@@ -119,10 +119,11 @@ public class VirtualTerminal {
     $by = "█ (c) $(Get-Date -Format yyyy) $author"
     $url = 'https://locksmith.ad'
 
-    # ANSI escape sequences for RGB colors
-    $fgColor = "`e[38;2;$($ForegroundRGB[0]);$($ForegroundRGB[1]);$($ForegroundRGB[2])m"
-    $bgColor = "`e[48;2;$($BackgroundRGB[0]);$($BackgroundRGB[1]);$($BackgroundRGB[2])m"
-    $reset = "`e[0m"
+    # ANSI escape sequences for RGB colors (use [char]27 for PS 5.1 compatibility)
+    $esc = [char]27
+    $fgColor = "$esc[38;2;$($ForegroundRGB[0]);$($ForegroundRGB[1]);$($ForegroundRGB[2])m"
+    $bgColor = "$esc[48;2;$($BackgroundRGB[0]);$($BackgroundRGB[1]);$($BackgroundRGB[2])m"
+    $reset = "$esc[0m"
 
     Write-Host
     $logo = @(
