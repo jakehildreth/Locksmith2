@@ -53,7 +53,7 @@ function Convert-IdentityReferenceToSid {
     param(
         [Parameter(Mandatory, ValueFromPipeline)]
         [System.Security.Principal.IdentityReference]
-        $Principal,
+        $IdentityReference,
 
         [Parameter()]
         [System.Management.Automation.PSCredential]
@@ -66,26 +66,26 @@ function Convert-IdentityReferenceToSid {
 
     process {
         # If already a SID, return it
-        if ($Principal -is [System.Security.Principal.SecurityIdentifier]) {
-            return $Principal
+        if ($IdentityReference -is [System.Security.Principal.SecurityIdentifier]) {
+            return $IdentityReference
         }
 
         # Try the built-in Translate method first (works on domain-joined computers)
         try {
-            return $Principal.Translate([System.Security.Principal.SecurityIdentifier])
+            return $IdentityReference.Translate([System.Security.Principal.SecurityIdentifier])
         } catch {
             Write-Verbose "Translate() failed, attempting LDAP lookup: $_"
         }
 
         # Fallback to LDAP query for non-domain joined scenarios
         if (-not $Credential) {
-            Write-Warning "Could not translate principal '$Principal' to SID. Not domain-joined and no credential provided."
-            return $Principal
+            Write-Warning "Could not translate principal '$IdentityReference' to SID. Not domain-joined and no credential provided."
+            return $IdentityReference
         }
 
         try {
             # Parse the NTAccount name
-            $ntAccountString = $Principal.Value
+            $ntAccountString = $IdentityReference.Value
             if ($ntAccountString -match '^(.+?)\\(.+)$') {
                 $domain = $Matches[1]
                 $samAccountName = $Matches[2]
@@ -109,13 +109,13 @@ function Convert-IdentityReferenceToSid {
             }
 
             if (-not $server) {
-                Write-Warning "Could not determine server to query for principal '$Principal'."
-                return $Principal
+                Write-Warning "Could not determine server to query for principal '$IdentityReference'."
+                return $IdentityReference
             }
 
             # First try Global Catalog search for forest-wide lookup
             if ($rootDomainDN) {
-                Write-Verbose "Attempting Global Catalog search for '$Principal'"
+                Write-Verbose "Attempting Global Catalog search for '$IdentityReference'"
                 $gcSearcher = New-Object System.DirectoryServices.DirectorySearcher
                 $gcPath = "GC://$server/$rootDomainDN"
                 
@@ -158,7 +158,7 @@ function Convert-IdentityReferenceToSid {
                         if ($domainResult -and $domainResult.Properties['objectSid'].Count -gt 0) {
                             $sidBytes = $domainResult.Properties['objectSid'][0]
                             $sid = New-Object System.Security.Principal.SecurityIdentifier($sidBytes, 0)
-                            Write-Verbose "Resolved '$Principal' to SID '$($sid.Value)' via Global Catalog"
+                            Write-Verbose "Resolved '$IdentityReference' to SID '$($sid.Value)' via Global Catalog"
                             
                             if ($domainSearcher) { $domainSearcher.Dispose() }
                             if ($domainEntry) { $domainEntry.Dispose() }
@@ -180,7 +180,7 @@ function Convert-IdentityReferenceToSid {
             }
 
             # Fallback to direct LDAP search in default domain
-            Write-Verbose "Attempting direct LDAP search for '$Principal'"
+            Write-Verbose "Attempting direct LDAP search for '$IdentityReference'"
             $domainDN = if ($RootDSE) { $RootDSE.defaultNamingContext.Value } else { $null }
             
             # Create LDAP searcher with credentials
@@ -203,15 +203,15 @@ function Convert-IdentityReferenceToSid {
             if ($result -and $result.Properties['objectSid'].Count -gt 0) {
                 $sidBytes = $result.Properties['objectSid'][0]
                 $sid = New-Object System.Security.Principal.SecurityIdentifier($sidBytes, 0)
-                Write-Verbose "Resolved '$Principal' to SID '$($sid.Value)' via LDAP"
+                Write-Verbose "Resolved '$IdentityReference' to SID '$($sid.Value)' via LDAP"
                 return $sid
             } else {
-                Write-Warning "Could not find principal '$Principal' in Active Directory via LDAP query."
-                return $Principal
+                Write-Warning "Could not find principal '$IdentityReference' in Active Directory via LDAP query."
+                return $IdentityReference
             }
         } catch {
-            Write-Warning "LDAP query failed for principal '$Principal': $_"
-            return $Principal
+            Write-Warning "LDAP query failed for principal '$IdentityReference': $_"
+            return $IdentityReference
         } finally {
             if ($searcher) { $searcher.Dispose() }
             if ($directoryEntry) { $directoryEntry.Dispose() }
