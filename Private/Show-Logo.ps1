@@ -4,24 +4,20 @@
         Displays the Locksmith 2 ASCII logo with version and copyright information.
 
         .DESCRIPTION
-        Renders the Locksmith 2 ASCII art logo with configurable foreground and background colors.
-        Displays a subtitle line containing copyright (Gilmour Ltd), URL (https://locksmith.ad),
-        and version information, evenly spaced across the logo width.
+        Renders the Locksmith 2 ASCII art logo with configurable foreground and background colors using ANSI escape codes.
+        Displays a subtitle line containing copyright, URL, and version information, evenly spaced across the logo width.
         
-        The foreground color defaults to a random ConsoleColor, while the background defaults to Black.
-        If the foreground and background colors are the same, the foreground is automatically randomized
-        to ensure readability.
+        The function uses true RGB colors via ANSI escape sequences, bypassing terminal color scheme remapping.
+        In Windows PowerShell 5.1, ANSI support requires Windows 10 1511+ with conhost or Windows Terminal.
 
         .PARAMETER Version
         The version string to display. Defaults to current date/time in yyyy.M.d.Hmm format.
 
-        .PARAMETER ForegroundColor
-        The foreground color for the logo. Accepts any System.ConsoleColor value with tab completion.
-        Defaults to a random color.
+        .PARAMETER ForegroundRGB
+        The foreground color as an RGB array [R, G, B]. Defaults to a random bright color.
 
-        .PARAMETER BackgroundColor
-        The background color for the logo. Accepts any System.ConsoleColor value with tab completion.
-        Defaults to Black.
+        .PARAMETER BackgroundRGB
+        The background color as an RGB array [R, G, B]. Defaults to true black [0, 0, 0].
 
         .PARAMETER FullWidth
         When specified, extends the logo to fill the entire terminal width with colored blocks.
@@ -35,45 +31,64 @@
 
         .EXAMPLE
         Show-Logo
-        Displays the logo with a random foreground color, black background, and current version/timestamp.
+        Displays the logo with a random foreground color and black background.
 
         .EXAMPLE
         Show-Logo -Version '2025.11.24.0800'
         Displays the logo with a specific version string.
 
         .EXAMPLE
-        Show-Logo -ForegroundColor Green -BackgroundColor DarkBlue
-        Displays the logo with specific colors.
-
-        .EXAMPLE
-        Show-Logo -ForegroundColor Cyan
-        Displays the logo with cyan text on black background.
+        Show-Logo -ForegroundRGB @(0, 255, 0) -BackgroundRGB @(0, 0, 128)
+        Displays the logo with green text on dark blue background.
 
         .EXAMPLE
         Show-Logo -FullWidth
         Displays the logo extended to full terminal width with colored block padding.
 
         .NOTES
-        The function uses UTF-8 block characters for the logo border and requires proper console encoding.
-        All System.ConsoleColor values are supported with automatic tab completion.
+        The function uses UTF-8 block characters and ANSI escape codes.
+        Requires ANSI/VT100 support in the terminal (Windows 10 1511+, Windows Terminal, or PowerShell 7+).
     #>
     [CmdletBinding()]
     param (
         [string]$Version = (Get-Date -Format yyyy.M.d.Hmm),
-        [System.ConsoleColor]$ForegroundColor = ([enum]::GetValues([System.ConsoleColor]) | Get-Random),
-        [System.ConsoleColor]$BackgroundColor = 'Black',
+        [ValidateCount(3, 3)]
+        [ValidateRange(0, 255)]
+        [int[]]$ForegroundRGB,
+        [ValidateCount(3, 3)]
+        [ValidateRange(0, 255)]
+        [int[]]$BackgroundRGB = @(0, 0, 0),
         [switch]$FullWidth
     )
+    
+    # Generate random bright color if not specified
+    if (-not $ForegroundRGB) {
+        $ForegroundRGB = @(
+            (Get-Random -Minimum 100 -Maximum 255),
+            (Get-Random -Minimum 100 -Maximum 255),
+            (Get-Random -Minimum 100 -Maximum 255)
+        )
+    }
+    
+    # Ensure foreground and background are different
+    while (($ForegroundRGB[0] -eq $BackgroundRGB[0]) -and 
+           ($ForegroundRGB[1] -eq $BackgroundRGB[1]) -and 
+           ($ForegroundRGB[2] -eq $BackgroundRGB[2])) {
+        $ForegroundRGB = @(
+            (Get-Random -Minimum 100 -Maximum 255),
+            (Get-Random -Minimum 100 -Maximum 255),
+            (Get-Random -Minimum 100 -Maximum 255)
+        )
+    }
     
     $author = 'Jake Hildreth'
     $by = "█ (c) $(Get-Date -Format yyyy) $author"
     $url = 'https://locksmith.ad'
 
-    while ($ForegroundColor -eq $BackgroundColor) {
-        $ForegroundColor = [enum]::GetValues([System.ConsoleColor]) | Get-Random
-    }
-
-    $originalBackgroundColor = $Host.UI.RawUI.BackgroundColor
+    # ANSI escape sequences for RGB colors
+    $fgColor = "`e[38;2;$($ForegroundRGB[0]);$($ForegroundRGB[1]);$($ForegroundRGB[2])m"
+    $bgColor = "`e[48;2;$($BackgroundRGB[0]);$($BackgroundRGB[1]);$($BackgroundRGB[2])m"
+    $reset = "`e[0m"
 
     Write-Host
     $logo = @(
@@ -95,13 +110,13 @@
     # Display logo (with or without padding based on FullWidth switch)
     $logo | ForEach-Object {
         if ($FullWidth) {
-            Write-Host $leftPaddingBlocks -ForegroundColor $ForegroundColor -BackgroundColor $BackgroundColor -NoNewline
+            Write-Host "$fgColor$bgColor$leftPaddingBlocks" -NoNewline
         }
-        Write-Host $_ -ForegroundColor $ForegroundColor -BackgroundColor $BackgroundColor -NoNewline
+        Write-Host "$fgColor$bgColor$_" -NoNewline
         if ($FullWidth) {
-            Write-Host $rightPaddingBlocks -ForegroundColor $ForegroundColor -BackgroundColor $BackgroundColor -NoNewline
+            Write-Host "$fgColor$bgColor$rightPaddingBlocks" -NoNewline
         }
-        Write-Host '' -BackgroundColor $originalBackgroundColor
+        Write-Host $reset
     }
     
     $versionString = "v$Version █"
@@ -112,24 +127,24 @@
     $subtitle = $by + (' ' * $padding1) + $url + (' ' * $padding2) + $versionString
     
     if ($FullWidth) {
-        Write-Host $leftPaddingBlocks -ForegroundColor $ForegroundColor -BackgroundColor $BackgroundColor -NoNewline 
+        Write-Host "$fgColor$bgColor$leftPaddingBlocks" -NoNewline
     }
-    Write-Host $subtitle -ForegroundColor $ForegroundColor -BackgroundColor $BackgroundColor -NoNewline
+    Write-Host "$fgColor$bgColor$subtitle" -NoNewline
     if ($FullWidth) {
-        Write-Host $rightPaddingBlocks -ForegroundColor $ForegroundColor -BackgroundColor $BackgroundColor -NoNewline
+        Write-Host "$fgColor$bgColor$rightPaddingBlocks" -NoNewline
     }
-    Write-Host '' -BackgroundColor $originalBackgroundColor
+    Write-Host $reset
     
     # Bottom border line
     $bottomLine = '▀' * $logoWidth
     if ($FullWidth) {
         $leftBottomBlocks = '▀' * $leftPadding
         $rightBottomBlocks = '▀' * $rightPadding
-        Write-Host $leftBottomBlocks -ForegroundColor $ForegroundColor -BackgroundColor $originalBackgroundColor -NoNewline
+        Write-Host "$fgColor$leftBottomBlocks" -NoNewline
     }
-    Write-Host $bottomLine -ForegroundColor $ForegroundColor -BackgroundColor $originalBackgroundColor -NoNewline
+    Write-Host "$fgColor$bottomLine" -NoNewline
     if ($FullWidth) {
-        Write-Host $rightBottomBlocks -ForegroundColor $ForegroundColor -BackgroundColor $originalBackgroundColor -NoNewline
+        Write-Host "$fgColor$rightBottomBlocks" -NoNewline
     }
-    Write-Host '' -BackgroundColor $originalBackgroundColor
+    Write-Host $reset
 }
