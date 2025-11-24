@@ -125,7 +125,7 @@
     if ($FullWidth) {
         $leftBottomBlocks = '▀' * $leftPadding
         $rightBottomBlocks = '▀' * $rightPadding
-        Write-Host $leftBottomBlocks -ForegroundColor $ForegroundColor -BackgroundColor $BackgroundColor -NoNewline
+        Write-Host $leftBottomBlocks -ForegroundColor $ForegroundColor -BackgroundColor $originalBackgroundColor -NoNewline
     }
     Write-Host $bottomLine -ForegroundColor $ForegroundColor -BackgroundColor $BackgroundColor -NoNewline
     if ($FullWidth) {
