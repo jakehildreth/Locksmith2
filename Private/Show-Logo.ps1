@@ -61,6 +61,40 @@
         [switch]$FullWidth
     )
     
+    # Enable ANSI/VT100 support in Windows PowerShell 5.1
+    if ($PSVersionTable.PSVersion.Major -le 5) {
+        try {
+            $code = @'
+using System;
+using System.Runtime.InteropServices;
+public class VirtualTerminal {
+    [DllImport("kernel32.dll", SetLastError = true)]
+    public static extern IntPtr GetStdHandle(int nStdHandle);
+    
+    [DllImport("kernel32.dll", SetLastError = true)]
+    public static extern bool GetConsoleMode(IntPtr hConsoleHandle, out uint lpMode);
+    
+    [DllImport("kernel32.dll", SetLastError = true)]
+    public static extern bool SetConsoleMode(IntPtr hConsoleHandle, uint dwMode);
+    
+    public static void Enable() {
+        IntPtr handle = GetStdHandle(-11); // STD_OUTPUT_HANDLE
+        uint mode;
+        GetConsoleMode(handle, out mode);
+        mode |= 0x0004; // ENABLE_VIRTUAL_TERMINAL_PROCESSING
+        SetConsoleMode(handle, mode);
+    }
+}
+'@
+            if (-not ([System.Management.Automation.PSTypeName]'VirtualTerminal').Type) {
+                Add-Type -TypeDefinition $code
+            }
+            [VirtualTerminal]::Enable()
+        } catch {
+            Write-Warning "Could not enable ANSI support. Colors may not display correctly."
+        }
+    }
+    
     # Generate random bright color if not specified
     if (-not $ForegroundRGB) {
         $ForegroundRGB = @(
