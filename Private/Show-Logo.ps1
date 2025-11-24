@@ -66,7 +66,7 @@
     )
     
     $author = 'Jake Hildreth'
-    $by = "(c) $(Get-Date -Format yyyy) $author"
+    $by = "█ (c) $(Get-Date -Format yyyy) $author"
     $url = 'https://locksmith.ad'
 
     while ($ForegroundColor -eq $BackgroundColor) {
@@ -104,22 +104,32 @@
         Write-Host '' -BackgroundColor $originalBackgroundColor
     }
     
-    $versionString = "v$Version"
+    $versionString = "v$Version █"
     $subtitleWidth = $by.Length + $url.Length + $versionString.Length
     $paddingTotal = $logoWidth - $subtitleWidth
     $padding1 = [Math]::Floor($paddingTotal / 2)
     $padding2 = $paddingTotal - $padding1
     $subtitle = $by + (' ' * $padding1) + $url + (' ' * $padding2) + $versionString
     
-    $leftPaddingSpaces = ' ' * $leftPadding
-    $rightPaddingSpaces = ' ' * $rightPadding
     if ($FullWidth) {
-        Write-Host $leftPaddingSpaces -BackgroundColor $originalBackgroundColor -NoNewline 
+        Write-Host $leftPaddingBlocks -ForegroundColor $ForegroundColor -BackgroundColor $BackgroundColor -NoNewline 
     }
-    Write-Host $subtitle -ForegroundColor $ForegroundColor -NoNewline
+    Write-Host $subtitle -ForegroundColor $ForegroundColor -BackgroundColor $BackgroundColor -NoNewline
     if ($FullWidth) {
-        Write-Host $rightPaddingSpaces -BackgroundColor $originalBackgroundColor
-    } else {
-        Write-Host -BackgroundColor $originalBackgroundColor
+        Write-Host $rightPaddingBlocks -ForegroundColor $ForegroundColor -BackgroundColor $BackgroundColor -NoNewline
     }
+    Write-Host '' -BackgroundColor $originalBackgroundColor
+    
+    # Bottom border line
+    $bottomLine = '▀' * $logoWidth
+    if ($FullWidth) {
+        $leftBottomBlocks = '▀' * $leftPadding
+        $rightBottomBlocks = '▀' * $rightPadding
+        Write-Host $leftBottomBlocks -ForegroundColor $ForegroundColor -BackgroundColor $BackgroundColor -NoNewline
+    }
+    Write-Host $bottomLine -ForegroundColor $ForegroundColor -BackgroundColor $BackgroundColor -NoNewline
+    if ($FullWidth) {
+        Write-Host $rightBottomBlocks -ForegroundColor $ForegroundColor -BackgroundColor $BackgroundColor -NoNewline
+    }
+    Write-Host '' -BackgroundColor $originalBackgroundColor
 }
