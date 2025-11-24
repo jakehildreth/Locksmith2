@@ -132,7 +132,4 @@
         Write-Host $rightBottomBlocks -ForegroundColor $ForegroundColor -BackgroundColor $originalBackgroundColor -NoNewline
     }
     Write-Host '' -BackgroundColor $originalBackgroundColor
-    
-    # Reset console colors to prevent Windows Terminal from persisting the background
-    [Console]::ResetColor()
 }
