@@ -168,8 +168,11 @@ public class VirtualTerminal {
     $terminalWidth = $Host.UI.RawUI.WindowSize.Width
     
     # Warn if using FullWidth in ISE where WindowSize.Width returns 0
-    if ($FullWidth -and $terminalWidth -eq 0) {
-        Write-Warning "FullWidth mode is not supported in hosts that do not support `$Host.UI.RawUI.WindowSize.Width. Displaying logo without padding."
+    if ($FullWidth -and ($terminalWidth -eq 0 -or $null -eq $terminalWidth)) {
+        Write-Warning @"
+FullWidth mode is not supported in hosts that do not support `$Host.UI.RawUI.WindowSize.Width.
+        Displaying logo without padding.
+"@
         $FullWidth = $false
     }
     
