@@ -47,22 +47,17 @@
     [CmdletBinding()]
     param (
         [string]$Version = (Get-Date -Format yyyy.M.d.Hmm),
-        [ValidateSet('Black', 'DarkBlue', 'DarkGreen', 'DarkRed')]
-        [string]$ForegroundColor,
-        [ValidateSet('Black', 'DarkBlue', 'DarkGreen', 'DarkRed')]
-        [string]$BackgroundColor
+        [System.ConsoleColor]$ForegroundColor = ([enum]::GetValues([System.ConsoleColor]) | Get-Random),
+        [System.ConsoleColor]$BackgroundColor = 'Black'
     )
 
     $safeColors = @(
-        'Black',
-        'DarkBlue',
-        'DarkGreen',
-        'DarkRed'
+        'Black', 'DarkGray', 'DarkMagenta', 'DarkYellow'
     )
 
     while ($ForegroundColor -eq $BackgroundColor) {
-        $ForegroundColor = $safeColors | Get-Random
-        $BackgroundColor = $safeColors | Get-Random
+        $ForegroundColor = [enum]::GetValues([System.ConsoleColor]) | Get-Random
+        # $BackgroundColor = $safeColors | Get-Random
     }
 
     Write-Host
