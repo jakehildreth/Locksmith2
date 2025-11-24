@@ -1,7 +1,7 @@
 ﻿function Show-Logo {
     param (
         [string]$Version = (Get-Date -Format yyyy.M.d.Hmm),
-        [int]$padpad = 11,
+        [int]$rightPad = 1,
         [ValidateSet('Black', 'DarkBlue', 'DarkGreen', 'DarkRed')]
         [string]$ForegroundColor,
         [ValidateSet('Black', 'DarkBlue', 'DarkGreen', 'DarkRed')]
@@ -33,10 +33,14 @@
         Write-Host $_ -ForegroundColor $ForegroundColor -BackgroundColor $BackgroundColor -NoNewline; Write-Host
     }
     
-    # Right-align version string, ending 10 characters before the end
     $logoWidth = ($logo -split "`n")[0].Length
-    $padding = [Math]::Max(0, $logoWidth - $Version.Length - $padpad)
-    $rightAlignedVersion = (' ' * $padding) + 'v' + $Version + (' ' * ($padpad - 1))
+    $by = "(c) $(Get-Date -Format yyyy) Jake Hildreth"
+    $Url = 'https://locksmith.ad'
+    $subtitleWidth = $by.Length + $Url.Length + $Version.Length + 1 # + 1 for the 'v' in the subtitle
+    $paddingTotal = $logoWidth - $subtitleWidth
+    $padding1 = [Math]::Floor($paddingTotal  / 2)
+    $padding2 = $paddingTotal - $padding1
+    $rightAlignedVersion = $by + (' ' * $padding1) + $Url + (' ' * $padding2) + 'v' + $Version
     
     Write-Host $rightAlignedVersion -ForegroundColor $ForegroundColor
 }
