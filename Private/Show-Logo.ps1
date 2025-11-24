@@ -166,18 +166,6 @@ public class VirtualTerminal {
     # Calculate centering based on terminal width
     $logoWidth = $logo[0].Length
     $terminalWidth = $Host.UI.RawUI.WindowSize.Width
-    
-    # Warn if FullWidth is used in ISE
-    if ($FullWidth -and $Host.Name -eq 'Windows PowerShell ISE Host') {
-        Write-Warning "The -FullWidth parameter is not supported in PowerShell ISE. Displaying without full-width padding."
-        $FullWidth = $false
-    }
-    
-    # Handle ISE or other hosts with no width
-    if ($terminalWidth -eq 0) {
-        $terminalWidth = 120  # Default fallback
-    }
-    
     $leftPadding = [Math]::Max(0, [Math]::Floor(($terminalWidth - $logoWidth) / 2))
     $leftPaddingBlocks = '█' * $leftPadding
     $rightPadding = [Math]::Max(0, $terminalWidth - $logoWidth - $leftPadding)
