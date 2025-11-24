@@ -171,7 +171,8 @@ public class VirtualTerminal {
     if ($FullWidth -and ($terminalWidth -eq 0 -or $null -eq $terminalWidth)) {
         Write-Warning @"
 FullWidth mode is not supported in hosts that do not support `$Host.UI.RawUI.WindowSize.Width.
-        Displaying logo without padding.
+         Displaying logo without padding.
+
 "@
         $FullWidth = $false
     }
