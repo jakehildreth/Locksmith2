@@ -68,6 +68,45 @@ function Convert-SidToIdentityReference {
     begin {
         # Cache NetBIOS name lookups to avoid repeated queries
         $script:netBiosCache = @{}
+        
+        # Pre-load all NetBIOS names if we have credentials
+        if ($Credential -and $RootDSE) {
+            try {
+                $configNC = $RootDSE.configurationNamingContext.Value
+                if ($RootDSE.Path -match 'LDAP://([^/]+)') {
+                    $server = $Matches[1]
+                    $partitionsPath = "LDAP://$server/CN=Partitions,$configNC"
+                    
+                    $partitionsEntry = New-Object System.DirectoryServices.DirectoryEntry(
+                        $partitionsPath,
+                        $Credential.UserName,
+                        $Credential.GetNetworkCredential().Password
+                    )
+                    
+                    $partitionsSearcher = New-Object System.DirectoryServices.DirectorySearcher
+                    $partitionsSearcher.SearchRoot = $partitionsEntry
+                    $partitionsSearcher.Filter = "(objectClass=crossRef)"
+                    $partitionsSearcher.PropertiesToLoad.AddRange(@('nCName', 'nETBIOSName')) | Out-Null
+                    $partitionsSearcher.SearchScope = [System.DirectoryServices.SearchScope]::OneLevel
+                    
+                    $allPartitions = $partitionsSearcher.FindAll()
+                    foreach ($partition in $allPartitions) {
+                        if ($partition.Properties['nCName'].Count -gt 0 -and $partition.Properties['nETBIOSName'].Count -gt 0) {
+                            $domainDN = $partition.Properties['nCName'][0]
+                            $netBiosName = $partition.Properties['nETBIOSName'][0]
+                            $script:netBiosCache[$domainDN] = $netBiosName
+                            Write-Verbose "Pre-cached NetBIOS name '$netBiosName' for '$domainDN'"
+                        }
+                    }
+                    
+                    $allPartitions.Dispose()
+                    $partitionsSearcher.Dispose()
+                    $partitionsEntry.Dispose()
+                }
+            } catch {
+                Write-Verbose "Could not pre-load NetBIOS names: $_"
+            }
+        }
     }
 
     process {
@@ -123,93 +162,37 @@ function Convert-SidToIdentityReference {
                 $gcSearcher.Filter = "(objectSid=$sidString)"
                 $gcSearcher.PropertiesToLoad.AddRange(@('distinguishedName', 'sAMAccountName')) | Out-Null
                 $gcSearcher.SearchScope = [System.DirectoryServices.SearchScope]::Subtree
+                $gcSearcher.PageSize = 1000
 
                 try {
                     $gcResult = $gcSearcher.FindOne()
                     
-                    if ($gcResult) {
+                    if ($gcResult -and $gcResult.Properties['sAMAccountName'].Count -gt 0) {
                         $distinguishedName = $gcResult.Properties['distinguishedName'][0]
+                        $samAccountName = $gcResult.Properties['sAMAccountName'][0]
                         Write-Verbose "Found SID in GC at: $distinguishedName"
                         
-                        # Query the specific domain partition for full details
-                        $domainSearcher = New-Object System.DirectoryServices.DirectorySearcher
-                        $domainPath = "LDAP://$server/$distinguishedName"
+                        # Get NetBIOS domain name (with caching)
+                        $domainDN = $distinguishedName -replace '^.*?,(?=DC=)', ''
                         
-                        $domainEntry = New-Object System.DirectoryServices.DirectoryEntry(
-                            $domainPath,
-                            $Credential.UserName,
-                            $Credential.GetNetworkCredential().Password
-                        )
-                        
-                        $domainSearcher.SearchRoot = $domainEntry
-                        $domainSearcher.Filter = "(objectClass=*)"
-                        $domainSearcher.PropertiesToLoad.AddRange(@('sAMAccountName', 'objectSid')) | Out-Null
-                        $domainSearcher.SearchScope = [System.DirectoryServices.SearchScope]::Base
-                        
-                        $domainResult = $domainSearcher.FindOne()
-                        
-                        if ($domainResult -and $domainResult.Properties['sAMAccountName'].Count -gt 0) {
-                            $samAccountName = $domainResult.Properties['sAMAccountName'][0]
-                            
-                            # Get NetBIOS domain name (with caching)
-                            $domainDN = $distinguishedName -replace '^.*?,(?=DC=)', ''
-                            
-                            if (-not $script:netBiosCache.ContainsKey($domainDN)) {
-                                $domainNetBiosName = $null
-                                if ($RootDSE) {
-                                    try {
-                                        $configNC = $RootDSE.configurationNamingContext.Value
-                                        $partitionsPath = "LDAP://$server/CN=Partitions,$configNC"
-                                        
-                                        $partitionsEntry = New-Object System.DirectoryServices.DirectoryEntry(
-                                            $partitionsPath,
-                                            $Credential.UserName,
-                                            $Credential.GetNetworkCredential().Password
-                                        )
-                                        
-                                        $partitionsSearcher = New-Object System.DirectoryServices.DirectorySearcher
-                                        $partitionsSearcher.SearchRoot = $partitionsEntry
-                                        $partitionsSearcher.Filter = "(nCName=$domainDN)"
-                                        $partitionsSearcher.PropertiesToLoad.Add('nETBIOSName') | Out-Null
-                                        $partitionsSearcher.SearchScope = [System.DirectoryServices.SearchScope]::OneLevel
-                                        
-                                        $partitionResult = $partitionsSearcher.FindOne()
-                                        if ($partitionResult -and $partitionResult.Properties['nETBIOSName'].Count -gt 0) {
-                                            $domainNetBiosName = $partitionResult.Properties['nETBIOSName'][0]
-                                            Write-Verbose "Found NetBIOS name '$domainNetBiosName' for DN '$domainDN'"
-                                        }
-                                        
-                                        $partitionsSearcher.Dispose()
-                                        $partitionsEntry.Dispose()
-                                    } catch {
-                                        Write-Verbose "Could not query Partitions container for NetBIOS name: $_"
-                                    }
-                                }
-                                
-                                # Fallback: extract first DC component from DN
-                                if (-not $domainNetBiosName -and $domainDN -match 'DC=([^,]+)') {
-                                    $domainNetBiosName = $Matches[1].ToUpper()
-                                    Write-Verbose "Using fallback NetBIOS name from DN: $domainNetBiosName"
-                                }
-                                
-                                if (-not $domainNetBiosName) {
-                                    $domainNetBiosName = 'UNKNOWN'
-                                }
-                                
-                                $script:netBiosCache[$domainDN] = $domainNetBiosName
-                            }
-                            
+                        if ($script:netBiosCache.ContainsKey($domainDN)) {
                             $domainNetBiosName = $script:netBiosCache[$domainDN]
-                            
-                            $ntAccountString = "$domainNetBiosName\$samAccountName"
-                            $ntAccount = New-Object System.Security.Principal.NTAccount($ntAccountString)
-                            Write-Verbose "Resolved SID '$sidString' to '$ntAccountString' via Global Catalog"
-                            
-                            return $ntAccount
+                        } else {
+                            # Fallback: extract first DC component from DN
+                            if ($domainDN -match 'DC=([^,]+)') {
+                                $domainNetBiosName = $Matches[1].ToUpper()
+                                Write-Verbose "Using fallback NetBIOS name from DN: $domainNetBiosName"
+                            } else {
+                                $domainNetBiosName = 'UNKNOWN'
+                            }
+                            $script:netBiosCache[$domainDN] = $domainNetBiosName
                         }
                         
-                        if ($domainSearcher) { $domainSearcher.Dispose() }
-                        if ($domainEntry) { $domainEntry.Dispose() }
+                        $ntAccountString = "$domainNetBiosName\$samAccountName"
+                        $ntAccount = New-Object System.Security.Principal.NTAccount($ntAccountString)
+                        Write-Verbose "Resolved SID '$sidString' to '$ntAccountString' via Global Catalog"
+                        
+                        return $ntAccount
                     }
                 } catch {
                     Write-Verbose "Global Catalog search failed, falling back to domain search: $_"
@@ -242,6 +225,7 @@ function Convert-SidToIdentityReference {
             $searcher.Filter = "(objectSid=$sidString)"
             $searcher.PropertiesToLoad.AddRange(@('sAMAccountName', 'distinguishedName')) | Out-Null
             $searcher.SearchScope = [System.DirectoryServices.SearchScope]::Subtree
+            $searcher.PageSize = 1000
 
             $result = $searcher.FindOne()
 
@@ -252,52 +236,18 @@ function Convert-SidToIdentityReference {
                 # Get NetBIOS domain name (with caching)
                 $domainDN = $distinguishedName -replace '^.*?,(?=DC=)', ''
                 
-                if (-not $script:netBiosCache.ContainsKey($domainDN)) {
-                    $domainNetBiosName = $null
-                    if ($RootDSE) {
-                        try {
-                            $configNC = $RootDSE.configurationNamingContext.Value
-                            $partitionsPath = "LDAP://$server/CN=Partitions,$configNC"
-                            
-                            $partitionsEntry = New-Object System.DirectoryServices.DirectoryEntry(
-                                $partitionsPath,
-                                $Credential.UserName,
-                                $Credential.GetNetworkCredential().Password
-                            )
-                            
-                            $partitionsSearcher = New-Object System.DirectoryServices.DirectorySearcher
-                            $partitionsSearcher.SearchRoot = $partitionsEntry
-                            $partitionsSearcher.Filter = "(nCName=$domainDN)"
-                            $partitionsSearcher.PropertiesToLoad.Add('nETBIOSName') | Out-Null
-                            $partitionsSearcher.SearchScope = [System.DirectoryServices.SearchScope]::OneLevel
-                            
-                            $partitionResult = $partitionsSearcher.FindOne()
-                            if ($partitionResult -and $partitionResult.Properties['nETBIOSName'].Count -gt 0) {
-                                $domainNetBiosName = $partitionResult.Properties['nETBIOSName'][0]
-                                Write-Verbose "Found NetBIOS name '$domainNetBiosName' for DN '$domainDN'"
-                            }
-                            
-                            $partitionsSearcher.Dispose()
-                            $partitionsEntry.Dispose()
-                        } catch {
-                            Write-Verbose "Could not query Partitions container for NetBIOS name: $_"
-                        }
-                    }
-                    
+                if ($script:netBiosCache.ContainsKey($domainDN)) {
+                    $domainNetBiosName = $script:netBiosCache[$domainDN]
+                } else {
                     # Fallback: extract first DC component from DN
-                    if (-not $domainNetBiosName -and $domainDN -match 'DC=([^,]+)') {
+                    if ($domainDN -match 'DC=([^,]+)') {
                         $domainNetBiosName = $Matches[1].ToUpper()
                         Write-Verbose "Using fallback NetBIOS name from DN: $domainNetBiosName"
-                    }
-                    
-                    if (-not $domainNetBiosName) {
+                    } else {
                         $domainNetBiosName = 'UNKNOWN'
                     }
-                    
                     $script:netBiosCache[$domainDN] = $domainNetBiosName
                 }
-                
-                $domainNetBiosName = $script:netBiosCache[$domainDN]
                 
                 $ntAccountString = "$domainNetBiosName\$samAccountName"
                 $ntAccount = New-Object System.Security.Principal.NTAccount($ntAccountString)
