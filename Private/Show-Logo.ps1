@@ -73,6 +73,8 @@
         $ForegroundColor = [enum]::GetValues([System.ConsoleColor]) | Get-Random
     }
 
+    $originalBackgroundColor = $Host.UI.RawUI.BackgroundColor
+
     Write-Host
     $logo = @(
         '█▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀█████████',
@@ -99,7 +101,7 @@
         if ($FullWidth) {
             Write-Host $rightPaddingBlocks -ForegroundColor $ForegroundColor -BackgroundColor $BackgroundColor -NoNewline
         }
-        Write-Host
+        Write-Host '' -BackgroundColor $originalBackgroundColor
     }
     
     $versionString = "v$Version"
@@ -112,12 +114,12 @@
     $leftPaddingSpaces = ' ' * $leftPadding
     $rightPaddingSpaces = ' ' * $rightPadding
     if ($FullWidth) {
-        Write-Host $leftPaddingSpaces -NoNewline
+        Write-Host $leftPaddingSpaces -BackgroundColor $originalBackgroundColor -NoNewline 
     }
     Write-Host $subtitle -ForegroundColor $ForegroundColor -NoNewline
     if ($FullWidth) {
-        Write-Host $rightPaddingSpaces
+        Write-Host $rightPaddingSpaces -BackgroundColor $originalBackgroundColor
     } else {
-        Write-Host
+        Write-Host -BackgroundColor $originalBackgroundColor
     }
 }
