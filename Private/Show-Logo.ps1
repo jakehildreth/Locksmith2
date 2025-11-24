@@ -166,6 +166,13 @@ public class VirtualTerminal {
     # Calculate centering based on terminal width
     $logoWidth = $logo[0].Length
     $terminalWidth = $Host.UI.RawUI.WindowSize.Width
+    
+    # Warn if using FullWidth in ISE where WindowSize.Width returns 0
+    if ($FullWidth -and $terminalWidth -eq 0) {
+        Write-Warning "FullWidth mode is not supported in hosts that do not support `$Host.UI.RawUI.WindowSize.Width. Displaying logo without padding."
+        $FullWidth = $false
+    }
+    
     $leftPadding = [Math]::Max(0, [Math]::Floor(($terminalWidth - $logoWidth) / 2))
     $leftPaddingBlocks = '█' * $leftPadding
     $rightPadding = [Math]::Max(0, $terminalWidth - $logoWidth - $leftPadding)
