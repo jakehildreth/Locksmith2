@@ -51,13 +51,8 @@
         [System.ConsoleColor]$BackgroundColor = 'Black'
     )
 
-    $safeColors = @(
-        'Black', 'DarkGray', 'DarkMagenta', 'DarkYellow'
-    )
-
     while ($ForegroundColor -eq $BackgroundColor) {
         $ForegroundColor = [enum]::GetValues([System.ConsoleColor]) | Get-Random
-        # $BackgroundColor = $safeColors | Get-Random
     }
 
     Write-Host
