@@ -62,6 +62,7 @@
     )
     
     # Enable ANSI/VT100 support in Windows PowerShell 5.1
+    $useAnsi = $true
     if ($PSVersionTable.PSVersion.Major -le 5) {
         try {
             $code = @'
@@ -77,21 +78,30 @@ public class VirtualTerminal {
     [DllImport("kernel32.dll", SetLastError = true)]
     public static extern bool SetConsoleMode(IntPtr hConsoleHandle, uint dwMode);
     
-    public static void Enable() {
+    public static bool Enable() {
         IntPtr handle = GetStdHandle(-11); // STD_OUTPUT_HANDLE
+        if (handle == IntPtr.Zero || handle == new IntPtr(-1)) {
+            return false;
+        }
         uint mode;
-        GetConsoleMode(handle, out mode);
+        if (!GetConsoleMode(handle, out mode)) {
+            return false;
+        }
         mode |= 0x0004; // ENABLE_VIRTUAL_TERMINAL_PROCESSING
-        SetConsoleMode(handle, mode);
+        return SetConsoleMode(handle, mode);
     }
 }
 '@
             if (-not ([System.Management.Automation.PSTypeName]'VirtualTerminal').Type) {
                 Add-Type -TypeDefinition $code
             }
-            [VirtualTerminal]::Enable()
+            $useAnsi = [VirtualTerminal]::Enable()
+            if (-not $useAnsi) {
+                Write-Verbose "ANSI support not available, falling back to ConsoleColor"
+            }
         } catch {
-            Write-Warning "Could not enable ANSI support. Colors may not display correctly."
+            $useAnsi = $false
+            Write-Verbose "Could not enable ANSI support: $_"
         }
     }
     
@@ -119,6 +129,25 @@ public class VirtualTerminal {
     $by = "█ (c) $(Get-Date -Format yyyy) $author"
     $url = 'https://locksmith.ad'
 
+    # Convert RGB to nearest ConsoleColor for fallback
+    if (-not $useAnsi) {
+        # Map RGB to closest ConsoleColor (simplified mapping)
+        $fgColorEnum = [System.ConsoleColor]::White
+        $bgColorEnum = [System.ConsoleColor]::Black
+        
+        # Try to pick a bright ConsoleColor based on RGB values
+        $totalBrightness = $ForegroundRGB[0] + $ForegroundRGB[1] + $ForegroundRGB[2]
+        if ($ForegroundRGB[0] -gt $ForegroundRGB[1] -and $ForegroundRGB[0] -gt $ForegroundRGB[2]) {
+            $fgColorEnum = if ($totalBrightness -gt 450) { [System.ConsoleColor]::Red } else { [System.ConsoleColor]::DarkRed }
+        } elseif ($ForegroundRGB[1] -gt $ForegroundRGB[0] -and $ForegroundRGB[1] -gt $ForegroundRGB[2]) {
+            $fgColorEnum = if ($totalBrightness -gt 450) { [System.ConsoleColor]::Green } else { [System.ConsoleColor]::DarkGreen }
+        } elseif ($ForegroundRGB[2] -gt $ForegroundRGB[0] -and $ForegroundRGB[2] -gt $ForegroundRGB[1]) {
+            $fgColorEnum = if ($totalBrightness -gt 450) { [System.ConsoleColor]::Cyan } else { [System.ConsoleColor]::DarkCyan }
+        } else {
+            $fgColorEnum = if ($totalBrightness -gt 450) { [System.ConsoleColor]::White } else { [System.ConsoleColor]::Gray }
+        }
+    }
+
     # ANSI escape sequences for RGB colors (use [char]27 for PS 5.1 compatibility)
     $esc = [char]27
     $fgColor = "$esc[38;2;$($ForegroundRGB[0]);$($ForegroundRGB[1]);$($ForegroundRGB[2])m"
@@ -144,14 +173,25 @@ public class VirtualTerminal {
 
     # Display logo (with or without padding based on FullWidth switch)
     $logo | ForEach-Object {
-        if ($FullWidth) {
-            Write-Host "$fgColor$bgColor$leftPaddingBlocks" -NoNewline
+        if ($useAnsi) {
+            if ($FullWidth) {
+                Write-Host "$fgColor$bgColor$leftPaddingBlocks" -NoNewline
+            }
+            Write-Host "$fgColor$bgColor$_" -NoNewline
+            if ($FullWidth) {
+                Write-Host "$fgColor$bgColor$rightPaddingBlocks" -NoNewline
+            }
+            Write-Host $reset
+        } else {
+            if ($FullWidth) {
+                Write-Host $leftPaddingBlocks -ForegroundColor $fgColorEnum -BackgroundColor $bgColorEnum -NoNewline
+            }
+            Write-Host $_ -ForegroundColor $fgColorEnum -BackgroundColor $bgColorEnum -NoNewline
+            if ($FullWidth) {
+                Write-Host $rightPaddingBlocks -ForegroundColor $fgColorEnum -BackgroundColor $bgColorEnum -NoNewline
+            }
+            Write-Host
         }
-        Write-Host "$fgColor$bgColor$_" -NoNewline
-        if ($FullWidth) {
-            Write-Host "$fgColor$bgColor$rightPaddingBlocks" -NoNewline
-        }
-        Write-Host $reset
     }
     
     $versionString = "v$Version █"
@@ -161,25 +201,49 @@ public class VirtualTerminal {
     $padding2 = $paddingTotal - $padding1
     $subtitle = $by + (' ' * $padding1) + $url + (' ' * $padding2) + $versionString
     
-    if ($FullWidth) {
-        Write-Host "$fgColor$bgColor$leftPaddingBlocks" -NoNewline
+    if ($useAnsi) {
+        if ($FullWidth) {
+            Write-Host "$fgColor$bgColor$leftPaddingBlocks" -NoNewline
+        }
+        Write-Host "$fgColor$bgColor$subtitle" -NoNewline
+        if ($FullWidth) {
+            Write-Host "$fgColor$bgColor$rightPaddingBlocks" -NoNewline
+        }
+        Write-Host $reset
+    } else {
+        if ($FullWidth) {
+            Write-Host $leftPaddingBlocks -ForegroundColor $fgColorEnum -BackgroundColor $bgColorEnum -NoNewline
+        }
+        Write-Host $subtitle -ForegroundColor $fgColorEnum -BackgroundColor $bgColorEnum -NoNewline
+        if ($FullWidth) {
+            Write-Host $rightPaddingBlocks -ForegroundColor $fgColorEnum -BackgroundColor $bgColorEnum -NoNewline
+        }
+        Write-Host
     }
-    Write-Host "$fgColor$bgColor$subtitle" -NoNewline
-    if ($FullWidth) {
-        Write-Host "$fgColor$bgColor$rightPaddingBlocks" -NoNewline
-    }
-    Write-Host $reset
     
     # Bottom border line
     $bottomLine = '▀' * $logoWidth
-    if ($FullWidth) {
-        $leftBottomBlocks = '▀' * $leftPadding
-        $rightBottomBlocks = '▀' * $rightPadding
-        Write-Host "$fgColor$leftBottomBlocks" -NoNewline
+    if ($useAnsi) {
+        if ($FullWidth) {
+            $leftBottomBlocks = '▀' * $leftPadding
+            $rightBottomBlocks = '▀' * $rightPadding
+            Write-Host "$fgColor$leftBottomBlocks" -NoNewline
+        }
+        Write-Host "$fgColor$bottomLine" -NoNewline
+        if ($FullWidth) {
+            Write-Host "$fgColor$rightBottomBlocks" -NoNewline
+        }
+        Write-Host $reset
+    } else {
+        if ($FullWidth) {
+            $leftBottomBlocks = '▀' * $leftPadding
+            $rightBottomBlocks = '▀' * $rightPadding
+            Write-Host $leftBottomBlocks -ForegroundColor $fgColorEnum -NoNewline
+        }
+        Write-Host $bottomLine -ForegroundColor $fgColorEnum -NoNewline
+        if ($FullWidth) {
+            Write-Host $rightBottomBlocks -ForegroundColor $fgColorEnum -NoNewline
+        }
+        Write-Host
     }
-    Write-Host "$fgColor$bottomLine" -NoNewline
-    if ($FullWidth) {
-        Write-Host "$fgColor$rightBottomBlocks" -NoNewline
-    }
-    Write-Host $reset
 }
