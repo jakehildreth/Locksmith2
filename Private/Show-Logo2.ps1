@@ -170,8 +170,8 @@ public class VirtualTerminal {
             Write-Host "$fgColor$logoBottomLeftCorner" -NoNewline
             Write-Host "$fgColor$bgColor$logoBottomLine"
     } else {
-        Write-Host $logoBottomLeftCorner" -ForegroundColor $fgColorEnum -BackgroundColor $bgColorEnum -NoNewline
-        Write-Host $logoBottomLine" -ForegroundColor $fgColorEnum -BackgroundColor $bgColorEnum
+        Write-Host $logoBottomLeftCorner -ForegroundColor $fgColorEnum -BackgroundColor $bgColorEnum -NoNewline
+        Write-Host $logoBottomLine -ForegroundColor $fgColorEnum -BackgroundColor $bgColorEnum
     }
 
     $versionString = "v$Version"
