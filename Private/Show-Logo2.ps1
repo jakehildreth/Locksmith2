@@ -182,10 +182,10 @@ public class VirtualTerminal {
     $padding2 = $paddingTotal - $padding1
     $subtitle = $by + (' ' * $padding1) + $url + (' ' * $padding2) + $versionString
     
-    if ($useAnsi) {
-        Write-Host "$subtitle"
-        Write-Host $reset
-    } else {
+    # if ($useAnsi) {
         Write-Host $subtitle
-    }
+    #     Write-Host $reset
+    # } else {
+    #     Write-Host $subtitle
+    # }
 }
