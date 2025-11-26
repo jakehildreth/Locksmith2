@@ -147,14 +147,15 @@ public class VirtualTerminal {
     $reset = "$esc[0m"
 
     $logo = @(
-        '█▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀███▀▀▀███',
-        '█ ██ ▄▄▄▄▄▄ ▄▄▄▄▄▄ ██ ▄▄▄ ▄▄▄▄▄▄ ▄▄▄▄▄▄▄▄ ▀▀ ▄██▄▄▄▄ ██▄▄▄▄ ██▄███ ██ ',
-        '█ ██ ██  ██ ██     ██▀██  ▀▀▀▄▄▄ ██ ██ ██ ██  ██     ██  ██ ██▀▄▄▄███ ',
-        '█ ▀▀ ▀▀▀▀▀▀ ▀▀▀▀▀▀ ▀▀ ▀▀▀ ▀▀▀▀▀▀ ▀▀ ▀▀ ▀▀ ▀▀  ▀▀▀▀▀▀ ▀▀  ▀▀ ██ ▀▀▀▀██ '
+        '███▀▀▀███▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀███▀▀▀▀███',
+        '██ ███ ██ ██ ▄▄▄▄▄▄ ▄▄▄▄▄▄ ██ ▄▄▄ ▄▄▄▄▄▄ ▄▄▄▄▄▄▄▄ ▀▀ ▄██▄▄▄▄ ██▄▄▄▄ ██▄████ ██ ',
+        '█       █ ██ ██  ██ ██     ██▀██  ▀▀▀▄▄▄ ██ ██ ██ ██  ██     ██  ██ ██▀▄▄▄▄███ ',
+        '█       █ ▀▀ ▀▀▀▀▀▀ ▀▀▀▀▀▀ ▀▀ ▀▀▀ ▀▀▀▀▀▀ ▀▀ ▀▀ ▀▀ ▀▀  ▀▀▀▀▀▀ ▀▀  ▀▀ ██ ▀▀▀▀▀██ '
     )
 
+    $logoWidth = $logo[0].Length
     $logoBottomLeftCorner = '▀'
-    $logoBottomLine = '▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀ '
+    $logoBottomLine = ($logoBottomLeftCorner * ($logoWidth - 1) ) + ' '
 
     # Display logo
     $logo | ForEach-Object {
@@ -176,7 +177,6 @@ public class VirtualTerminal {
 
     $versionString = "v$Version"
     $subtitleWidth = $by.Length + $url.Length + $versionString.Length
-    $logoWidth = $logo[0].Length
     $paddingTotal = $logoWidth - $subtitleWidth
     $padding1 = [Math]::Floor($paddingTotal / 2)
     $padding2 = $paddingTotal - $padding1
