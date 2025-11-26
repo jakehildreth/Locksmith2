@@ -170,7 +170,7 @@ public class VirtualTerminal {
             Write-Host "$fgColor$logoBottomLeftCorner" -NoNewline
             Write-Host "$fgColor$bgColor$logoBottomLine"
     } else {
-        Write-Host $logoBottomLeftCorner -ForegroundColor $fgColorEnum -BackgroundColor $bgColorEnum -NoNewline
+        Write-Host $logoBottomLeftCorner -ForegroundColor $fgColorEnum -NoNewline
         Write-Host $logoBottomLine -ForegroundColor $fgColorEnum -BackgroundColor $bgColorEnum
     }
 
@@ -182,10 +182,5 @@ public class VirtualTerminal {
     $padding2 = $paddingTotal - $padding1
     $subtitle = $by + (' ' * $padding1) + $url + (' ' * $padding2) + $versionString
     
-    # if ($useAnsi) {
-        Write-Host $subtitle
-    #     Write-Host $reset
-    # } else {
-    #     Write-Host $subtitle
-    # }
+    Write-Host $subtitle
 }
