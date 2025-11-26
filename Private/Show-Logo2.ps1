@@ -19,9 +19,6 @@
         .PARAMETER BackgroundRGB
         The background color as an RGB array [R, G, B]. Defaults to true black [0, 0, 0].
 
-        .PARAMETER FullWidth
-        When specified, extends the logo to fill the entire terminal width with colored blocks.
-
         .INPUTS
         None
 
@@ -41,10 +38,6 @@
         Show-Logo -ForegroundRGB @(0, 255, 0) -BackgroundRGB @(0, 0, 128)
         Displays the logo with green text on dark blue background.
 
-        .EXAMPLE
-        Show-Logo -FullWidth
-        Displays the logo extended to full terminal width with colored block padding.
-
         .NOTES
         The function uses UTF-8 block characters and ANSI escape codes.
         Requires ANSI/VT100 support in the terminal (Windows 10 1511+, Windows Terminal, or PowerShell 7+).
@@ -57,8 +50,7 @@
         [int[]]$ForegroundRGB,
         [ValidateCount(3, 3)]
         [ValidateRange(0, 255)]
-        [int[]]$BackgroundRGB = @(0, 0, 0),
-        [switch]$FullWidth
+        [int[]]$BackgroundRGB = @(0, 0, 0)
     )
     
     # Enable ANSI/VT100 support in Windows PowerShell 5.1
@@ -163,102 +155,37 @@ public class VirtualTerminal {
 
     $logoBottomLeftCorner = '▀'
     $logoBottomLine = '▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀ '
-    # Calculate centering based on terminal width
-    $logoWidth = $logo[0].Length
-    $terminalWidth = $Host.UI.RawUI.WindowSize.Width
-    
-    # Warn if using FullWidth in ISE where WindowSize.Width returns 0
-    if ($FullWidth -and ($terminalWidth -eq 0 -or $null -eq $terminalWidth)) {
-        Write-Warning @"
-FullWidth mode is not supported in hosts that do not support `$Host.UI.RawUI.WindowSize.Width.
-         Displaying logo without padding.
 
-"@
-        $FullWidth = $false
-    }
-    
-    $leftPadding = [Math]::Max(0, [Math]::Floor(($terminalWidth - $logoWidth) / 2))
-    $leftPaddingBlocks = '█' * $leftPadding
-    $rightPadding = [Math]::Max(0, $terminalWidth - $logoWidth - $leftPadding)
-    $rightPaddingBlocks = '█' * $rightPadding
-
-    # Display logo (with or without padding based on FullWidth switch)
+    # Display logo
     $logo | ForEach-Object {
         if ($useAnsi) {
-            if ($FullWidth) {
-                Write-Host "$fgColor$bgColor$leftPaddingBlocks" -NoNewline
-            }
             Write-Host "$fgColor$bgColor$_" -NoNewline
-            if ($FullWidth) {
-                Write-Host "$fgColor$bgColor$rightPaddingBlocks" -NoNewline
-            }
             Write-Host $reset
         } else {
-            if ($FullWidth) {
-                Write-Host $leftPaddingBlocks -ForegroundColor $fgColorEnum -BackgroundColor $bgColorEnum -NoNewline
-            }
-            Write-Host $_ -ForegroundColor $fgColorEnum -BackgroundColor $bgColorEnum -NoNewline
-            if ($FullWidth) {
-                Write-Host $rightPaddingBlocks -ForegroundColor $fgColorEnum -BackgroundColor $bgColorEnum -NoNewline
-            }
-            Write-Host
+            Write-Host $_ -ForegroundColor $fgColorEnum -BackgroundColor $bgColorEnum
         }
-        
     }
     
+    if ($useAnsi) {
             Write-Host "$fgColor$logoBottomLeftCorner" -NoNewline
             Write-Host "$fgColor$bgColor$logoBottomLine"
+    } else {
+        Write-Host $logoBottomLeftCorner" -ForegroundColor $fgColorEnum -BackgroundColor $bgColorEnum -NoNewline
+        Write-Host $logoBottomLine" -ForegroundColor $fgColorEnum -BackgroundColor $bgColorEnum
+    }
 
     $versionString = "v$Version"
     $subtitleWidth = $by.Length + $url.Length + $versionString.Length
+    $logoWidth = $logo[0].Length
     $paddingTotal = $logoWidth - $subtitleWidth
     $padding1 = [Math]::Floor($paddingTotal / 2)
     $padding2 = $paddingTotal - $padding1
     $subtitle = $by + (' ' * $padding1) + $url + (' ' * $padding2) + $versionString
     
     if ($useAnsi) {
-        if ($FullWidth) {
-            Write-Host "$leftPaddingBlocks" -NoNewline
-        }
-        Write-Host "$subtitle" -NoNewline
-        if ($FullWidth) {
-            Write-Host "$rightPaddingBlocks" -NoNewline
-        }
+        Write-Host "$subtitle"
         Write-Host $reset
     } else {
-        if ($FullWidth) {
-            Write-Host $leftPaddingBlocks -NoNewline
-        }
-        Write-Host $subtitle -NoNewline
-        if ($FullWidth) {
-            Write-Host $rightPaddingBlocks -NoNewline
-        }
-        Write-Host
+        Write-Host $subtitle
     }
-    
-    # # Bottom border line
-    # $bottomLine = '▀' * $logoWidth
-    # if ($useAnsi) {
-    #     if ($FullWidth) {
-    #         $leftBottomBlocks = '▀' * $leftPadding
-    #         $rightBottomBlocks = '▀' * $rightPadding
-    #         Write-Host "$fgColor$leftBottomBlocks" -NoNewline
-    #     }
-    #     Write-Host "$fgColor$bottomLine" -NoNewline
-    #     if ($FullWidth) {
-    #         Write-Host "$fgColor$rightBottomBlocks" -NoNewline
-    #     }
-    #     Write-Host $reset
-    # } else {
-    #     if ($FullWidth) {
-    #         $leftBottomBlocks = '▀' * $leftPadding
-    #         $rightBottomBlocks = '▀' * $rightPadding
-    #         Write-Host $leftBottomBlocks -ForegroundColor $fgColorEnum -NoNewline
-    #     }
-    #     Write-Host $bottomLine -ForegroundColor $fgColorEnum -NoNewline
-    #     if ($FullWidth) {
-    #         Write-Host $rightBottomBlocks -ForegroundColor $fgColorEnum -NoNewline
-    #     }
-    #     Write-Host
-    # }
 }
