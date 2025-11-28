@@ -1,33 +1,46 @@
 function Get-AdcsObject {
     <#
         .SYNOPSIS
-        Retrieves all objects from the Public Key Services Container in the Active Directory Configuration partition.
+        Retrieves all objects from the Public Key Services Container in Active Directory.
 
         .DESCRIPTION
-        This function queries the Active Directory Configuration partition to retrieve all objects from the
-        Public Key Services Container (CN=Public Key Services,CN=Services,CN=Configuration,DC=domain,DC=com).
-        This container typically contains Certificate Authority objects, Certificate Templates, and other PKI-related objects.
+        Queries the Active Directory Configuration partition to retrieve all objects from the
+        Public Key Services Container (CN=Public Key Services,CN=Services,CN=Configuration).
+        This container contains Certificate Authority objects, Certificate Templates, and other 
+        PKI-related objects used by Active Directory Certificate Services (AD CS).
+        
+        The function performs a recursive LDAP search and returns DirectoryEntry objects for 
+        all discovered PKI objects, including their properties and ACLs.
 
-        .PARAMETER Server
-        The domain controller to query. If not specified, the function will use the default domain controller.
+        .PARAMETER RootDSE
+        A DirectoryEntry object for the RootDSE. Used to determine the configuration naming 
+        context for LDAP queries. This parameter is mandatory.
+
+        .PARAMETER Credential
+        PSCredential for authenticating to Active Directory. Used to create authenticated 
+        LDAP connections to the directory service.
 
         .INPUTS
-        None
+        None. This function does not accept pipeline input.
 
         .OUTPUTS
         System.DirectoryServices.DirectoryEntry
-        Returns DirectoryEntry objects from the Public Key Services container via the pipeline.
+        Returns DirectoryEntry objects for all objects found in the Public Key Services 
+        container and its subtree.
 
         .EXAMPLE
-        Get-AdcsObjects
-        Retrieves all objects from the Public Key Services container using the default domain controller.
+        $rootDSE = Get-RootDSE -Forest 'contoso.com' -Credential $cred
+        Get-AdcsObject -RootDSE $rootDSE -Credential $cred
+        Retrieves all AD CS objects using the specified forest and credentials.
 
         .EXAMPLE
-        Get-AdcsObjects -Server "dc01.contoso.com"
-        Retrieves all objects from the Public Key Services container using the specified domain controller.
+        $rootDSE = Get-RootDSE
+        $templates = Get-AdcsObject -RootDSE $rootDSE -Credential $cred | 
+            Where-Object { $_.objectClass -contains 'pKICertificateTemplate' }
+        Retrieves only certificate template objects from the PKI container.
 
         .LINK
-        https://docs.microsoft.com/en-us/windows-server/identity/ad-cs/
+        https://learn.microsoft.com/en-us/windows-server/identity/ad-cs/
     #>
     [CmdletBinding()]
     param (
