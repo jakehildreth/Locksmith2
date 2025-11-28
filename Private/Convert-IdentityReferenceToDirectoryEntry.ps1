@@ -54,48 +54,58 @@ function Convert-IdentityReferenceToDirectoryEntry {
     param(
         [Parameter(Mandatory, ValueFromPipeline)]
         [System.Security.Principal.IdentityReference]
-        $IdentityReference,
-
-        [Parameter(Mandatory)]
-        [System.Management.Automation.PSCredential]
-        $Credential,
-
-        [Parameter(Mandatory)]
-        [System.DirectoryServices.DirectoryEntry]
-        $RootDSE
+        $IdentityReference
     )
 
     begin {
-        # Cache NetBIOS name lookups to avoid repeated queries
-        $script:netBiosCache = @{}
+        # Initialize Principal Cache if it doesn't exist
+        # Cache for IdentityReference → Full principal object with all properties
+        if (-not $script:PrincipalCache) {
+            $script:PrincipalCache = @{}
+        }
         
-        # Pre-load all NetBIOS names if we have credentials
-        if ($Credential -and $RootDSE) {
+        # Initialize Domain Cache if it doesn't exist
+        # Cache for Domain DN → Full domain object with all properties
+        if (-not $script:DomainCache) {
+            $script:DomainCache = @{}
+        }
+        
+        # Pre-load all domains into Domain Cache if we have credentials
+        if ($script:Credential -and $script:RootDSE) {
             try {
-                $configNC = $RootDSE.configurationNamingContext.Value
-                if ($RootDSE.Path -match 'LDAP://([^/]+)') {
+                $configNC = $script:RootDSE.configurationNamingContext.Value
+                if ($script:RootDSE.Path -match 'LDAP://([^/]+)') {
                     $server = $Matches[1]
                     $partitionsPath = "LDAP://$server/CN=Partitions,$configNC"
                     
                     $partitionsEntry = New-Object System.DirectoryServices.DirectoryEntry(
                         $partitionsPath,
-                        $Credential.UserName,
-                        $Credential.GetNetworkCredential().Password
+                        $script:Credential.UserName,
+                        $script:Credential.GetNetworkCredential().Password
                     )
                     
                     $partitionsSearcher = New-Object System.DirectoryServices.DirectorySearcher
                     $partitionsSearcher.SearchRoot = $partitionsEntry
                     $partitionsSearcher.Filter = "(objectClass=crossRef)"
-                    $partitionsSearcher.PropertiesToLoad.AddRange(@('nCName', 'nETBIOSName')) | Out-Null
+                    $partitionsSearcher.PropertiesToLoad.AddRange(@('nCName', 'nETBIOSName', 'dnsRoot')) | Out-Null
                     $partitionsSearcher.SearchScope = [System.DirectoryServices.SearchScope]::OneLevel
                     
                     $allPartitions = $partitionsSearcher.FindAll()
                     foreach ($partition in $allPartitions) {
-                        if ($partition.Properties['nCName'].Count -gt 0 -and $partition.Properties['nETBIOSName'].Count -gt 0) {
+                        if ($partition.Properties['nCName'].Count -gt 0) {
                             $domainDN = $partition.Properties['nCName'][0]
-                            $netBiosName = $partition.Properties['nETBIOSName'][0]
-                            $script:netBiosCache[$domainDN] = $netBiosName
-                            Write-Verbose "Pre-cached NetBIOS name '$netBiosName' for '$domainDN'"
+                            
+                            # Create domain cache entry with all properties
+                            if (-not $script:DomainCache.ContainsKey($domainDN)) {
+                                $domainObj = [PSCustomObject]@{
+                                    DistinguishedName = $domainDN
+                                    NetBiosName = if ($partition.Properties['nETBIOSName'].Count -gt 0) { $partition.Properties['nETBIOSName'][0] } else { $null }
+                                    DnsRoot = if ($partition.Properties['dnsRoot'].Count -gt 0) { $partition.Properties['dnsRoot'][0] } else { $null }
+                                }
+                                
+                                $script:DomainCache[$domainDN] = $domainObj
+                                Write-Verbose "Cached domain: $domainDN (NetBIOS: $($domainObj.NetBiosName))"
+                            }
                         }
                     }
                     
@@ -110,6 +120,33 @@ function Convert-IdentityReferenceToDirectoryEntry {
     }
 
     process {
+        # Check cache first - use IdentityReference.Value as cache key
+        $cacheKey = $IdentityReference.Value
+        if ($script:PrincipalCache.ContainsKey($cacheKey)) {
+            $cachedPrincipal = $script:PrincipalCache[$cacheKey]
+            Write-Verbose "Cache HIT: Found cached principal for '$cacheKey': $($cachedPrincipal.DistinguishedName)"
+            
+            # Extract server from RootDSE
+            if ($script:RootDSE.Path -match 'LDAP://([^/]+)') {
+                $server = $Matches[1]
+            } else {
+                Write-Warning "Could not extract server from RootDSE path."
+                return $null
+            }
+            
+            # Create fresh DirectoryEntry from cached DN
+            $objectPath = "LDAP://$server/$($cachedPrincipal.DistinguishedName)"
+            $objectEntry = New-Object System.DirectoryServices.DirectoryEntry(
+                $objectPath,
+                $script:Credential.UserName,
+                $script:Credential.GetNetworkCredential().Password
+            )
+            
+            return $objectEntry
+        }
+        
+        Write-Verbose "Cache MISS: No cached DN found for '$cacheKey', performing LDAP lookup"
+        
         # Convert NTAccount to SecurityIdentifier if needed
         if ($IdentityReference -is [System.Security.Principal.NTAccount]) {
             Write-Verbose "Converting NTAccount '$IdentityReference' to SID"
@@ -133,14 +170,14 @@ function Convert-IdentityReferenceToDirectoryEntry {
                 }
                 
                 # Extract server from RootDSE
-                if ($RootDSE.Path -match 'LDAP://([^/]+)') {
+                if ($script:RootDSE.Path -match 'LDAP://([^/]+)') {
                     $server = $Matches[1]
                 } else {
                     Write-Warning "Could not extract server from RootDSE path."
                     return $null
                 }
                 
-                $rootDomainDN = $RootDSE.rootDomainNamingContext.Value
+                $rootDomainDN = $script:RootDSE.rootDomainNamingContext.Value
                 
                 # Try Global Catalog search for the account
                 Write-Verbose "Attempting Global Catalog search for NTAccount '$samAccountName'"
@@ -155,7 +192,8 @@ function Convert-IdentityReferenceToDirectoryEntry {
                 
                 $gcSearcher.SearchRoot = $gcEntry
                 $gcSearcher.Filter = "(sAMAccountName=$samAccountName)"
-                $gcSearcher.PropertiesToLoad.AddRange(@('distinguishedName')) | Out-Null
+                # Load all principal properties for complete cache object
+                $gcSearcher.PropertiesToLoad.AddRange(@('distinguishedName', 'objectSid', 'sAMAccountName', 'objectClass', 'displayName', 'memberOf', 'userPrincipalName')) | Out-Null
                 $gcSearcher.SearchScope = [System.DirectoryServices.SearchScope]::Subtree
                 $gcSearcher.PageSize = 1000
                 
@@ -166,12 +204,40 @@ function Convert-IdentityReferenceToDirectoryEntry {
                         $distinguishedName = $gcResult.Properties['distinguishedName'][0]
                         Write-Verbose "Found NTAccount in GC at: $distinguishedName"
                         
+                        # Build complete principal object for cache
+                        # Create DirectoryEntry to get ObjectSecurity
+                        $objectPath = "LDAP://$server/$distinguishedName"
+                        $tempEntry = New-Object System.DirectoryServices.DirectoryEntry(
+                            $objectPath,
+                            $script:Credential.UserName,
+                            $script:Credential.GetNetworkCredential().Password
+                        )
+                        
+                        $principalObj = [PSCustomObject]@{
+                            DistinguishedName = $distinguishedName
+                            ObjectSid = if ($gcResult.Properties['objectSid'].Count -gt 0) { 
+                                (New-Object System.Security.Principal.SecurityIdentifier($gcResult.Properties['objectSid'][0], 0)).Value 
+                            } else { $null }
+                            SamAccountName = if ($gcResult.Properties['sAMAccountName'].Count -gt 0) { $gcResult.Properties['sAMAccountName'][0] } else { $null }
+                            ObjectClass = if ($gcResult.Properties['objectClass'].Count -gt 0) { $gcResult.Properties['objectClass'][-1] } else { $null }
+                            DisplayName = if ($gcResult.Properties['displayName'].Count -gt 0) { $gcResult.Properties['displayName'][0] } else { $null }
+                            UserPrincipalName = if ($gcResult.Properties['userPrincipalName'].Count -gt 0) { $gcResult.Properties['userPrincipalName'][0] } else { $null }
+                            MemberOf = if ($gcResult.Properties['memberOf'].Count -gt 0) { @($gcResult.Properties['memberOf']) } else { @() }
+                            ObjectSecurity = $tempEntry.ObjectSecurity
+                        }
+                        
+                        $tempEntry.Dispose()
+                        
+                        # Cache the complete principal object
+                        $script:PrincipalCache[$cacheKey] = $principalObj
+                        Write-Verbose "Cached principal object for '$cacheKey': $distinguishedName (ObjectClass: $($principalObj.ObjectClass))"
+                        
                         # Return DirectoryEntry for the found object
                         $objectPath = "LDAP://$server/$distinguishedName"
                         $objectEntry = New-Object System.DirectoryServices.DirectoryEntry(
                             $objectPath,
-                            $Credential.UserName,
-                            $Credential.GetNetworkCredential().Password
+                            $script:Credential.UserName,
+                            $script:Credential.GetNetworkCredential().Password
                         )
                         
                         Write-Verbose "Resolved NTAccount '$accountString' to '$distinguishedName' via Global Catalog"
@@ -194,9 +260,9 @@ function Convert-IdentityReferenceToDirectoryEntry {
             $sidString = $sid.Value
 
             # Extract server from RootDSE
-            if ($RootDSE) {
-                $rootDomainDN = $RootDSE.rootDomainNamingContext.Value
-                if ($RootDSE.Path -match 'LDAP://([^/]+)') {
+            if ($script:RootDSE) {
+                $rootDomainDN = $script:RootDSE.rootDomainNamingContext.Value
+                if ($script:RootDSE.Path -match 'LDAP://([^/]+)') {
                     $server = $Matches[1]
                 } else {
                     Write-Warning "Could not extract server from RootDSE path."
@@ -215,13 +281,14 @@ function Convert-IdentityReferenceToDirectoryEntry {
                 
                 $gcEntry = New-Object System.DirectoryServices.DirectoryEntry(
                     $gcPath,
-                    $Credential.UserName,
-                    $Credential.GetNetworkCredential().Password
+                    $script:Credential.UserName,
+                    $script:Credential.GetNetworkCredential().Password
                 )
                 
                 $gcSearcher.SearchRoot = $gcEntry
                 $gcSearcher.Filter = "(objectSid=$sidString)"
-                $gcSearcher.PropertiesToLoad.AddRange(@('distinguishedName')) | Out-Null
+                # Load all principal properties for complete cache object
+                $gcSearcher.PropertiesToLoad.AddRange(@('distinguishedName', 'objectSid', 'sAMAccountName', 'objectClass', 'displayName', 'memberOf', 'userPrincipalName')) | Out-Null
                 $gcSearcher.SearchScope = [System.DirectoryServices.SearchScope]::Subtree
                 $gcSearcher.PageSize = 1000
 
@@ -232,12 +299,40 @@ function Convert-IdentityReferenceToDirectoryEntry {
                         $distinguishedName = $gcResult.Properties['distinguishedName'][0]
                         Write-Verbose "Found SID in GC at: $distinguishedName"
                         
+                        # Build complete principal object for cache
+                        # Create DirectoryEntry to get ObjectSecurity
+                        $objectPath = "LDAP://$server/$distinguishedName"
+                        $tempEntry = New-Object System.DirectoryServices.DirectoryEntry(
+                            $objectPath,
+                            $script:Credential.UserName,
+                            $script:Credential.GetNetworkCredential().Password
+                        )
+                        
+                        $principalObj = [PSCustomObject]@{
+                            DistinguishedName = $distinguishedName
+                            ObjectSid = if ($gcResult.Properties['objectSid'].Count -gt 0) { 
+                                (New-Object System.Security.Principal.SecurityIdentifier($gcResult.Properties['objectSid'][0], 0)).Value 
+                            } else { $null }
+                            SamAccountName = if ($gcResult.Properties['sAMAccountName'].Count -gt 0) { $gcResult.Properties['sAMAccountName'][0] } else { $null }
+                            ObjectClass = if ($gcResult.Properties['objectClass'].Count -gt 0) { $gcResult.Properties['objectClass'][-1] } else { $null }
+                            DisplayName = if ($gcResult.Properties['displayName'].Count -gt 0) { $gcResult.Properties['displayName'][0] } else { $null }
+                            UserPrincipalName = if ($gcResult.Properties['userPrincipalName'].Count -gt 0) { $gcResult.Properties['userPrincipalName'][0] } else { $null }
+                            MemberOf = if ($gcResult.Properties['memberOf'].Count -gt 0) { @($gcResult.Properties['memberOf']) } else { @() }
+                            ObjectSecurity = $tempEntry.ObjectSecurity
+                        }
+                        
+                        $tempEntry.Dispose()
+                        
+                        # Cache the complete principal object
+                        $script:PrincipalCache[$cacheKey] = $principalObj
+                        Write-Verbose "Cached principal object for '$cacheKey': $distinguishedName (ObjectClass: $($principalObj.ObjectClass))"
+                        
                         # Return DirectoryEntry for the found object
                         $objectPath = "LDAP://$server/$distinguishedName"
                         $objectEntry = New-Object System.DirectoryServices.DirectoryEntry(
                             $objectPath,
-                            $Credential.UserName,
-                            $Credential.GetNetworkCredential().Password
+                            $script:Credential.UserName,
+                            $script:Credential.GetNetworkCredential().Password
                         )
                         
                         Write-Verbose "Resolved SID '$sidString' to '$distinguishedName' via Global Catalog"
@@ -253,7 +348,7 @@ function Convert-IdentityReferenceToDirectoryEntry {
 
             # Fallback to direct LDAP search in default domain
             Write-Verbose "Attempting direct LDAP search for SID '$sidString'"
-            $domainDN = if ($RootDSE) { $RootDSE.defaultNamingContext.Value } else { $null }
+            $domainDN = if ($script:RootDSE) { $script:RootDSE.defaultNamingContext.Value } else { $null }
             
             if (-not $domainDN) {
                 Write-Warning "Could not determine domain DN for SID resolution."
@@ -266,13 +361,14 @@ function Convert-IdentityReferenceToDirectoryEntry {
             
             $directoryEntry = New-Object System.DirectoryServices.DirectoryEntry(
                 $ldapPath,
-                $Credential.UserName,
-                $Credential.GetNetworkCredential().Password
+                $script:Credential.UserName,
+                $script:Credential.GetNetworkCredential().Password
             )
             
             $searcher.SearchRoot = $directoryEntry
             $searcher.Filter = "(objectSid=$sidString)"
-            $searcher.PropertiesToLoad.AddRange(@('distinguishedName')) | Out-Null
+            # Load all principal properties for complete cache object
+            $searcher.PropertiesToLoad.AddRange(@('distinguishedName', 'objectSid', 'sAMAccountName', 'objectClass', 'displayName', 'memberOf', 'userPrincipalName')) | Out-Null
             $searcher.SearchScope = [System.DirectoryServices.SearchScope]::Subtree
             $searcher.PageSize = 1000
 
@@ -281,12 +377,40 @@ function Convert-IdentityReferenceToDirectoryEntry {
             if ($result) {
                 $distinguishedName = $result.Properties['distinguishedName'][0]
                 
+                # Build complete principal object for cache
+                # Create DirectoryEntry to get ObjectSecurity
+                $objectPath = "LDAP://$server/$distinguishedName"
+                $tempEntry = New-Object System.DirectoryServices.DirectoryEntry(
+                    $objectPath,
+                    $script:Credential.UserName,
+                    $script:Credential.GetNetworkCredential().Password
+                )
+                
+                $principalObj = [PSCustomObject]@{
+                    DistinguishedName = $distinguishedName
+                    ObjectSid = if ($result.Properties['objectSid'].Count -gt 0) { 
+                        (New-Object System.Security.Principal.SecurityIdentifier($result.Properties['objectSid'][0], 0)).Value 
+                    } else { $null }
+                    SamAccountName = if ($result.Properties['sAMAccountName'].Count -gt 0) { $result.Properties['sAMAccountName'][0] } else { $null }
+                    ObjectClass = if ($result.Properties['objectClass'].Count -gt 0) { $result.Properties['objectClass'][-1] } else { $null }
+                    DisplayName = if ($result.Properties['displayName'].Count -gt 0) { $result.Properties['displayName'][0] } else { $null }
+                    UserPrincipalName = if ($result.Properties['userPrincipalName'].Count -gt 0) { $result.Properties['userPrincipalName'][0] } else { $null }
+                    MemberOf = if ($result.Properties['memberOf'].Count -gt 0) { @($result.Properties['memberOf']) } else { @() }
+                    ObjectSecurity = $tempEntry.ObjectSecurity
+                }
+                
+                $tempEntry.Dispose()
+                
+                # Cache the complete principal object
+                $script:PrincipalCache[$cacheKey] = $principalObj
+                Write-Verbose "Cached principal object for '$cacheKey': $distinguishedName (ObjectClass: $($principalObj.ObjectClass))"
+                
                 # Return DirectoryEntry for the found object
                 $objectPath = "LDAP://$server/$distinguishedName"
                 $objectEntry = New-Object System.DirectoryServices.DirectoryEntry(
                     $objectPath,
-                    $Credential.UserName,
-                    $Credential.GetNetworkCredential().Password
+                    $script:Credential.UserName,
+                    $script:Credential.GetNetworkCredential().Password
                 )
                 
                 Write-Verbose "Resolved SID '$sidString' to '$distinguishedName' via LDAP"

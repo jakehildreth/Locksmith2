@@ -53,15 +53,7 @@ function Convert-IdentityReferenceToSid {
     param(
         [Parameter(Mandatory, ValueFromPipeline)]
         [System.Security.Principal.IdentityReference]
-        $IdentityReference,
-
-        [Parameter()]
-        [System.Management.Automation.PSCredential]
-        $Credential,
-
-        [Parameter()]
-        [System.DirectoryServices.DirectoryEntry]
-        $RootDSE
+        $IdentityReference
     )
 
     begin {
@@ -83,7 +75,7 @@ function Convert-IdentityReferenceToSid {
         }
 
         # Fallback to LDAP query for non-domain joined scenarios
-        if (-not $Credential) {
+        if (-not $script:Credential) {
             Write-Warning "Could not translate principal '$IdentityReference' to SID. Not domain-joined and no credential provided."
             return $IdentityReference
         }
@@ -100,10 +92,10 @@ function Convert-IdentityReferenceToSid {
             }
 
             # Get the default naming context from RootDSE
-            if ($RootDSE) {
-                $rootDomainDN = $RootDSE.rootDomainNamingContext.Value
+            if ($script:RootDSE) {
+                $rootDomainDN = $script:RootDSE.rootDomainNamingContext.Value
                 # Extract server from RootDSE path if available
-                if ($RootDSE.Path -match 'LDAP://([^/]+)') {
+                if ($script:RootDSE.Path -match 'LDAP://([^/]+)') {
                     $server = $Matches[1]
                 } else {
                     $server = $domain
@@ -126,8 +118,8 @@ function Convert-IdentityReferenceToSid {
                 
                 $gcEntry = New-Object System.DirectoryServices.DirectoryEntry(
                     $gcPath,
-                    $Credential.UserName,
-                    $Credential.GetNetworkCredential().Password
+                    $script:Credential.UserName,
+                    $script:Credential.GetNetworkCredential().Password
                 )
                 
                 $gcSearcher.SearchRoot = $gcEntry
@@ -158,7 +150,7 @@ function Convert-IdentityReferenceToSid {
 
             # Fallback to direct LDAP search in default domain
             Write-Verbose "Attempting direct LDAP search for '$IdentityReference'"
-            $domainDN = if ($RootDSE) { $RootDSE.defaultNamingContext.Value } else { $null }
+            $domainDN = if ($script:RootDSE) { $script:RootDSE.defaultNamingContext.Value } else { $null }
             
             # Create LDAP searcher with credentials
             $searcher = New-Object System.DirectoryServices.DirectorySearcher
@@ -166,8 +158,8 @@ function Convert-IdentityReferenceToSid {
             
             $directoryEntry = New-Object System.DirectoryServices.DirectoryEntry(
                 $ldapPath,
-                $Credential.UserName,
-                $Credential.GetNetworkCredential().Password
+                $script:Credential.UserName,
+                $script:Credential.GetNetworkCredential().Password
             )
             
             $searcher.SearchRoot = $directoryEntry

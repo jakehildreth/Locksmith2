@@ -43,55 +43,101 @@ function Get-AdcsObject {
         https://learn.microsoft.com/en-us/windows-server/identity/ad-cs/
     #>
     [CmdletBinding()]
-    param (
-        [Parameter(Mandatory)]
-        $RootDSE,
-        [System.Management.Automation.PSCredential]$Credential
-    )
+    param ()
 
     #requires -Version 5.1 -Modules Microsoft.PowerShell.Security
 
-    try {
-        # Build the LDAP search base for the Public Key Services container
-        $searchBase = "CN=Public Key Services,CN=Services,$($RootDSE.configurationNamingContext)"
-        
-        Write-Verbose "Searching $searchBase for AD CS objects."
-        
-        # Create DirectorySearcher for recursive search
-        $searcherDirectoryEntry = New-Object System.DirectoryServices.DirectoryEntry(
-            "$($RootDSE.Parent)/$searchBase",
-            $Credential.UserName,
-            $Credential.GetNetworkCredential().Password
-        )
-        $searcher = New-Object System.DirectoryServices.DirectorySearcher($searcherDirectoryEntry)
-        $searcher.Filter = "(objectClass=*)"  # Get all objects
-        $searcher.SearchScope = [System.DirectoryServices.SearchScope]::Subtree  # Recursive search
-        $searcher.PageSize = 1000  # Handle large result sets
-        
-        # Get all results
-        $searchResults = $searcher.FindAll()
-        
-        # Convert paths into DirectoryEntry objects
-        $objectCount = 0
-        $searchResults | ForEach-Object {
-            $objectDirectoryEntry = $_.GetDirectoryEntry()
-            Write-Verbose "`nFound object: $($objectDirectoryEntry.distinguishedName)`nClass: $($objectDirectoryEntry.objectClass -join ', ')"
-            $objectDirectoryEntry
-            $objectCount++
+    begin {
+        # Initialize ADCS Object Cache if it doesn't exist
+        if (-not $script:AdcsObjectCache) {
+            $script:AdcsObjectCache = @{}
         }
-        Write-Verbose "Found $objectCount total objects in the Public Key Services container and its subtree"
-        
-        # Clean up
-        $searcher.Dispose()
-        $searcherDirectoryEntry.Dispose()
-        $searchResults.Dispose()
-    } catch {
-        $errorRecord = [System.Management.Automation.ErrorRecord]::new(
-            $_.Exception,
-            'ADCSObjectRetrievalFailed',
-            [System.Management.Automation.ErrorCategory]::NotSpecified,
-            $searchBase
-        )
-        $PSCmdlet.WriteError($errorRecord)
+    }
+
+    process {
+        try {
+            # Build the LDAP search base for the Public Key Services container
+            $searchBase = "CN=Public Key Services,CN=Services,$($script:RootDSE.configurationNamingContext)"
+            
+            Write-Verbose "Searching $searchBase for AD CS objects."
+            Write-Verbose "ADCS Object Cache currently has $($script:AdcsObjectCache.Count) entries"
+            
+            # Create DirectorySearcher for recursive search
+            $searcherDirectoryEntry = New-Object System.DirectoryServices.DirectoryEntry(
+                "$($script:RootDSE.Parent)/$searchBase",
+                $script:Credential.UserName,
+                $script:Credential.GetNetworkCredential().Password
+            )
+            $searcher = New-Object System.DirectoryServices.DirectorySearcher($searcherDirectoryEntry)
+            $searcher.Filter = "(objectClass=*)"  # Get all objects
+            $searcher.SearchScope = [System.DirectoryServices.SearchScope]::Subtree  # Recursive search
+            $searcher.PageSize = 1000  # Handle large result sets
+            
+            # Get all results
+            $searchResults = $searcher.FindAll()
+            
+            # Convert paths into DirectoryEntry objects and cache them
+            $objectCount = 0
+            $cachedCount = 0
+            $searchResults | ForEach-Object {
+                $objectDirectoryEntry = $_.GetDirectoryEntry()
+                $distinguishedName = $objectDirectoryEntry.distinguishedName.Value
+                
+                Write-Verbose "`nFound object: $distinguishedName`nClass: $($objectDirectoryEntry.objectClass -join ', ')"
+                
+                # Cache the ADCS object if not already cached
+                if (-not $script:AdcsObjectCache.ContainsKey($distinguishedName)) {
+                    # Build cache object with all properties
+                    $adcsObj = [PSCustomObject]@{
+                        DistinguishedName = $distinguishedName
+                        ObjectClass = if ($objectDirectoryEntry.objectClass) { @($objectDirectoryEntry.objectClass) } else { @() }
+                        Name = if ($objectDirectoryEntry.name) { $objectDirectoryEntry.name.Value } else { $null }
+                        DisplayName = if ($objectDirectoryEntry.displayName) { $objectDirectoryEntry.displayName.Value } else { $null }
+                        CN = if ($objectDirectoryEntry.cn) { $objectDirectoryEntry.cn.Value } else { $null }
+                        
+                        # Certificate Template specific properties
+                        Flags = if ($objectDirectoryEntry.Properties.Contains('flags')) { $objectDirectoryEntry.flags.Value } else { $null }
+                        PKIDefaultKeySpec = if ($objectDirectoryEntry.Properties.Contains('pKIDefaultKeySpec')) { $objectDirectoryEntry.pKIDefaultKeySpec.Value } else { $null }
+                        PKIMaxIssuingDepth = if ($objectDirectoryEntry.Properties.Contains('pKIMaxIssuingDepth')) { $objectDirectoryEntry.pKIMaxIssuingDepth.Value } else { $null }
+                        PKICriticalExtensions = if ($objectDirectoryEntry.Properties.Contains('pKICriticalExtensions')) { @($objectDirectoryEntry.pKICriticalExtensions) } else { @() }
+                        PKIExtendedKeyUsage = if ($objectDirectoryEntry.Properties.Contains('pKIExtendedKeyUsage')) { @($objectDirectoryEntry.pKIExtendedKeyUsage) } else { @() }
+                        MSPKICertificateNameFlag = if ($objectDirectoryEntry.Properties.Contains('msPKI-Certificate-Name-Flag')) { $objectDirectoryEntry.Properties['msPKI-Certificate-Name-Flag'][0] } else { $null }
+                        MSPKIEnrollmentFlag = if ($objectDirectoryEntry.Properties.Contains('msPKI-Enrollment-Flag')) { $objectDirectoryEntry.Properties['msPKI-Enrollment-Flag'][0] } else { $null }
+                        MSPKIPrivateKeyFlag = if ($objectDirectoryEntry.Properties.Contains('msPKI-Private-Key-Flag')) { $objectDirectoryEntry.Properties['msPKI-Private-Key-Flag'][0] } else { $null }
+                        MSPKIRASignature = if ($objectDirectoryEntry.Properties.Contains('msPKI-RA-Signature')) { $objectDirectoryEntry.Properties['msPKI-RA-Signature'][0] } else { $null }
+                        MSPKITemplateSchemaVersion = if ($objectDirectoryEntry.Properties.Contains('msPKI-Template-Schema-Version')) { $objectDirectoryEntry.Properties['msPKI-Template-Schema-Version'][0] } else { $null }
+                        MSPKITemplateMinorRevision = if ($objectDirectoryEntry.Properties.Contains('msPKI-Template-Minor-Revision')) { $objectDirectoryEntry.Properties['msPKI-Template-Minor-Revision'][0] } else { $null }
+                        
+                        # Security descriptor
+                        ObjectSecurity = $objectDirectoryEntry.ObjectSecurity
+                        
+                        # Store the raw DirectoryEntry path for later retrieval if needed
+                        Path = $objectDirectoryEntry.Path
+                    }
+                    
+                    $script:AdcsObjectCache[$distinguishedName] = $adcsObj
+                    $cachedCount++
+                    Write-Verbose "Cached ADCS object: $distinguishedName"
+                }
+                
+                $objectDirectoryEntry
+                $objectCount++
+            }
+            Write-Verbose "Found $objectCount total objects in the Public Key Services container and its subtree"
+            Write-Verbose "Cached $cachedCount new ADCS objects (Total cache size: $($script:AdcsObjectCache.Count))"
+            
+            # Clean up
+            $searcher.Dispose()
+            $searcherDirectoryEntry.Dispose()
+            $searchResults.Dispose()
+        } catch {
+            $errorRecord = [System.Management.Automation.ErrorRecord]::new(
+                $_.Exception,
+                'ADCSObjectRetrievalFailed',
+                [System.Management.Automation.ErrorCategory]::NotSpecified,
+                $searchBase
+            )
+            $PSCmdlet.WriteError($errorRecord)
+        }
     }
 }
