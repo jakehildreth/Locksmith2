@@ -97,14 +97,14 @@ function Convert-IdentityReferenceToDirectoryEntry {
                             
                             # Create domain store entry with all properties
                             if (-not $script:DomainStore.ContainsKey($domainDN)) {
-                                $domainObj = [PSCustomObject]@{
+                                $domainObject = [PSCustomObject]@{
                                     distinguishedName = $domainDN
                                     nETBIOSName = if ($partition.Properties['nETBIOSName'].Count -gt 0) { $partition.Properties['nETBIOSName'][0] } else { $null }
                                     dnsRoot = if ($partition.Properties['dnsRoot'].Count -gt 0) { $partition.Properties['dnsRoot'][0] } else { $null }
                                 }
                                 
-                                $script:DomainStore[$domainDN] = $domainObj
-                                Write-Verbose "Stored domain: $domainDN (NetBIOS: $($domainObj.nETBIOSName))"
+                                $script:DomainStore[$domainDN] = $domainObject
+                                Write-Verbose "Stored domain: $domainDN (NetBIOS: $($domainObject.nETBIOSName))"
                             }
                         }
                     }
@@ -213,7 +213,7 @@ function Convert-IdentityReferenceToDirectoryEntry {
                             $script:Credential.GetNetworkCredential().Password
                         )
                         
-                        $principalObj = [PSCustomObject]@{
+                        $principalObject = [PSCustomObject]@{
                             DistinguishedName = $distinguishedName
                             ObjectSid = if ($gcResult.Properties['objectSid'].Count -gt 0) { 
                                 (New-Object System.Security.Principal.SecurityIdentifier($gcResult.Properties['objectSid'][0], 0)).Value 
@@ -229,8 +229,8 @@ function Convert-IdentityReferenceToDirectoryEntry {
                         $tempEntry.Dispose()
                         
                         # Store the complete principal object
-                        $script:PrincipalStore[$storeKey] = $principalObj
-                        Write-Verbose "Stored principal object for '$storeKey': $distinguishedName (ObjectClass: $($principalObj.ObjectClass))"
+                        $script:PrincipalStore[$storeKey] = $principalObject
+                        Write-Verbose "Stored principal object for '$storeKey': $distinguishedName (ObjectClass: $($principalObject.ObjectClass))"
                         
                         # Return DirectoryEntry for the found object
                         $objectPath = "LDAP://$server/$distinguishedName"
@@ -308,7 +308,7 @@ function Convert-IdentityReferenceToDirectoryEntry {
                             $script:Credential.GetNetworkCredential().Password
                         )
                         
-                        $principalObj = [PSCustomObject]@{
+                        $principalObject = [PSCustomObject]@{
                             DistinguishedName = $distinguishedName
                             ObjectSid = if ($gcResult.Properties['objectSid'].Count -gt 0) { 
                                 (New-Object System.Security.Principal.SecurityIdentifier($gcResult.Properties['objectSid'][0], 0)).Value 
@@ -324,8 +324,8 @@ function Convert-IdentityReferenceToDirectoryEntry {
                         $tempEntry.Dispose()
                         
                         # Store the complete principal object
-                        $script:PrincipalStore[$storeKey] = $principalObj
-                        Write-Verbose "Stored principal object for '$storeKey': $distinguishedName (objectClass: $($principalObj.objectClass))"
+                        $script:PrincipalStore[$storeKey] = $principalObject
+                        Write-Verbose "Stored principal object for '$storeKey': $distinguishedName (objectClass: $($principalObject.objectClass))"
                         
                         # Return DirectoryEntry for the found object
                         $objectPath = "LDAP://$server/$distinguishedName"
@@ -386,7 +386,7 @@ function Convert-IdentityReferenceToDirectoryEntry {
                     $script:Credential.GetNetworkCredential().Password
                 )
                 
-                $principalObj = [PSCustomObject]@{
+                $principalObject = [PSCustomObject]@{
                     distinguishedName = $distinguishedName
                     objectSid = if ($result.Properties['objectSid'].Count -gt 0) { 
                         (New-Object System.Security.Principal.SecurityIdentifier($result.Properties['objectSid'][0], 0)).Value 
@@ -402,8 +402,8 @@ function Convert-IdentityReferenceToDirectoryEntry {
                 $tempEntry.Dispose()
                 
                 # Store the complete principal object
-                $script:PrincipalStore[$storeKey] = $principalObj
-                Write-Verbose "Stored principal object for '$storeKey': $distinguishedName (objectClass: $($principalObj.objectClass))"
+                $script:PrincipalStore[$storeKey] = $principalObject
+                Write-Verbose "Stored principal object for '$storeKey': $distinguishedName (objectClass: $($principalObject.objectClass))"
                 
                 # Return DirectoryEntry for the found object
                 $objectPath = "LDAP://$server/$distinguishedName"
