@@ -120,11 +120,19 @@ function Convert-IdentityReferenceToDirectoryEntry {
     }
 
     process {
-        # Check store first - use IdentityReference.Value as store key
-        $storeKey = $IdentityReference.Value
-        if ($script:PrincipalStore.ContainsKey($storeKey)) {
-            $storedPrincipal = $script:PrincipalStore[$storeKey]
-            Write-Verbose "Store HIT: Found stored principal for '$storeKey': $($storedPrincipal.distinguishedName)"
+        # Convert IdentityReference to SID for store key
+        $sidKey = $IdentityReference | Convert-IdentityReferenceToSid
+        if (-not $sidKey) {
+            Write-Warning "Could not convert IdentityReference to SID: $($IdentityReference.Value)"
+            return $null
+        }
+        
+        $sidString = $sidKey.Value
+        
+        # Check store first - use SID as store key
+        if ($script:PrincipalStore.ContainsKey($sidString)) {
+            $storedPrincipal = $script:PrincipalStore[$sidString]
+            Write-Verbose "Store HIT: Found stored principal for SID '$sidString': $($storedPrincipal.distinguishedName)"
             
             # Extract server from RootDSE
             if ($script:RootDSE.Path -match 'LDAP://([^/]+)') {
@@ -145,7 +153,7 @@ function Convert-IdentityReferenceToDirectoryEntry {
             return $objectEntry
         }
         
-        Write-Verbose "Store MISS: No stored DN found for '$storeKey', performing LDAP lookup"
+        Write-Verbose "Store MISS: No stored DN found for SID '$sidString', performing LDAP lookup"
         
         # Convert NTAccount to SecurityIdentifier if needed
         if ($IdentityReference -is [System.Security.Principal.NTAccount]) {
@@ -213,24 +221,24 @@ function Convert-IdentityReferenceToDirectoryEntry {
                             $script:Credential.GetNetworkCredential().Password
                         )
                         
-                        $principalObject = [PSCustomObject]@{
-                            DistinguishedName = $distinguishedName
-                            ObjectSid = if ($gcResult.Properties['objectSid'].Count -gt 0) { 
+                        $principalObj = [PSCustomObject]@{
+                            distinguishedName = $distinguishedName
+                            objectSid = if ($gcResult.Properties['objectSid'].Count -gt 0) { 
                                 (New-Object System.Security.Principal.SecurityIdentifier($gcResult.Properties['objectSid'][0], 0)).Value 
                             } else { $null }
-                            SamAccountName = if ($gcResult.Properties['sAMAccountName'].Count -gt 0) { $gcResult.Properties['sAMAccountName'][0] } else { $null }
-                            ObjectClass = if ($gcResult.Properties['objectClass'].Count -gt 0) { $gcResult.Properties['objectClass'][-1] } else { $null }
-                            DisplayName = if ($gcResult.Properties['displayName'].Count -gt 0) { $gcResult.Properties['displayName'][0] } else { $null }
-                            UserPrincipalName = if ($gcResult.Properties['userPrincipalName'].Count -gt 0) { $gcResult.Properties['userPrincipalName'][0] } else { $null }
-                            MemberOf = if ($gcResult.Properties['memberOf'].Count -gt 0) { @($gcResult.Properties['memberOf']) } else { @() }
+                            sAMAccountName = if ($gcResult.Properties['sAMAccountName'].Count -gt 0) { $gcResult.Properties['sAMAccountName'][0] } else { $null }
+                            objectClass = if ($gcResult.Properties['objectClass'].Count -gt 0) { $gcResult.Properties['objectClass'][-1] } else { $null }
+                            displayName = if ($gcResult.Properties['displayName'].Count -gt 0) { $gcResult.Properties['displayName'][0] } else { $null }
+                            userPrincipalName = if ($gcResult.Properties['userPrincipalName'].Count -gt 0) { $gcResult.Properties['userPrincipalName'][0] } else { $null }
+                            memberOf = if ($gcResult.Properties['memberOf'].Count -gt 0) { @($gcResult.Properties['memberOf']) } else { @() }
                             ObjectSecurity = $tempEntry.ObjectSecurity
                         }
                         
                         $tempEntry.Dispose()
                         
-                        # Store the complete principal object
-                        $script:PrincipalStore[$storeKey] = $principalObject
-                        Write-Verbose "Stored principal object for '$storeKey': $distinguishedName (ObjectClass: $($principalObject.ObjectClass))"
+                        # Store the complete principal object using SID as key
+                        $script:PrincipalStore[$sidString] = $principalObj
+                        Write-Verbose "Stored principal object for SID '$sidString': $distinguishedName (objectClass: $($principalObj.objectClass))"
                         
                         # Return DirectoryEntry for the found object
                         $objectPath = "LDAP://$server/$distinguishedName"
@@ -308,24 +316,24 @@ function Convert-IdentityReferenceToDirectoryEntry {
                             $script:Credential.GetNetworkCredential().Password
                         )
                         
-                        $principalObject = [PSCustomObject]@{
-                            DistinguishedName = $distinguishedName
-                            ObjectSid = if ($gcResult.Properties['objectSid'].Count -gt 0) { 
+                        $principalObj = [PSCustomObject]@{
+                            distinguishedName = $distinguishedName
+                            objectSid = if ($gcResult.Properties['objectSid'].Count -gt 0) { 
                                 (New-Object System.Security.Principal.SecurityIdentifier($gcResult.Properties['objectSid'][0], 0)).Value 
                             } else { $null }
-                            SamAccountName = if ($gcResult.Properties['sAMAccountName'].Count -gt 0) { $gcResult.Properties['sAMAccountName'][0] } else { $null }
-                            ObjectClass = if ($gcResult.Properties['objectClass'].Count -gt 0) { $gcResult.Properties['objectClass'][-1] } else { $null }
-                            DisplayName = if ($gcResult.Properties['displayName'].Count -gt 0) { $gcResult.Properties['displayName'][0] } else { $null }
-                            UserPrincipalName = if ($gcResult.Properties['userPrincipalName'].Count -gt 0) { $gcResult.Properties['userPrincipalName'][0] } else { $null }
-                            MemberOf = if ($gcResult.Properties['memberOf'].Count -gt 0) { @($gcResult.Properties['memberOf']) } else { @() }
+                            sAMAccountName = if ($gcResult.Properties['sAMAccountName'].Count -gt 0) { $gcResult.Properties['sAMAccountName'][0] } else { $null }
+                            objectClass = if ($gcResult.Properties['objectClass'].Count -gt 0) { $gcResult.Properties['objectClass'][-1] } else { $null }
+                            displayName = if ($gcResult.Properties['displayName'].Count -gt 0) { $gcResult.Properties['displayName'][0] } else { $null }
+                            userPrincipalName = if ($gcResult.Properties['userPrincipalName'].Count -gt 0) { $gcResult.Properties['userPrincipalName'][0] } else { $null }
+                            memberOf = if ($gcResult.Properties['memberOf'].Count -gt 0) { @($gcResult.Properties['memberOf']) } else { @() }
                             ObjectSecurity = $tempEntry.ObjectSecurity
                         }
                         
                         $tempEntry.Dispose()
                         
-                        # Store the complete principal object
-                        $script:PrincipalStore[$storeKey] = $principalObject
-                        Write-Verbose "Stored principal object for '$storeKey': $distinguishedName (objectClass: $($principalObject.objectClass))"
+                        # Store the complete principal object using SID as key
+                        $script:PrincipalStore[$sidString] = $principalObj
+                        Write-Verbose "Stored principal object for SID '$sidString': $distinguishedName (objectClass: $($principalObj.objectClass))"
                         
                         # Return DirectoryEntry for the found object
                         $objectPath = "LDAP://$server/$distinguishedName"
@@ -386,7 +394,7 @@ function Convert-IdentityReferenceToDirectoryEntry {
                     $script:Credential.GetNetworkCredential().Password
                 )
                 
-                $principalObject = [PSCustomObject]@{
+                $principalObj = [PSCustomObject]@{
                     distinguishedName = $distinguishedName
                     objectSid = if ($result.Properties['objectSid'].Count -gt 0) { 
                         (New-Object System.Security.Principal.SecurityIdentifier($result.Properties['objectSid'][0], 0)).Value 
@@ -401,9 +409,9 @@ function Convert-IdentityReferenceToDirectoryEntry {
                 
                 $tempEntry.Dispose()
                 
-                # Store the complete principal object
-                $script:PrincipalStore[$storeKey] = $principalObject
-                Write-Verbose "Stored principal object for '$storeKey': $distinguishedName (objectClass: $($principalObject.objectClass))"
+                # Store the complete principal object using SID as key
+                $script:PrincipalStore[$sidString] = $principalObj
+                Write-Verbose "Stored principal object for SID '$sidString': $distinguishedName (objectClass: $($principalObj.objectClass))"
                 
                 # Return DirectoryEntry for the found object
                 $objectPath = "LDAP://$server/$distinguishedName"
