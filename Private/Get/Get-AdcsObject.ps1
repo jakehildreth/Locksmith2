@@ -88,7 +88,7 @@ function Get-AdcsObject {
                 # Store the ADCS object if not already stored
                 if (-not $script:AdcsObjectStore.ContainsKey($distinguishedName)) {
                     # Build store object with all properties
-                    $adcsObj = [PSCustomObject]@{
+                    $adcsObject = [PSCustomObject]@{
                         distinguishedName = $distinguishedName
                         objectClass = if ($objectDirectoryEntry.objectClass) { @($objectDirectoryEntry.objectClass) } else { @() }
                         name = if ($objectDirectoryEntry.name) { $objectDirectoryEntry.name.Value } else { $null }
@@ -115,7 +115,7 @@ function Get-AdcsObject {
                         Path = $objectDirectoryEntry.Path
                     }
                     
-                    $script:AdcsObjectStore[$distinguishedName] = $adcsObj
+                    $script:AdcsObjectStore[$distinguishedName] = $adcsObject
                     $cachedCount++
                     Write-Verbose "Stored ADCS object: $distinguishedName"
                 }
