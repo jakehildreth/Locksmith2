@@ -48,9 +48,9 @@ function Get-AdcsObject {
     #requires -Version 5.1 -Modules Microsoft.PowerShell.Security
 
     begin {
-        # Initialize ADCS Object Cache if it doesn't exist
-        if (-not $script:AdcsObjectCache) {
-            $script:AdcsObjectCache = @{}
+        # Initialize the AdcsObjectStore if it doesn't exist
+        if (-not $script:AdcsObjectStore) {
+            $script:AdcsObjectStore = @{}
         }
     }
 
@@ -60,7 +60,7 @@ function Get-AdcsObject {
             $searchBase = "CN=Public Key Services,CN=Services,$($script:RootDSE.configurationNamingContext)"
             
             Write-Verbose "Searching $searchBase for AD CS objects."
-            Write-Verbose "ADCS Object Cache currently has $($script:AdcsObjectCache.Count) entries"
+            Write-Verbose "ADCS Object Store currently has $($script:AdcsObjectStore.Count) entries"
             
             # Create DirectorySearcher for recursive search
             $searcherDirectoryEntry = New-Object System.DirectoryServices.DirectoryEntry(
@@ -76,7 +76,7 @@ function Get-AdcsObject {
             # Get all results
             $searchResults = $searcher.FindAll()
             
-            # Convert paths into DirectoryEntry objects and cache them
+            # Convert paths into DirectoryEntry objects and store them
             $objectCount = 0
             $cachedCount = 0
             $searchResults | ForEach-Object {
@@ -85,9 +85,9 @@ function Get-AdcsObject {
                 
                 Write-Verbose "`nFound object: $distinguishedName`nClass: $($objectDirectoryEntry.objectClass -join ', ')"
                 
-                # Cache the ADCS object if not already cached
-                if (-not $script:AdcsObjectCache.ContainsKey($distinguishedName)) {
-                    # Build cache object with all properties
+                # Store the ADCS object if not already stored
+                if (-not $script:AdcsObjectStore.ContainsKey($distinguishedName)) {
+                    # Build store object with all properties
                     $adcsObj = [PSCustomObject]@{
                         DistinguishedName = $distinguishedName
                         ObjectClass = if ($objectDirectoryEntry.objectClass) { @($objectDirectoryEntry.objectClass) } else { @() }
@@ -115,16 +115,16 @@ function Get-AdcsObject {
                         Path = $objectDirectoryEntry.Path
                     }
                     
-                    $script:AdcsObjectCache[$distinguishedName] = $adcsObj
+                    $script:AdcsObjectStore[$distinguishedName] = $adcsObj
                     $cachedCount++
-                    Write-Verbose "Cached ADCS object: $distinguishedName"
+                    Write-Verbose "Stored ADCS object: $distinguishedName"
                 }
                 
                 $objectDirectoryEntry
                 $objectCount++
             }
             Write-Verbose "Found $objectCount total objects in the Public Key Services container and its subtree"
-            Write-Verbose "Cached $cachedCount new ADCS objects (Total cache size: $($script:AdcsObjectCache.Count))"
+            Write-Verbose "Stored $cachedCount new ADCS objects (Total store size: $($script:AdcsObjectStore.Count))"
             
             # Clean up
             $searcher.Dispose()
