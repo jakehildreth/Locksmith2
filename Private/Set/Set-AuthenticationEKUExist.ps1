@@ -117,7 +117,14 @@ function Set-AuthenticationEKUExist {
                     Write-Verbose "pKIExtendedKeyUsage is empty. Template can be used for Any Purpose."
                 }
                 
-                # Add the AuthenticationEKUExist property to the object
+                # Update the AdcsObjectStore with the AuthenticationEKUExist property
+                $dn = $_.Properties.distinguishedName[0]
+                if ($script:AdcsObjectStore.ContainsKey($dn)) {
+                    $script:AdcsObjectStore[$dn] | Add-Member -NotePropertyName AuthenticationEKUExist -NotePropertyValue $authenticationEKUExist -Force
+                    Write-Verbose "Updated AdcsObjectStore for $dn with AuthenticationEKUExist = $authenticationEKUExist"
+                }
+                
+                # Also add to the pipeline object for backward compatibility
                 $_ | Add-Member -NotePropertyName AuthenticationEKUExist -NotePropertyValue $authenticationEKUExist -Force
                 
                 # Return the modified object

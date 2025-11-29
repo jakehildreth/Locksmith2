@@ -99,7 +99,14 @@ function Set-SANAllowed {
                     Write-Verbose "msPKI-Certificate-Name-Flag attribute not found on object"
                 }
                 
-                # Add the SANAllowed property to the object
+                # Update the AdcsObjectStore with the SANAllowed property
+                $dn = $_.Properties.distinguishedName[0]
+                if ($script:AdcsObjectStore.ContainsKey($dn)) {
+                    $script:AdcsObjectStore[$dn] | Add-Member -NotePropertyName SANAllowed -NotePropertyValue $sanAllowed -Force
+                    Write-Verbose "Updated AdcsObjectStore for $dn with SANAllowed = $sanAllowed"
+                }
+                
+                # Also add to the pipeline object for backward compatibility
                 $_ | Add-Member -NotePropertyName SANAllowed -NotePropertyValue $sanAllowed -Force
                 
                 # Return the modified object
