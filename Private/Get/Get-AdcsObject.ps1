@@ -89,24 +89,24 @@ function Get-AdcsObject {
                 if (-not $script:AdcsObjectStore.ContainsKey($distinguishedName)) {
                     # Build store object with all properties
                     $adcsObj = [PSCustomObject]@{
-                        DistinguishedName = $distinguishedName
-                        ObjectClass = if ($objectDirectoryEntry.objectClass) { @($objectDirectoryEntry.objectClass) } else { @() }
-                        Name = if ($objectDirectoryEntry.name) { $objectDirectoryEntry.name.Value } else { $null }
-                        DisplayName = if ($objectDirectoryEntry.displayName) { $objectDirectoryEntry.displayName.Value } else { $null }
-                        CN = if ($objectDirectoryEntry.cn) { $objectDirectoryEntry.cn.Value } else { $null }
+                        distinguishedName = $distinguishedName
+                        objectClass = if ($objectDirectoryEntry.objectClass) { @($objectDirectoryEntry.objectClass) } else { @() }
+                        name = if ($objectDirectoryEntry.name) { $objectDirectoryEntry.name.Value } else { $null }
+                        displayName = if ($objectDirectoryEntry.displayName) { $objectDirectoryEntry.displayName.Value } else { $null }
+                        cn = if ($objectDirectoryEntry.cn) { $objectDirectoryEntry.cn.Value } else { $null }
                         
                         # Certificate Template specific properties
-                        Flags = if ($objectDirectoryEntry.Properties.Contains('flags')) { $objectDirectoryEntry.flags.Value } else { $null }
-                        PKIDefaultKeySpec = if ($objectDirectoryEntry.Properties.Contains('pKIDefaultKeySpec')) { $objectDirectoryEntry.pKIDefaultKeySpec.Value } else { $null }
-                        PKIMaxIssuingDepth = if ($objectDirectoryEntry.Properties.Contains('pKIMaxIssuingDepth')) { $objectDirectoryEntry.pKIMaxIssuingDepth.Value } else { $null }
-                        PKICriticalExtensions = if ($objectDirectoryEntry.Properties.Contains('pKICriticalExtensions')) { @($objectDirectoryEntry.pKICriticalExtensions) } else { @() }
-                        PKIExtendedKeyUsage = if ($objectDirectoryEntry.Properties.Contains('pKIExtendedKeyUsage')) { @($objectDirectoryEntry.pKIExtendedKeyUsage) } else { @() }
-                        MSPKICertificateNameFlag = if ($objectDirectoryEntry.Properties.Contains('msPKI-Certificate-Name-Flag')) { $objectDirectoryEntry.Properties['msPKI-Certificate-Name-Flag'][0] } else { $null }
-                        MSPKIEnrollmentFlag = if ($objectDirectoryEntry.Properties.Contains('msPKI-Enrollment-Flag')) { $objectDirectoryEntry.Properties['msPKI-Enrollment-Flag'][0] } else { $null }
-                        MSPKIPrivateKeyFlag = if ($objectDirectoryEntry.Properties.Contains('msPKI-Private-Key-Flag')) { $objectDirectoryEntry.Properties['msPKI-Private-Key-Flag'][0] } else { $null }
-                        MSPKIRASignature = if ($objectDirectoryEntry.Properties.Contains('msPKI-RA-Signature')) { $objectDirectoryEntry.Properties['msPKI-RA-Signature'][0] } else { $null }
-                        MSPKITemplateSchemaVersion = if ($objectDirectoryEntry.Properties.Contains('msPKI-Template-Schema-Version')) { $objectDirectoryEntry.Properties['msPKI-Template-Schema-Version'][0] } else { $null }
-                        MSPKITemplateMinorRevision = if ($objectDirectoryEntry.Properties.Contains('msPKI-Template-Minor-Revision')) { $objectDirectoryEntry.Properties['msPKI-Template-Minor-Revision'][0] } else { $null }
+                        flags = if ($objectDirectoryEntry.Properties.Contains('flags')) { $objectDirectoryEntry.flags.Value } else { $null }
+                        pKIDefaultKeySpec = if ($objectDirectoryEntry.Properties.Contains('pKIDefaultKeySpec')) { $objectDirectoryEntry.pKIDefaultKeySpec.Value } else { $null }
+                        pKIMaxIssuingDepth = if ($objectDirectoryEntry.Properties.Contains('pKIMaxIssuingDepth')) { $objectDirectoryEntry.pKIMaxIssuingDepth.Value } else { $null }
+                        pKICriticalExtensions = if ($objectDirectoryEntry.Properties.Contains('pKICriticalExtensions')) { @($objectDirectoryEntry.pKICriticalExtensions) } else { @() }
+                        pKIExtendedKeyUsage = if ($objectDirectoryEntry.Properties.Contains('pKIExtendedKeyUsage')) { @($objectDirectoryEntry.pKIExtendedKeyUsage) } else { @() }
+                        'msPKI-Certificate-Name-Flag' = if ($objectDirectoryEntry.Properties.Contains('msPKI-Certificate-Name-Flag')) { $objectDirectoryEntry.Properties['msPKI-Certificate-Name-Flag'][0] } else { $null }
+                        'msPKI-Enrollment-Flag' = if ($objectDirectoryEntry.Properties.Contains('msPKI-Enrollment-Flag')) { $objectDirectoryEntry.Properties['msPKI-Enrollment-Flag'][0] } else { $null }
+                        'msPKI-Private-Key-Flag' = if ($objectDirectoryEntry.Properties.Contains('msPKI-Private-Key-Flag')) { $objectDirectoryEntry.Properties['msPKI-Private-Key-Flag'][0] } else { $null }
+                        'msPKI-RA-Signature' = if ($objectDirectoryEntry.Properties.Contains('msPKI-RA-Signature')) { $objectDirectoryEntry.Properties['msPKI-RA-Signature'][0] } else { $null }
+                        'msPKI-Template-Schema-Version' = if ($objectDirectoryEntry.Properties.Contains('msPKI-Template-Schema-Version')) { $objectDirectoryEntry.Properties['msPKI-Template-Schema-Version'][0] } else { $null }
+                        'msPKI-Template-Minor-Revision' = if ($objectDirectoryEntry.Properties.Contains('msPKI-Template-Minor-Revision')) { $objectDirectoryEntry.Properties['msPKI-Template-Minor-Revision'][0] } else { $null }
                         
                         # Security descriptor
                         ObjectSecurity = $objectDirectoryEntry.ObjectSecurity

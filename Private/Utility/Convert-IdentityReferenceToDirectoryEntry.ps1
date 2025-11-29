@@ -98,13 +98,13 @@ function Convert-IdentityReferenceToDirectoryEntry {
                             # Create domain store entry with all properties
                             if (-not $script:DomainStore.ContainsKey($domainDN)) {
                                 $domainObj = [PSCustomObject]@{
-                                    DistinguishedName = $domainDN
-                                    NetBiosName = if ($partition.Properties['nETBIOSName'].Count -gt 0) { $partition.Properties['nETBIOSName'][0] } else { $null }
-                                    DnsRoot = if ($partition.Properties['dnsRoot'].Count -gt 0) { $partition.Properties['dnsRoot'][0] } else { $null }
+                                    distinguishedName = $domainDN
+                                    nETBIOSName = if ($partition.Properties['nETBIOSName'].Count -gt 0) { $partition.Properties['nETBIOSName'][0] } else { $null }
+                                    dnsRoot = if ($partition.Properties['dnsRoot'].Count -gt 0) { $partition.Properties['dnsRoot'][0] } else { $null }
                                 }
                                 
                                 $script:DomainStore[$domainDN] = $domainObj
-                                Write-Verbose "Stored domain: $domainDN (NetBIOS: $($domainObj.NetBiosName))"
+                                Write-Verbose "Stored domain: $domainDN (NetBIOS: $($domainObj.nETBIOSName))"
                             }
                         }
                     }
@@ -124,7 +124,7 @@ function Convert-IdentityReferenceToDirectoryEntry {
         $storeKey = $IdentityReference.Value
         if ($script:PrincipalStore.ContainsKey($storeKey)) {
             $storedPrincipal = $script:PrincipalStore[$storeKey]
-            Write-Verbose "Store HIT: Found stored principal for '$storeKey': $($storedPrincipal.DistinguishedName)"
+            Write-Verbose "Store HIT: Found stored principal for '$storeKey': $($storedPrincipal.distinguishedName)"
             
             # Extract server from RootDSE
             if ($script:RootDSE.Path -match 'LDAP://([^/]+)') {
@@ -135,7 +135,7 @@ function Convert-IdentityReferenceToDirectoryEntry {
             }
             
             # Create fresh DirectoryEntry from stored DN
-            $objectPath = "LDAP://$server/$($storedPrincipal.DistinguishedName)"
+            $objectPath = "LDAP://$server/$($storedPrincipal.distinguishedName)"
             $objectEntry = New-Object System.DirectoryServices.DirectoryEntry(
                 $objectPath,
                 $script:Credential.UserName,
@@ -157,17 +157,17 @@ function Convert-IdentityReferenceToDirectoryEntry {
                 
                 # Parse the NTAccount string
                 $accountString = $IdentityReference.Value
-                if ($accountString -match '^(.+?)\\(.+)$') {
-                    $domain = $Matches[1]
-                    $samAccountName = $Matches[2]
-                } elseif ($accountString -match '@') {
-                    # UPN format
-                    $samAccountName = $accountString.Split('@')[0]
-                    $domain = $null
-                } else {
-                    $samAccountName = $accountString
-                    $domain = $null
-                }
+                # if ($accountString -match '^(.+?)\\(.+)$') {
+                #     $domain = $Matches[1]
+                #     $samAccountName = $Matches[2]
+                # } elseif ($accountString -match '@') {
+                #     # UPN format
+                #     $samAccountName = $accountString.Split('@')[0]
+                #     $domain = $null
+                # } else {
+                #     $samAccountName = $accountString
+                #     $domain = $null
+                # }
                 
                 # Extract server from RootDSE
                 if ($script:RootDSE.Path -match 'LDAP://([^/]+)') {
@@ -325,7 +325,7 @@ function Convert-IdentityReferenceToDirectoryEntry {
                         
                         # Store the complete principal object
                         $script:PrincipalStore[$storeKey] = $principalObj
-                        Write-Verbose "Stored principal object for '$storeKey': $distinguishedName (ObjectClass: $($principalObj.ObjectClass))"
+                        Write-Verbose "Stored principal object for '$storeKey': $distinguishedName (objectClass: $($principalObj.objectClass))"
                         
                         # Return DirectoryEntry for the found object
                         $objectPath = "LDAP://$server/$distinguishedName"
@@ -387,15 +387,15 @@ function Convert-IdentityReferenceToDirectoryEntry {
                 )
                 
                 $principalObj = [PSCustomObject]@{
-                    DistinguishedName = $distinguishedName
-                    ObjectSid = if ($result.Properties['objectSid'].Count -gt 0) { 
+                    distinguishedName = $distinguishedName
+                    objectSid = if ($result.Properties['objectSid'].Count -gt 0) { 
                         (New-Object System.Security.Principal.SecurityIdentifier($result.Properties['objectSid'][0], 0)).Value 
                     } else { $null }
-                    SamAccountName = if ($result.Properties['sAMAccountName'].Count -gt 0) { $result.Properties['sAMAccountName'][0] } else { $null }
-                    ObjectClass = if ($result.Properties['objectClass'].Count -gt 0) { $result.Properties['objectClass'][-1] } else { $null }
-                    DisplayName = if ($result.Properties['displayName'].Count -gt 0) { $result.Properties['displayName'][0] } else { $null }
-                    UserPrincipalName = if ($result.Properties['userPrincipalName'].Count -gt 0) { $result.Properties['userPrincipalName'][0] } else { $null }
-                    MemberOf = if ($result.Properties['memberOf'].Count -gt 0) { @($result.Properties['memberOf']) } else { @() }
+                    sAMAccountName = if ($result.Properties['sAMAccountName'].Count -gt 0) { $result.Properties['sAMAccountName'][0] } else { $null }
+                    objectClass = if ($result.Properties['objectClass'].Count -gt 0) { $result.Properties['objectClass'][-1] } else { $null }
+                    displayName = if ($result.Properties['displayName'].Count -gt 0) { $result.Properties['displayName'][0] } else { $null }
+                    userPrincipalName = if ($result.Properties['userPrincipalName'].Count -gt 0) { $result.Properties['userPrincipalName'][0] } else { $null }
+                    memberOf = if ($result.Properties['memberOf'].Count -gt 0) { @($result.Properties['memberOf']) } else { @() }
                     ObjectSecurity = $tempEntry.ObjectSecurity
                 }
                 
@@ -403,7 +403,7 @@ function Convert-IdentityReferenceToDirectoryEntry {
                 
                 # Store the complete principal object
                 $script:PrincipalStore[$storeKey] = $principalObj
-                Write-Verbose "Stored principal object for '$storeKey': $distinguishedName (ObjectClass: $($principalObj.ObjectClass))"
+                Write-Verbose "Stored principal object for '$storeKey': $distinguishedName (objectClass: $($principalObj.objectClass))"
                 
                 # Return DirectoryEntry for the found object
                 $objectPath = "LDAP://$server/$distinguishedName"
