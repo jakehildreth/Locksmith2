@@ -58,19 +58,19 @@ function Convert-IdentityReferenceToDirectoryEntry {
     )
 
     begin {
-        # Initialize Principal Cache if it doesn't exist
-        # Cache for IdentityReference → Full principal object with all properties
-        if (-not $script:PrincipalCache) {
-            $script:PrincipalCache = @{}
+        # Initialize Principal Store if it doesn't exist
+        # Store for IdentityReference → Full principal object with all properties
+        if (-not $script:PrincipalStore) {
+            $script:PrincipalStore = @{}
         }
         
-        # Initialize Domain Cache if it doesn't exist
-        # Cache for Domain DN → Full domain object with all properties
-        if (-not $script:DomainCache) {
-            $script:DomainCache = @{}
+        # Initialize Domain Store if it doesn't exist
+        # Store for Domain DN → Full domain object with all properties
+        if (-not $script:DomainStore) {
+            $script:DomainStore = @{}
         }
         
-        # Pre-load all domains into Domain Cache if we have credentials
+        # Pre-load all domains into Domain Store if we have credentials
         if ($script:Credential -and $script:RootDSE) {
             try {
                 $configNC = $script:RootDSE.configurationNamingContext.Value
@@ -95,16 +95,16 @@ function Convert-IdentityReferenceToDirectoryEntry {
                         if ($partition.Properties['nCName'].Count -gt 0) {
                             $domainDN = $partition.Properties['nCName'][0]
                             
-                            # Create domain cache entry with all properties
-                            if (-not $script:DomainCache.ContainsKey($domainDN)) {
+                            # Create domain store entry with all properties
+                            if (-not $script:DomainStore.ContainsKey($domainDN)) {
                                 $domainObj = [PSCustomObject]@{
                                     DistinguishedName = $domainDN
                                     NetBiosName = if ($partition.Properties['nETBIOSName'].Count -gt 0) { $partition.Properties['nETBIOSName'][0] } else { $null }
                                     DnsRoot = if ($partition.Properties['dnsRoot'].Count -gt 0) { $partition.Properties['dnsRoot'][0] } else { $null }
                                 }
                                 
-                                $script:DomainCache[$domainDN] = $domainObj
-                                Write-Verbose "Cached domain: $domainDN (NetBIOS: $($domainObj.NetBiosName))"
+                                $script:DomainStore[$domainDN] = $domainObj
+                                Write-Verbose "Stored domain: $domainDN (NetBIOS: $($domainObj.NetBiosName))"
                             }
                         }
                     }
@@ -120,11 +120,11 @@ function Convert-IdentityReferenceToDirectoryEntry {
     }
 
     process {
-        # Check cache first - use IdentityReference.Value as cache key
-        $cacheKey = $IdentityReference.Value
-        if ($script:PrincipalCache.ContainsKey($cacheKey)) {
-            $cachedPrincipal = $script:PrincipalCache[$cacheKey]
-            Write-Verbose "Cache HIT: Found cached principal for '$cacheKey': $($cachedPrincipal.DistinguishedName)"
+        # Check store first - use IdentityReference.Value as store key
+        $storeKey = $IdentityReference.Value
+        if ($script:PrincipalStore.ContainsKey($storeKey)) {
+            $storedPrincipal = $script:PrincipalStore[$storeKey]
+            Write-Verbose "Store HIT: Found stored principal for '$storeKey': $($storedPrincipal.DistinguishedName)"
             
             # Extract server from RootDSE
             if ($script:RootDSE.Path -match 'LDAP://([^/]+)') {
@@ -134,8 +134,8 @@ function Convert-IdentityReferenceToDirectoryEntry {
                 return $null
             }
             
-            # Create fresh DirectoryEntry from cached DN
-            $objectPath = "LDAP://$server/$($cachedPrincipal.DistinguishedName)"
+            # Create fresh DirectoryEntry from stored DN
+            $objectPath = "LDAP://$server/$($storedPrincipal.DistinguishedName)"
             $objectEntry = New-Object System.DirectoryServices.DirectoryEntry(
                 $objectPath,
                 $script:Credential.UserName,
@@ -145,7 +145,7 @@ function Convert-IdentityReferenceToDirectoryEntry {
             return $objectEntry
         }
         
-        Write-Verbose "Cache MISS: No cached DN found for '$cacheKey', performing LDAP lookup"
+        Write-Verbose "Store MISS: No stored DN found for '$storeKey', performing LDAP lookup"
         
         # Convert NTAccount to SecurityIdentifier if needed
         if ($IdentityReference -is [System.Security.Principal.NTAccount]) {
@@ -192,7 +192,7 @@ function Convert-IdentityReferenceToDirectoryEntry {
                 
                 $gcSearcher.SearchRoot = $gcEntry
                 $gcSearcher.Filter = "(sAMAccountName=$samAccountName)"
-                # Load all principal properties for complete cache object
+                # Load all principal properties for complete store object
                 $gcSearcher.PropertiesToLoad.AddRange(@('distinguishedName', 'objectSid', 'sAMAccountName', 'objectClass', 'displayName', 'memberOf', 'userPrincipalName')) | Out-Null
                 $gcSearcher.SearchScope = [System.DirectoryServices.SearchScope]::Subtree
                 $gcSearcher.PageSize = 1000
@@ -204,7 +204,7 @@ function Convert-IdentityReferenceToDirectoryEntry {
                         $distinguishedName = $gcResult.Properties['distinguishedName'][0]
                         Write-Verbose "Found NTAccount in GC at: $distinguishedName"
                         
-                        # Build complete principal object for cache
+                        # Build complete principal object for store
                         # Create DirectoryEntry to get ObjectSecurity
                         $objectPath = "LDAP://$server/$distinguishedName"
                         $tempEntry = New-Object System.DirectoryServices.DirectoryEntry(
@@ -228,9 +228,9 @@ function Convert-IdentityReferenceToDirectoryEntry {
                         
                         $tempEntry.Dispose()
                         
-                        # Cache the complete principal object
-                        $script:PrincipalCache[$cacheKey] = $principalObj
-                        Write-Verbose "Cached principal object for '$cacheKey': $distinguishedName (ObjectClass: $($principalObj.ObjectClass))"
+                        # Store the complete principal object
+                        $script:PrincipalStore[$storeKey] = $principalObj
+                        Write-Verbose "Stored principal object for '$storeKey': $distinguishedName (ObjectClass: $($principalObj.ObjectClass))"
                         
                         # Return DirectoryEntry for the found object
                         $objectPath = "LDAP://$server/$distinguishedName"
@@ -287,7 +287,7 @@ function Convert-IdentityReferenceToDirectoryEntry {
                 
                 $gcSearcher.SearchRoot = $gcEntry
                 $gcSearcher.Filter = "(objectSid=$sidString)"
-                # Load all principal properties for complete cache object
+                # Load all principal properties for complete store object
                 $gcSearcher.PropertiesToLoad.AddRange(@('distinguishedName', 'objectSid', 'sAMAccountName', 'objectClass', 'displayName', 'memberOf', 'userPrincipalName')) | Out-Null
                 $gcSearcher.SearchScope = [System.DirectoryServices.SearchScope]::Subtree
                 $gcSearcher.PageSize = 1000
@@ -299,7 +299,7 @@ function Convert-IdentityReferenceToDirectoryEntry {
                         $distinguishedName = $gcResult.Properties['distinguishedName'][0]
                         Write-Verbose "Found SID in GC at: $distinguishedName"
                         
-                        # Build complete principal object for cache
+                        # Build complete principal object for store
                         # Create DirectoryEntry to get ObjectSecurity
                         $objectPath = "LDAP://$server/$distinguishedName"
                         $tempEntry = New-Object System.DirectoryServices.DirectoryEntry(
@@ -323,9 +323,9 @@ function Convert-IdentityReferenceToDirectoryEntry {
                         
                         $tempEntry.Dispose()
                         
-                        # Cache the complete principal object
-                        $script:PrincipalCache[$cacheKey] = $principalObj
-                        Write-Verbose "Cached principal object for '$cacheKey': $distinguishedName (ObjectClass: $($principalObj.ObjectClass))"
+                        # Store the complete principal object
+                        $script:PrincipalStore[$storeKey] = $principalObj
+                        Write-Verbose "Stored principal object for '$storeKey': $distinguishedName (ObjectClass: $($principalObj.ObjectClass))"
                         
                         # Return DirectoryEntry for the found object
                         $objectPath = "LDAP://$server/$distinguishedName"
@@ -367,7 +367,7 @@ function Convert-IdentityReferenceToDirectoryEntry {
             
             $searcher.SearchRoot = $directoryEntry
             $searcher.Filter = "(objectSid=$sidString)"
-            # Load all principal properties for complete cache object
+            # Load all principal properties for complete store object
             $searcher.PropertiesToLoad.AddRange(@('distinguishedName', 'objectSid', 'sAMAccountName', 'objectClass', 'displayName', 'memberOf', 'userPrincipalName')) | Out-Null
             $searcher.SearchScope = [System.DirectoryServices.SearchScope]::Subtree
             $searcher.PageSize = 1000
@@ -377,7 +377,7 @@ function Convert-IdentityReferenceToDirectoryEntry {
             if ($result) {
                 $distinguishedName = $result.Properties['distinguishedName'][0]
                 
-                # Build complete principal object for cache
+                # Build complete principal object for store
                 # Create DirectoryEntry to get ObjectSecurity
                 $objectPath = "LDAP://$server/$distinguishedName"
                 $tempEntry = New-Object System.DirectoryServices.DirectoryEntry(
@@ -401,9 +401,9 @@ function Convert-IdentityReferenceToDirectoryEntry {
                 
                 $tempEntry.Dispose()
                 
-                # Cache the complete principal object
-                $script:PrincipalCache[$cacheKey] = $principalObj
-                Write-Verbose "Cached principal object for '$cacheKey': $distinguishedName (ObjectClass: $($principalObj.ObjectClass))"
+                # Store the complete principal object
+                $script:PrincipalStore[$storeKey] = $principalObj
+                Write-Verbose "Stored principal object for '$storeKey': $distinguishedName (ObjectClass: $($principalObj.ObjectClass))"
                 
                 # Return DirectoryEntry for the found object
                 $objectPath = "LDAP://$server/$distinguishedName"
