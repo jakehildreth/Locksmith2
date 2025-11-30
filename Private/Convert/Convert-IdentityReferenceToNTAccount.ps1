@@ -1,4 +1,4 @@
-function Convert-SidToIdentityReference {
+function Convert-IdentityReferenceToNTAccount {
     <#
         .SYNOPSIS
         Converts a SecurityIdentifier (SID) to an IdentityReference (NTAccount).
@@ -33,15 +33,15 @@ function Convert-SidToIdentityReference {
 
         .EXAMPLE
         $sid = [System.Security.Principal.SecurityIdentifier]::new('S-1-5-21-...')
-        $sid | Convert-SidToIdentityReference
+        $sid | Convert-IdentityReferenceToNTAccount
         Converts a SID to NTAccount (domain-joined computer).
 
         .EXAMPLE
-        $sid | Convert-SidToIdentityReference -Credential $cred -RootDSE $rootDSE
+        $sid | Convert-IdentityReferenceToNTAccount -Credential $cred -RootDSE $rootDSE
         Converts a SID to NTAccount using credentials and RootDSE (non-domain joined computer).
 
         .EXAMPLE
-        $ace.IdentityReference | Convert-SidToIdentityReference -Credential $cred -RootDSE $rootDSE
+        $ace.IdentityReference | Convert-IdentityReferenceToNTAccount -Credential $cred -RootDSE $rootDSE
         Converts SID IdentityReferences from an ACL to NTAccount objects.
 
         .NOTES
@@ -66,47 +66,8 @@ function Convert-SidToIdentityReference {
     )
 
     begin {
-        # Cache NetBIOS name lookups to avoid repeated queries
-        $script:netBiosCache = @{}
-        
-        # Pre-load all NetBIOS names if we have credentials
-        if ($Credential -and $RootDSE) {
-            try {
-                $configNC = $RootDSE.configurationNamingContext.Value
-                if ($RootDSE.Path -match 'LDAP://([^/]+)') {
-                    $server = $Matches[1]
-                    $partitionsPath = "LDAP://$server/CN=Partitions,$configNC"
-                    
-                    $partitionsEntry = New-Object System.DirectoryServices.DirectoryEntry(
-                        $partitionsPath,
-                        $Credential.UserName,
-                        $Credential.GetNetworkCredential().Password
-                    )
-                    
-                    $partitionsSearcher = New-Object System.DirectoryServices.DirectorySearcher
-                    $partitionsSearcher.SearchRoot = $partitionsEntry
-                    $partitionsSearcher.Filter = "(objectClass=crossRef)"
-                    $partitionsSearcher.PropertiesToLoad.AddRange(@('nCName', 'nETBIOSName')) | Out-Null
-                    $partitionsSearcher.SearchScope = [System.DirectoryServices.SearchScope]::OneLevel
-                    
-                    $allPartitions = $partitionsSearcher.FindAll()
-                    foreach ($partition in $allPartitions) {
-                        if ($partition.Properties['nCName'].Count -gt 0 -and $partition.Properties['nETBIOSName'].Count -gt 0) {
-                            $domainDN = $partition.Properties['nCName'][0]
-                            $netBiosName = $partition.Properties['nETBIOSName'][0].ToUpper()
-                            $script:netBiosCache[$domainDN] = $netBiosName
-                            Write-Verbose "Pre-cached NetBIOS name '$netBiosName' for '$domainDN'"
-                        }
-                    }
-                    
-                    $allPartitions.Dispose()
-                    $partitionsSearcher.Dispose()
-                    $partitionsEntry.Dispose()
-                }
-            } catch {
-                Write-Verbose "Could not pre-load NetBIOS names: $_"
-            }
-        }
+        # DomainStore is pre-populated by Initialize-DomainStore
+        # No need for separate caching
     }
 
     process {
@@ -172,11 +133,11 @@ function Convert-SidToIdentityReference {
                         $samAccountName = $gcResult.Properties['sAMAccountName'][0]
                         Write-Verbose "Found SID in GC at: $distinguishedName"
                         
-                        # Get NetBIOS domain name (with caching)
+                        # Get NetBIOS domain name from DomainStore
                         $domainDN = $distinguishedName -replace '^.*?,(?=DC=)', ''
                         
-                        if ($script:netBiosCache.ContainsKey($domainDN)) {
-                            $domainNetBiosName = $script:netBiosCache[$domainDN]
+                        if ($script:DomainStore -and $script:DomainStore.ContainsKey($domainDN)) {
+                            $domainNetBiosName = $script:DomainStore[$domainDN].nETBIOSName.ToUpper()
                         } else {
                             # Fallback: extract first DC component from DN
                             if ($domainDN -match 'DC=([^,]+)') {
@@ -185,7 +146,6 @@ function Convert-SidToIdentityReference {
                             } else {
                                 $domainNetBiosName = 'UNKNOWN'
                             }
-                            $script:netBiosCache[$domainDN] = $domainNetBiosName
                         }
                         
                         $ntAccountString = "$($domainNetBiosName.ToUpper())\$samAccountName"
@@ -233,11 +193,11 @@ function Convert-SidToIdentityReference {
                 $samAccountName = $result.Properties['sAMAccountName'][0]
                 $distinguishedName = $result.Properties['distinguishedName'][0]
                 
-                # Get NetBIOS domain name (with caching)
+                # Get NetBIOS domain name from DomainStore
                 $domainDN = $distinguishedName -replace '^.*?,(?=DC=)', ''
                 
-                if ($script:netBiosCache.ContainsKey($domainDN)) {
-                    $domainNetBiosName = $script:netBiosCache[$domainDN]
+                if ($script:DomainStore -and $script:DomainStore.ContainsKey($domainDN)) {
+                    $domainNetBiosName = $script:DomainStore[$domainDN].nETBIOSName.ToUpper()
                 } else {
                     # Fallback: extract first DC component from DN
                     if ($domainDN -match 'DC=([^,]+)') {
@@ -246,7 +206,6 @@ function Convert-SidToIdentityReference {
                     } else {
                         $domainNetBiosName = 'UNKNOWN'
                     }
-                    $script:netBiosCache[$domainDN] = $domainNetBiosName
                 }
                 
                 $ntAccountString = "$($domainNetBiosName.ToUpper())\$samAccountName"
