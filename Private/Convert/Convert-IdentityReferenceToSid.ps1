@@ -56,20 +56,26 @@ function Convert-IdentityReferenceToSid {
         $IdentityReference
     )
 
-    begin {
-        # Cache for performance (currently unused but kept for consistency with Convert-IdentityReferenceToNTAccount)
-        $script:searchCache = @{}
-    }
-
     process {
         # If already a SID, return it
         if ($IdentityReference -is [System.Security.Principal.SecurityIdentifier]) {
             return $IdentityReference
         }
 
+        # Check PrincipalStore first (if it exists) - it has the SID already
+        if ($script:PrincipalStore) {
+            # Try to find by NTAccount value
+            $matchingPrincipal = $script:PrincipalStore.Values | Where-Object { $_.ntAccountName -eq $IdentityReference.Value } | Select-Object -First 1
+            if ($matchingPrincipal -and $matchingPrincipal.sid) {
+                Write-Verbose "PrincipalStore HIT for '$($IdentityReference.Value)' → SID: $($matchingPrincipal.sid)"
+                return [System.Security.Principal.SecurityIdentifier]::new($matchingPrincipal.sid)
+            }
+        }
+
         # Try the built-in Translate method first (works on domain-joined computers)
         try {
-            return $IdentityReference.Translate([System.Security.Principal.SecurityIdentifier])
+            $sid = $IdentityReference.Translate([System.Security.Principal.SecurityIdentifier])
+            return $sid
         } catch {
             Write-Verbose "Translate() failed, attempting LDAP lookup: $_"
         }
@@ -111,11 +117,12 @@ function Convert-IdentityReferenceToSid {
             }
 
             # First try Global Catalog search for forest-wide lookup
-            if ($rootDomainDN -and $script:GCDirectoryEntry) {
+            if ($rootDomainDN) {
                 Write-Verbose "Attempting Global Catalog search for '$IdentityReference'"
                 $gcSearcher = New-Object System.DirectoryServices.DirectorySearcher
+                $gcPath = "GC://$server/$rootDomainDN"
                 
-                $gcSearcher.SearchRoot = $script:GCDirectoryEntry
+                $gcSearcher.SearchRoot = New-AuthenticatedDirectoryEntry -Path $gcPath
                 $gcSearcher.Filter = "(sAMAccountName=$samAccountName)"
                 $gcSearcher.PropertiesToLoad.AddRange(@('distinguishedName', 'objectSid')) | Out-Null
                 $gcSearcher.SearchScope = [System.DirectoryServices.SearchScope]::Subtree
@@ -146,13 +153,9 @@ function Convert-IdentityReferenceToSid {
             
             # Create LDAP searcher with credentials
             $searcher = New-Object System.DirectoryServices.DirectorySearcher
+            $ldapPath = if ($domainDN) { "LDAP://$server/$domainDN" } else { "LDAP://$server" }
             
-            if ($script:LDAPDirectoryEntry -and $domainDN -and $domainDN -eq $script:RootDSE.defaultNamingContext.Value) {
-                $searcher.SearchRoot = $script:LDAPDirectoryEntry
-            } else {
-                $ldapPath = if ($domainDN) { "LDAP://$server/$domainDN" } else { "LDAP://$server" }
-                $searcher.SearchRoot = New-AuthenticatedDirectoryEntry -Path $ldapPath
-            }
+            $searcher.SearchRoot = New-AuthenticatedDirectoryEntry -Path $ldapPath
             $searcher.Filter = "(sAMAccountName=$samAccountName)"
             $searcher.PropertiesToLoad.Add('objectSid') | Out-Null
             $searcher.SearchScope = [System.DirectoryServices.SearchScope]::Subtree
@@ -163,7 +166,7 @@ function Convert-IdentityReferenceToSid {
             if ($result -and $result.Properties['objectSid'].Count -gt 0) {
                 $sidBytes = $result.Properties['objectSid'][0]
                 $sid = New-Object System.Security.Principal.SecurityIdentifier($sidBytes, 0)
-                Write-Verbose "Resolved '$IdentityReference' to SID '$($sid.Value)' via LDAP"
+                Write-Verbose "Resolved NTAccount '$ntAccountString' to SID '$($sid.Value)' via LDAP"
                 return $sid
             } else {
                 Write-Warning "Could not find principal '$IdentityReference' in Active Directory via LDAP query."

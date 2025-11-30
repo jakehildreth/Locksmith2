@@ -19,8 +19,18 @@ class LS2Principal {
         $this.distinguishedName = $SearchResult.Properties['distinguishedName'][0]
         
         # Create DirectoryEntry to get ObjectSecurity
+        if (-not $Server) {
+            throw "Server parameter is null or empty"
+        }
+        
         $objectPath = "LDAP://$Server/$($this.distinguishedName)"
+        Write-Verbose "LS2Principal: Creating DirectoryEntry for $objectPath"
         $tempEntry = New-AuthenticatedDirectoryEntry -Path $objectPath
+        
+        # Handle case where DirectoryEntry creation fails
+        if (-not $tempEntry) {
+            throw "Failed to create DirectoryEntry for path: $objectPath"
+        }
         
         # Set objectSid
         if ($SearchResult.Properties['objectSid'].Count -gt 0) {
@@ -74,10 +84,18 @@ class LS2Principal {
             $this.memberOf = @()
         }
         
-        # Set ObjectSecurity
-        $this.ObjectSecurity = $tempEntry.ObjectSecurity
+        # Set ObjectSecurity (may fail for some objects in PS5.1)
+        try {
+            $this.ObjectSecurity = $tempEntry.ObjectSecurity
+        } catch {
+            Write-Verbose "Could not retrieve ObjectSecurity for '$($this.distinguishedName)': $_"
+            $this.ObjectSecurity = $null
+        }
         
-        $tempEntry.Dispose()
+        # Dispose only if not null
+        if ($tempEntry) {
+            $tempEntry.Dispose()
+        }
     }
     
     # Constructor for well-known principals that don't exist in AD

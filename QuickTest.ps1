@@ -1,14 +1,16 @@
 Set-Location ~\Documents\Locksmith2\
 Import-Module .\Locksmith2.psd1 -Force
 
+if (-not $Credential) {
+    $Credential = New-Credential -User 'adcs.goat\Administrator'
+}
+$Forest = 'adcs.goat'
+
 # Start performance measurement
 $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
 
-# $Credential = New-Credential -User 'adcs.goat\Administrator'
-$Forest = 'adcs.goat'
+# Run main function
 $results = Invoke-Locksmith2 -Forest $Forest -Credential $Credential -Verbose -SkipPowerShellCheck
-$stores = Get-Locksmith2Stores
-# $stores.PrincipalStore.Values
 
 # Stop performance measurement and display results
 $stopwatch.Stop()
@@ -32,7 +34,7 @@ if ($previousRuns) {
 $logEntry = "[{0:yyyy-MM-dd HH:mm:ss}] PS {1} | Execution Time: {2:F3} seconds" -f (Get-Date), $PSVersionTable.PSVersion, $stopwatch.Elapsed.TotalSeconds
 $logEntry | Add-Content -Path $logPath
 
-$diffText = if ($timeDiff -ne $null) {
+$diffText = if ($null -ne $timeDiff) {
     $diffSign = if ($timeDiff -gt 0) { "+" } else { "" }
     $diffColor = if ($timeDiff -lt 0) { "Green" } else { "Red" }
     " ($diffSign$($timeDiff.ToString('F3'))s vs previous)"

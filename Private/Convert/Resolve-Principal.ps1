@@ -131,11 +131,12 @@ function Resolve-Principal {
             }
 
             # First try Global Catalog search for forest-wide lookup
-            if ($rootDomainDN -and $script:GCDirectoryEntry) {
+            if ($rootDomainDN) {
                 Write-Verbose "Attempting Global Catalog search for SID '$sidString'"
                 $gcSearcher = New-Object System.DirectoryServices.DirectorySearcher
+                $gcPath = "GC://$server/$rootDomainDN"
                 
-                $gcSearcher.SearchRoot = $script:GCDirectoryEntry
+                $gcSearcher.SearchRoot = New-AuthenticatedDirectoryEntry -Path $gcPath
                 $gcSearcher.Filter = "(objectSid=$sidString)"
                 # Load all principal properties for complete store object
                 $gcSearcher.PropertiesToLoad.AddRange(@('distinguishedName', 'objectSid', 'sAMAccountName', 'objectClass', 'displayName', 'memberOf', 'userPrincipalName')) | Out-Null
@@ -181,13 +182,9 @@ function Resolve-Principal {
             
             # Create LDAP searcher with credentials
             $searcher = New-Object System.DirectoryServices.DirectorySearcher
+            $ldapPath = "LDAP://$server/$domainDN"
             
-            if ($script:LDAPDirectoryEntry -and $domainDN -eq $script:RootDSE.defaultNamingContext.Value) {
-                $searcher.SearchRoot = $script:LDAPDirectoryEntry
-            } else {
-                $ldapPath = "LDAP://$server/$domainDN"
-                $searcher.SearchRoot = New-AuthenticatedDirectoryEntry -Path $ldapPath
-            }
+            $searcher.SearchRoot = New-AuthenticatedDirectoryEntry -Path $ldapPath
             $searcher.Filter = "(objectSid=$sidString)"
             # Load all principal properties for complete store object
             $searcher.PropertiesToLoad.AddRange(@('distinguishedName', 'objectSid', 'sAMAccountName', 'objectClass', 'displayName', 'memberOf', 'userPrincipalName')) | Out-Null

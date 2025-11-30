@@ -65,20 +65,26 @@ function Convert-IdentityReferenceToNTAccount {
         $RootDSE
     )
 
-    begin {
-        # DomainStore is pre-populated by Initialize-DomainStore
-        # No need for separate caching
-    }
-
     process {
         # If already an NTAccount, return it
         if ($SecurityIdentifier -is [System.Security.Principal.NTAccount]) {
             return $SecurityIdentifier
         }
 
+        # Check PrincipalStore first (if it exists) - it has the NTAccount name already
+        $sidString = $SecurityIdentifier.Value
+        if ($script:PrincipalStore -and $script:PrincipalStore.ContainsKey($sidString)) {
+            $storedPrincipal = $script:PrincipalStore[$sidString]
+            if ($storedPrincipal.ntAccountName) {
+                Write-Verbose "PrincipalStore HIT for SID '$sidString' → NTAccount: $($storedPrincipal.ntAccountName)"
+                return [System.Security.Principal.NTAccount]::new($storedPrincipal.ntAccountName)
+            }
+        }
+
         # Try the built-in Translate method first (works on domain-joined computers)
         try {
-            return $SecurityIdentifier.Translate([System.Security.Principal.NTAccount])
+            $ntAccount = $SecurityIdentifier.Translate([System.Security.Principal.NTAccount])
+            return $ntAccount
         } catch {
             Write-Verbose "Translate() failed, attempting LDAP lookup: $_"
         }
@@ -108,11 +114,12 @@ function Convert-IdentityReferenceToNTAccount {
             }
 
             # First try Global Catalog search for forest-wide lookup
-            if ($rootDomainDN -and $script:GCDirectoryEntry) {
+            if ($rootDomainDN) {
                 Write-Verbose "Attempting Global Catalog search for SID '$sidString'"
                 $gcSearcher = New-Object System.DirectoryServices.DirectorySearcher
+                $gcPath = "GC://$server/$rootDomainDN"
                 
-                $gcSearcher.SearchRoot = $script:GCDirectoryEntry
+                $gcSearcher.SearchRoot = New-AuthenticatedDirectoryEntry -Path $gcPath
                 $gcSearcher.Filter = "(objectSid=$sidString)"
                 $gcSearcher.PropertiesToLoad.AddRange(@('distinguishedName', 'sAMAccountName')) | Out-Null
                 $gcSearcher.SearchScope = [System.DirectoryServices.SearchScope]::Subtree
@@ -165,13 +172,9 @@ function Convert-IdentityReferenceToNTAccount {
             
             # Create LDAP searcher with credentials
             $searcher = New-Object System.DirectoryServices.DirectorySearcher
+            $ldapPath = "LDAP://$server/$domainDN"
             
-            if ($script:LDAPDirectoryEntry -and $domainDN -eq $script:RootDSE.defaultNamingContext.Value) {
-                $searcher.SearchRoot = $script:LDAPDirectoryEntry
-            } else {
-                $ldapPath = "LDAP://$server/$domainDN"
-                $searcher.SearchRoot = New-AuthenticatedDirectoryEntry -Path $ldapPath
-            }
+            $searcher.SearchRoot = New-AuthenticatedDirectoryEntry -Path $ldapPath
             $searcher.Filter = "(objectSid=$sidString)"
             $searcher.PropertiesToLoad.AddRange(@('sAMAccountName', 'distinguishedName')) | Out-Null
             $searcher.SearchScope = [System.DirectoryServices.SearchScope]::Subtree
