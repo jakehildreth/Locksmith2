@@ -64,11 +64,7 @@ function Initialize-DomainStore {
                 $server = $Matches[1]
                 $partitionsPath = "LDAP://$server/CN=Partitions,$configNC"
                 
-                $partitionsEntry = New-Object System.DirectoryServices.DirectoryEntry(
-                    $partitionsPath,
-                    $script:Credential.UserName,
-                    $script:Credential.GetNetworkCredential().Password
-                )
+                $partitionsEntry = New-AuthenticatedDirectoryEntry -Path $partitionsPath
                 
                 $partitionsSearcher = New-Object System.DirectoryServices.DirectorySearcher
                 $partitionsSearcher.SearchRoot = $partitionsEntry

@@ -108,11 +108,7 @@ function Resolve-Principal {
             
             # Create fresh DirectoryEntry from stored DN
             $objectPath = "LDAP://$server/$($storedPrincipal.distinguishedName)"
-            $objectEntry = New-Object System.DirectoryServices.DirectoryEntry(
-                $objectPath,
-                $script:Credential.UserName,
-                $script:Credential.GetNetworkCredential().Password
-            )
+            $objectEntry = New-AuthenticatedDirectoryEntry -Path $objectPath
             
             return $objectEntry
         }
@@ -135,18 +131,11 @@ function Resolve-Principal {
             }
 
             # First try Global Catalog search for forest-wide lookup
-            if ($rootDomainDN) {
+            if ($rootDomainDN -and $script:GCDirectoryEntry) {
                 Write-Verbose "Attempting Global Catalog search for SID '$sidString'"
                 $gcSearcher = New-Object System.DirectoryServices.DirectorySearcher
-                $gcPath = "GC://$server/$rootDomainDN"
                 
-                $gcEntry = New-Object System.DirectoryServices.DirectoryEntry(
-                    $gcPath,
-                    $script:Credential.UserName,
-                    $script:Credential.GetNetworkCredential().Password
-                )
-                
-                $gcSearcher.SearchRoot = $gcEntry
+                $gcSearcher.SearchRoot = $script:GCDirectoryEntry
                 $gcSearcher.Filter = "(objectSid=$sidString)"
                 # Load all principal properties for complete store object
                 $gcSearcher.PropertiesToLoad.AddRange(@('distinguishedName', 'objectSid', 'sAMAccountName', 'objectClass', 'displayName', 'memberOf', 'userPrincipalName')) | Out-Null
@@ -169,11 +158,7 @@ function Resolve-Principal {
                         
                         # Return DirectoryEntry for the found object
                         $objectPath = "LDAP://$server/$distinguishedName"
-                        $objectEntry = New-Object System.DirectoryServices.DirectoryEntry(
-                            $objectPath,
-                            $script:Credential.UserName,
-                            $script:Credential.GetNetworkCredential().Password
-                        )
+                        $objectEntry = New-AuthenticatedDirectoryEntry -Path $objectPath
                         
                         Write-Verbose "Resolved SID '$sidString' to '$distinguishedName' via Global Catalog"
                         return $objectEntry
@@ -182,7 +167,6 @@ function Resolve-Principal {
                     Write-Verbose "Global Catalog search failed, falling back to domain search: $_"
                 } finally {
                     if ($gcSearcher) { $gcSearcher.Dispose() }
-                    if ($gcEntry) { $gcEntry.Dispose() }
                 }
             }
 
@@ -197,15 +181,13 @@ function Resolve-Principal {
             
             # Create LDAP searcher with credentials
             $searcher = New-Object System.DirectoryServices.DirectorySearcher
-            $ldapPath = "LDAP://$server/$domainDN"
             
-            $directoryEntry = New-Object System.DirectoryServices.DirectoryEntry(
-                $ldapPath,
-                $script:Credential.UserName,
-                $script:Credential.GetNetworkCredential().Password
-            )
-            
-            $searcher.SearchRoot = $directoryEntry
+            if ($script:LDAPDirectoryEntry -and $domainDN -eq $script:RootDSE.defaultNamingContext.Value) {
+                $searcher.SearchRoot = $script:LDAPDirectoryEntry
+            } else {
+                $ldapPath = "LDAP://$server/$domainDN"
+                $searcher.SearchRoot = New-AuthenticatedDirectoryEntry -Path $ldapPath
+            }
             $searcher.Filter = "(objectSid=$sidString)"
             # Load all principal properties for complete store object
             $searcher.PropertiesToLoad.AddRange(@('distinguishedName', 'objectSid', 'sAMAccountName', 'objectClass', 'displayName', 'memberOf', 'userPrincipalName')) | Out-Null
@@ -226,11 +208,7 @@ function Resolve-Principal {
                 
                 # Return DirectoryEntry for the found object
                 $objectPath = "LDAP://$server/$distinguishedName"
-                $objectEntry = New-Object System.DirectoryServices.DirectoryEntry(
-                    $objectPath,
-                    $script:Credential.UserName,
-                    $script:Credential.GetNetworkCredential().Password
-                )
+                $objectEntry = New-AuthenticatedDirectoryEntry -Path $objectPath
                 
                 Write-Verbose "Resolved SID '$sidString' to '$distinguishedName' via LDAP"
                 return $objectEntry
@@ -256,7 +234,6 @@ function Resolve-Principal {
             return $null
         } finally {
             if ($searcher) { $searcher.Dispose() }
-            if ($directoryEntry) { $directoryEntry.Dispose() }
         }
     }
 }

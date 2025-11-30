@@ -20,11 +20,7 @@ class LS2Principal {
         
         # Create DirectoryEntry to get ObjectSecurity
         $objectPath = "LDAP://$Server/$($this.distinguishedName)"
-        $tempEntry = New-Object System.DirectoryServices.DirectoryEntry(
-            $objectPath,
-            $script:Credential.UserName,
-            $script:Credential.GetNetworkCredential().Password
-        )
+        $tempEntry = New-AuthenticatedDirectoryEntry -Path $objectPath
         
         # Set objectSid
         if ($SearchResult.Properties['objectSid'].Count -gt 0) {

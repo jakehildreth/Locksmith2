@@ -63,11 +63,7 @@ function Get-AdcsObject {
             Write-Verbose "ADCS Object Store currently has $($script:AdcsObjectStore.Count) entries"
             
             # Create DirectorySearcher for recursive search
-            $searcherDirectoryEntry = New-Object System.DirectoryServices.DirectoryEntry(
-                "$($script:RootDSE.Parent)/$searchBase",
-                $script:Credential.UserName,
-                $script:Credential.GetNetworkCredential().Password
-            )
+            $searcherDirectoryEntry = New-AuthenticatedDirectoryEntry -Path "$($script:RootDSE.Parent)/$searchBase"
             $searcher = New-Object System.DirectoryServices.DirectorySearcher($searcherDirectoryEntry)
             $searcher.Filter = "(objectClass=*)"  # Get all objects
             $searcher.SearchScope = [System.DirectoryServices.SearchScope]::Subtree  # Recursive search
