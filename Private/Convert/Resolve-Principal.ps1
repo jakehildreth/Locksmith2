@@ -70,54 +70,6 @@ function Resolve-Principal {
         if (-not $script:DomainStore) {
             $script:DomainStore = @{}
         }
-        
-        # Pre-load all domains into Domain Store if we have credentials
-        if ($script:Credential -and $script:RootDSE) {
-            try {
-                $configNC = $script:RootDSE.configurationNamingContext.Value
-                if ($script:RootDSE.Path -match 'LDAP://([^/]+)') {
-                    $server = $Matches[1]
-                    $partitionsPath = "LDAP://$server/CN=Partitions,$configNC"
-                    
-                    $partitionsEntry = New-Object System.DirectoryServices.DirectoryEntry(
-                        $partitionsPath,
-                        $script:Credential.UserName,
-                        $script:Credential.GetNetworkCredential().Password
-                    )
-                    
-                    $partitionsSearcher = New-Object System.DirectoryServices.DirectorySearcher
-                    $partitionsSearcher.SearchRoot = $partitionsEntry
-                    $partitionsSearcher.Filter = "(objectClass=crossRef)"
-                    $partitionsSearcher.PropertiesToLoad.AddRange(@('nCName', 'nETBIOSName', 'dnsRoot')) | Out-Null
-                    $partitionsSearcher.SearchScope = [System.DirectoryServices.SearchScope]::OneLevel
-                    
-                    $allPartitions = $partitionsSearcher.FindAll()
-                    foreach ($partition in $allPartitions) {
-                        if ($partition.Properties['nCName'].Count -gt 0) {
-                            $domainDN = $partition.Properties['nCName'][0]
-                            
-                            # Create domain store entry with all properties
-                            if (-not $script:DomainStore.ContainsKey($domainDN)) {
-                                $domainObject = [PSCustomObject]@{
-                                    distinguishedName = $domainDN
-                                    nETBIOSName = if ($partition.Properties['nETBIOSName'].Count -gt 0) { $partition.Properties['nETBIOSName'][0] } else { $null }
-                                    dnsRoot = if ($partition.Properties['dnsRoot'].Count -gt 0) { $partition.Properties['dnsRoot'][0] } else { $null }
-                                }
-                                
-                                $script:DomainStore[$domainDN] = $domainObject
-                                Write-Verbose "Stored domain: $domainDN (NetBIOS: $($domainObject.nETBIOSName))"
-                            }
-                        }
-                    }
-                    
-                    $allPartitions.Dispose()
-                    $partitionsSearcher.Dispose()
-                    $partitionsEntry.Dispose()
-                }
-            } catch {
-                Write-Verbose "Could not pre-load NetBIOS names: $_"
-            }
-        }
     }
 
     process {
@@ -130,9 +82,19 @@ function Resolve-Principal {
         
         $sidString = $sidKey.Value
         
-        # Capture NTAccount name if available for well-known principals
+        # Try to get NTAccount name for the SID (for well-known principals)
         $ntAccountName = if ($IdentityReference -is [System.Security.Principal.NTAccount]) {
+            # Already have the friendly name
             $IdentityReference.Value
+        } elseif ($IdentityReference -is [System.Security.Principal.SecurityIdentifier]) {
+            # Try to translate SID to NTAccount to get friendly name
+            try {
+                $ntAccount = $IdentityReference.Translate([System.Security.Principal.NTAccount])
+                $ntAccount.Value
+            } catch {
+                Write-Verbose "Could not translate SID '$sidString' to NTAccount (likely not a well-known SID)"
+                $null
+            }
         } else {
             $null
         }
@@ -163,118 +125,7 @@ function Resolve-Principal {
         
         Write-Verbose "Store MISS: No stored DN found for SID '$sidString', performing LDAP lookup"
         
-        # Convert NTAccount to SecurityIdentifier if needed
-        if ($IdentityReference -is [System.Security.Principal.NTAccount]) {
-            Write-Verbose "Converting NTAccount '$IdentityReference' to SID"
-            try {
-                $sid = $IdentityReference.Translate([System.Security.Principal.SecurityIdentifier])
-            } catch {
-                Write-Verbose "Built-in Translate() failed, attempting LDAP lookup for NTAccount"
-                
-                # Parse the NTAccount string
-                $accountString = $IdentityReference.Value
-                # if ($accountString -match '^(.+?)\\(.+)$') {
-                #     $domain = $Matches[1]
-                #     $samAccountName = $Matches[2]
-                # } elseif ($accountString -match '@') {
-                #     # UPN format
-                #     $samAccountName = $accountString.Split('@')[0]
-                #     $domain = $null
-                # } else {
-                #     $samAccountName = $accountString
-                #     $domain = $null
-                # }
-                
-                # Extract server from RootDSE
-                if ($script:RootDSE.Path -match 'LDAP://([^/]+)') {
-                    $server = $Matches[1]
-                } else {
-                    Write-Warning "Could not extract server from RootDSE path."
-                    return $null
-                }
-                
-                $rootDomainDN = $script:RootDSE.rootDomainNamingContext.Value
-                
-                # Try Global Catalog search for the account
-                Write-Verbose "Attempting Global Catalog search for NTAccount '$samAccountName'"
-                $gcSearcher = New-Object System.DirectoryServices.DirectorySearcher
-                $gcPath = "GC://$server/$rootDomainDN"
-                
-                $gcEntry = New-Object System.DirectoryServices.DirectoryEntry(
-                    $gcPath,
-                    $Credential.UserName,
-                    $Credential.GetNetworkCredential().Password
-                )
-                
-                $gcSearcher.SearchRoot = $gcEntry
-                $gcSearcher.Filter = "(sAMAccountName=$samAccountName)"
-                # Load all principal properties for complete store object
-                $gcSearcher.PropertiesToLoad.AddRange(@('distinguishedName', 'objectSid', 'sAMAccountName', 'objectClass', 'displayName', 'memberOf', 'userPrincipalName')) | Out-Null
-                $gcSearcher.SearchScope = [System.DirectoryServices.SearchScope]::Subtree
-                $gcSearcher.PageSize = 1000
-                
-                try {
-                    $gcResult = $gcSearcher.FindOne()
-                    
-                    if ($gcResult) {
-                        $distinguishedName = $gcResult.Properties['distinguishedName'][0]
-                        Write-Verbose "Found NTAccount in GC at: $distinguishedName"
-                        
-                        # Build complete principal object for store
-                        # Create DirectoryEntry to get ObjectSecurity
-                        $objectPath = "LDAP://$server/$distinguishedName"
-                        $tempEntry = New-Object System.DirectoryServices.DirectoryEntry(
-                            $objectPath,
-                            $script:Credential.UserName,
-                            $script:Credential.GetNetworkCredential().Password
-                        )
-                        
-                        $principalObj = [PSCustomObject]@{
-                            distinguishedName = $distinguishedName
-                            objectSid = if ($gcResult.Properties['objectSid'].Count -gt 0) { 
-                                (New-Object System.Security.Principal.SecurityIdentifier($gcResult.Properties['objectSid'][0], 0)).Value 
-                            } else { $null }
-                            sAMAccountName = if ($gcResult.Properties['sAMAccountName'].Count -gt 0) { $gcResult.Properties['sAMAccountName'][0] } else { $null }
-                            objectClass = if ($gcResult.Properties['objectClass'].Count -gt 0) { $gcResult.Properties['objectClass'][-1] } else { $null }
-                            displayName = if ($gcResult.Properties['displayName'].Count -gt 0) { $gcResult.Properties['displayName'][0] } else { $null }
-                            userPrincipalName = if ($gcResult.Properties['userPrincipalName'].Count -gt 0) { $gcResult.Properties['userPrincipalName'][0] } else { $null }
-                            memberOf = if ($gcResult.Properties['memberOf'].Count -gt 0) { @($gcResult.Properties['memberOf']) } else { @() }
-                            ObjectSecurity = $tempEntry.ObjectSecurity
-                        }
-                        
-                        $tempEntry.Dispose()
-                        
-                        # Store the complete principal object using SID as key
-                        $script:PrincipalStore[$sidString] = $principalObj
-                        Write-Verbose "Stored principal object for SID '$sidString': $distinguishedName (objectClass: $($principalObj.objectClass))"
-                        
-                        # Return DirectoryEntry for the found object
-                        $objectPath = "LDAP://$server/$distinguishedName"
-                        $objectEntry = New-Object System.DirectoryServices.DirectoryEntry(
-                            $objectPath,
-                            $script:Credential.UserName,
-                            $script:Credential.GetNetworkCredential().Password
-                        )
-                        
-                        Write-Verbose "Resolved NTAccount '$accountString' to '$distinguishedName' via Global Catalog"
-                        return $objectEntry
-                    } else {
-                        Write-Warning "Could not find NTAccount '$accountString' in Active Directory."
-                        return $null
-                    }
-                } finally {
-                    if ($gcSearcher) { $gcSearcher.Dispose() }
-                    if ($gcEntry) { $gcEntry.Dispose() }
-                }
-            }
-        } else {
-            $sid = $IdentityReference
-        }
-
         try {
-            # Get the SID string
-            $sidString = $sid.Value
-
             # Extract server from RootDSE
             if ($script:RootDSE) {
                 $rootDomainDN = $script:RootDSE.rootDomainNamingContext.Value
@@ -330,7 +181,10 @@ function Resolve-Principal {
                                 (New-Object System.Security.Principal.SecurityIdentifier($gcResult.Properties['objectSid'][0], 0)).Value 
                             } else { $null }
                             sAMAccountName = if ($gcResult.Properties['sAMAccountName'].Count -gt 0) { $gcResult.Properties['sAMAccountName'][0] } else { $null }
-                            objectClass = if ($gcResult.Properties['objectClass'].Count -gt 0) { $gcResult.Properties['objectClass'][-1] } else { $null }
+                            objectClass = if ($gcResult.Properties['objectClass'].Count -gt 0) { 
+                                $classes = @($gcResult.Properties['objectClass'])
+                                $classes[$classes.Count - 1]
+                            } else { $null }
                             displayName = if ($gcResult.Properties['displayName'].Count -gt 0) { $gcResult.Properties['displayName'][0] } else { $null }
                             userPrincipalName = if ($gcResult.Properties['userPrincipalName'].Count -gt 0) { $gcResult.Properties['userPrincipalName'][0] } else { $null }
                             memberOf = if ($gcResult.Properties['memberOf'].Count -gt 0) { @($gcResult.Properties['memberOf']) } else { @() }
@@ -408,7 +262,10 @@ function Resolve-Principal {
                         (New-Object System.Security.Principal.SecurityIdentifier($result.Properties['objectSid'][0], 0)).Value 
                     } else { $null }
                     sAMAccountName = if ($result.Properties['sAMAccountName'].Count -gt 0) { $result.Properties['sAMAccountName'][0] } else { $null }
-                    objectClass = if ($result.Properties['objectClass'].Count -gt 0) { $result.Properties['objectClass'][-1] } else { $null }
+                    objectClass = if ($result.Properties['objectClass'].Count -gt 0) { 
+                        $classes = @($result.Properties['objectClass'])
+                        $classes[$classes.Count - 1]
+                    } else { $null }
                     displayName = if ($result.Properties['displayName'].Count -gt 0) { $result.Properties['displayName'][0] } else { $null }
                     userPrincipalName = if ($result.Properties['userPrincipalName'].Count -gt 0) { $result.Properties['userPrincipalName'][0] } else { $null }
                     memberOf = if ($result.Properties['memberOf'].Count -gt 0) { @($result.Properties['memberOf']) } else { @() }
