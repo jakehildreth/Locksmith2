@@ -57,7 +57,7 @@ function Convert-IdentityReferenceToSid {
     )
 
     begin {
-        # Cache for performance (currently unused but kept for consistency with Convert-SidToIdentityReference)
+        # Cache for performance (currently unused but kept for consistency with Convert-IdentityReferenceToNTAccount)
         $script:searchCache = @{}
     }
 

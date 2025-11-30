@@ -179,7 +179,7 @@ function Resolve-Principal {
                         $principalNTAccountName = if ($ntAccountName) {
                             $ntAccountName
                         } else {
-                            $translated = $sidKey | Convert-SidToIdentityReference -Credential $script:Credential -RootDSE $script:RootDSE
+                            $translated = $sidKey | Convert-IdentityReferenceToNTAccount -Credential $script:Credential -RootDSE $script:RootDSE
                             if ($translated -is [System.Security.Principal.NTAccount]) {
                                 $translated.Value
                             } else {
