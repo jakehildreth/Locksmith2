@@ -64,12 +64,6 @@ function Resolve-Principal {
         if (-not $script:PrincipalStore) {
             $script:PrincipalStore = @{}
         }
-        
-        # Initialize Domain Store if it doesn't exist
-        # Store for Domain DN → Full domain object with all properties
-        if (-not $script:DomainStore) {
-            $script:DomainStore = @{}
-        }
     }
 
     process {
@@ -92,7 +86,7 @@ function Resolve-Principal {
                 $ntAccount = $IdentityReference.Translate([System.Security.Principal.NTAccount])
                 $ntAccount.Value
             } catch {
-                Write-Verbose "Could not translate SID '$sidString' to NTAccount (likely not a well-known SID)"
+                Write-Verbose "Could not translate SID '$sidString' to NTAccount. $_"
                 $null
             }
         } else {
@@ -167,46 +161,7 @@ function Resolve-Principal {
                         Write-Verbose "Found SID in GC at: $distinguishedName"
                         
                         # Build complete principal object for store
-                        # Create DirectoryEntry to get ObjectSecurity
-                        $objectPath = "LDAP://$server/$distinguishedName"
-                        $tempEntry = New-Object System.DirectoryServices.DirectoryEntry(
-                            $objectPath,
-                            $script:Credential.UserName,
-                            $script:Credential.GetNetworkCredential().Password
-                        )
-                        
-                        # For regular principals without NTAccountName, generate it from SID
-                        $principalNTAccountName = if ($ntAccountName) {
-                            $ntAccountName
-                        } else {
-                            $translated = $sidKey | Convert-IdentityReferenceToNTAccount -Credential $script:Credential -RootDSE $script:RootDSE
-                            if ($translated -is [System.Security.Principal.NTAccount]) {
-                                $translated.Value
-                            } else {
-                                $null
-                            }
-                        }
-                        
-                        $principalObject = [PSCustomObject]@{
-                            distinguishedName = $distinguishedName
-                            objectSid = if ($gcResult.Properties['objectSid'].Count -gt 0) { 
-                                (New-Object System.Security.Principal.SecurityIdentifier($gcResult.Properties['objectSid'][0], 0)).Value 
-                            } else { $null }
-                            sAMAccountName = if ($gcResult.Properties['sAMAccountName'].Count -gt 0) { 
-                                $gcResult.Properties['sAMAccountName'][0] 
-                            } else { $null }
-                            objectClass = if ($gcResult.Properties['objectClass'].Count -gt 0) { 
-                                $classes = @($gcResult.Properties['objectClass'])
-                                $classes[$classes.Count - 1]
-                            } else { $null }
-                            displayName = if ($gcResult.Properties['displayName'].Count -gt 0) { $gcResult.Properties['displayName'][0] } else { $null }
-                            NTAccountName = $principalNTAccountName
-                            userPrincipalName = if ($gcResult.Properties['userPrincipalName'].Count -gt 0) { $gcResult.Properties['userPrincipalName'][0] } else { $null }
-                            memberOf = if ($gcResult.Properties['memberOf'].Count -gt 0) { @($gcResult.Properties['memberOf']) } else { @() }
-                            ObjectSecurity = $tempEntry.ObjectSecurity
-                        }
-                        
-                        $tempEntry.Dispose()
+                        $principalObject = [LS2Principal]::new($gcResult, $server, $sidKey, $ntAccountName)
                         
                         # Store the complete principal object using SID as key
                         $script:PrincipalStore[$sidString] = $principalObject
@@ -263,46 +218,7 @@ function Resolve-Principal {
                 $distinguishedName = $result.Properties['distinguishedName'][0]
                 
                 # Build complete principal object for store
-                # Create DirectoryEntry to get ObjectSecurity
-                $objectPath = "LDAP://$server/$distinguishedName"
-                $tempEntry = New-Object System.DirectoryServices.DirectoryEntry(
-                    $objectPath,
-                    $script:Credential.UserName,
-                    $script:Credential.GetNetworkCredential().Password
-                )
-                
-                # For regular principals without NTAccountName, generate it from SID
-                $principalNTAccountName = if ($ntAccountName) {
-                    $ntAccountName
-                } else {
-                    $translated = $sidKey | Convert-SidToIdentityReference -Credential $script:Credential -RootDSE $script:RootDSE
-                    if ($translated -is [System.Security.Principal.NTAccount]) {
-                        $translated.Value
-                    } else {
-                        $null
-                    }
-                }
-                
-                $principalObject = [PSCustomObject]@{
-                    distinguishedName = $distinguishedName
-                    objectSid = if ($result.Properties['objectSid'].Count -gt 0) { 
-                        (New-Object System.Security.Principal.SecurityIdentifier($result.Properties['objectSid'][0], 0)).Value 
-                    } else { $null }
-                    sAMAccountName = if ($result.Properties['sAMAccountName'].Count -gt 0) { 
-                        $result.Properties['sAMAccountName'][0] 
-                    } else { $null }
-                    objectClass = if ($result.Properties['objectClass'].Count -gt 0) { 
-                        $classes = @($result.Properties['objectClass'])
-                        $classes[$classes.Count - 1]
-                    } else { $null }
-                    displayName = if ($result.Properties['displayName'].Count -gt 0) { $result.Properties['displayName'][0] } else { $null }
-                    NTAccountName = $principalNTAccountName
-                    userPrincipalName = if ($result.Properties['userPrincipalName'].Count -gt 0) { $result.Properties['userPrincipalName'][0] } else { $null }
-                    memberOf = if ($result.Properties['memberOf'].Count -gt 0) { @($result.Properties['memberOf']) } else { @() }
-                    ObjectSecurity = $tempEntry.ObjectSecurity
-                }
-                
-                $tempEntry.Dispose()
+                $principalObject = [LS2Principal]::new($result, $server, $sidKey, $ntAccountName)
                 
                 # Store the complete principal object using SID as key
                 $script:PrincipalStore[$sidString] = $principalObject
@@ -326,24 +242,7 @@ function Resolve-Principal {
                 if ($ntAccountName) {
                     Write-Verbose "Creating store entry for well-known SID '$sidString' with name '$ntAccountName'"
                     
-                    # Parse the NTAccount name to extract sAMAccountName
-                    $samAccount = if ($ntAccountName -match '^(.+?)\\(.+)$') {
-                        $Matches[2]  # Extract account name after backslash
-                    } else {
-                        $ntAccountName
-                    }
-                    
-                    $principalObject = [PSCustomObject]@{
-                        distinguishedName = $null  # Well-known SIDs don't have DNs in AD
-                        objectSid = $sidString
-                        sAMAccountName = $null
-                        objectClass = 'wellKnownPrincipal'
-                        displayName = $null
-                        NTAccountName = $ntAccountName
-                        userPrincipalName = $null
-                        memberOf = @()
-                        ObjectSecurity = $null
-                    }
+                    $principalObject = [LS2Principal]::new($sidString, $ntAccountName)
                     
                     # Store the principal object
                     $script:PrincipalStore[$sidString] = $principalObject
