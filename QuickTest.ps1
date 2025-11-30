@@ -8,15 +8,48 @@ $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
 $Forest = 'adcs.goat'
 $results = Invoke-Locksmith2 -Forest $Forest -Credential $Credential -Verbose -SkipPowerShellCheck
 $stores = Get-Locksmith2Stores
-$stores.PrincipalStore.Values
+# $stores.PrincipalStore.Values
 
 # Stop performance measurement and display results
 $stopwatch.Stop()
-Write-Host "`n========================================" -ForegroundColor Cyan
-Write-Host "Performance Metrics:" -ForegroundColor Cyan
-Write-Host "========================================" -ForegroundColor Cyan
-Write-Host "Total Execution Time: $($stopwatch.Elapsed.TotalSeconds.ToString('F3')) seconds" -ForegroundColor Green
-Write-Host "  Minutes: $($stopwatch.Elapsed.Minutes)" -ForegroundColor Gray
-Write-Host "  Seconds: $($stopwatch.Elapsed.Seconds)" -ForegroundColor Gray
-Write-Host "  Milliseconds: $($stopwatch.Elapsed.Milliseconds)" -ForegroundColor Gray
-Write-Host "========================================`n" -ForegroundColor Cyan
+
+# Get previous run time for this PS version
+$logPath = "~\Documents\Locksmith2\performance.log"
+$currentVersion = $PSVersionTable.PSVersion.ToString()
+$previousRuns = Get-Content -Path $logPath -ErrorAction SilentlyContinue | Where-Object { $_ -match "PS $([regex]::Escape($currentVersion))" }
+$previousTime = $null
+$timeDiff = $null
+
+if ($previousRuns) {
+    $lastRun = $previousRuns | Select-Object -Last 1
+    if ($lastRun -match "Execution Time: ([\d.]+) seconds") {
+        $previousTime = [double]$Matches[1]
+        $timeDiff = $stopwatch.Elapsed.TotalSeconds - $previousTime
+    }
+}
+
+# Log execution time to file
+$logEntry = "[{0:yyyy-MM-dd HH:mm:ss}] PS {1} | Execution Time: {2:F3} seconds" -f (Get-Date), $PSVersionTable.PSVersion, $stopwatch.Elapsed.TotalSeconds
+$logEntry | Add-Content -Path $logPath
+
+$diffText = if ($timeDiff -ne $null) {
+    $diffSign = if ($timeDiff -gt 0) { "+" } else { "" }
+    $diffColor = if ($timeDiff -lt 0) { "Green" } else { "Red" }
+    " ($diffSign$($timeDiff.ToString('F3'))s vs previous)"
+} else {
+    " (first run)"
+}
+
+$performanceOutput = @"
+
+========================================
+Performance Metrics:
+========================================
+Total Execution Time: $($stopwatch.Elapsed.TotalSeconds.ToString('F3')) seconds$diffText
+  Minutes: $($stopwatch.Elapsed.Minutes)
+  Seconds: $($stopwatch.Elapsed.Seconds)
+  Milliseconds: $($stopwatch.Elapsed.Milliseconds)
+========================================
+
+"@
+Write-Host $performanceOutput -ForegroundColor Cyan
