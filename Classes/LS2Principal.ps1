@@ -47,13 +47,22 @@ class LS2Principal {
             $this.displayName = $SearchResult.Properties['displayName'][0]
         }
         
-        # Set NTAccountName - use provided or generate from SID
+        # Set NTAccountName - use provided or build from sAMAccountName + domain
         if ($NTAccountName) {
             $this.NTAccountName = $NTAccountName
-        } else {
-            $translated = $SidKey | Convert-IdentityReferenceToNTAccount -Credential $script:Credential -RootDSE $script:RootDSE
-            if ($translated -is [System.Security.Principal.NTAccount]) {
-                $this.NTAccountName = $translated.Value
+        } elseif ($this.sAMAccountName) {
+            # Build NTAccount name from sAMAccountName and domain NetBIOS name
+            $domainDN = $this.distinguishedName -replace '^.*?,(?=DC=)', ''
+            
+            if ($script:DomainStore -and $script:DomainStore.ContainsKey($domainDN)) {
+                $domainNetBiosName = $script:DomainStore[$domainDN].nETBIOSName.ToUpper()
+                $this.NTAccountName = "$domainNetBiosName\$($this.sAMAccountName)"
+            } else {
+                # Fallback: extract first DC component from DN
+                if ($domainDN -match 'DC=([^,]+)') {
+                    $domainNetBiosName = $Matches[1].ToUpper()
+                    $this.NTAccountName = "$domainNetBiosName\$($this.sAMAccountName)"
+                }
             }
         }
         
