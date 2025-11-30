@@ -93,7 +93,7 @@ function Convert-SidToIdentityReference {
                     foreach ($partition in $allPartitions) {
                         if ($partition.Properties['nCName'].Count -gt 0 -and $partition.Properties['nETBIOSName'].Count -gt 0) {
                             $domainDN = $partition.Properties['nCName'][0]
-                            $netBiosName = $partition.Properties['nETBIOSName'][0]
+                            $netBiosName = $partition.Properties['nETBIOSName'][0].ToUpper()
                             $script:netBiosCache[$domainDN] = $netBiosName
                             Write-Verbose "Pre-cached NetBIOS name '$netBiosName' for '$domainDN'"
                         }
@@ -188,7 +188,7 @@ function Convert-SidToIdentityReference {
                             $script:netBiosCache[$domainDN] = $domainNetBiosName
                         }
                         
-                        $ntAccountString = "$domainNetBiosName\$samAccountName"
+                        $ntAccountString = "$($domainNetBiosName.ToUpper())\$samAccountName"
                         $ntAccount = New-Object System.Security.Principal.NTAccount($ntAccountString)
                         Write-Verbose "Resolved SID '$sidString' to '$ntAccountString' via Global Catalog"
                         
@@ -249,7 +249,7 @@ function Convert-SidToIdentityReference {
                     $script:netBiosCache[$domainDN] = $domainNetBiosName
                 }
                 
-                $ntAccountString = "$domainNetBiosName\$samAccountName"
+                $ntAccountString = "$($domainNetBiosName.ToUpper())\$samAccountName"
                 $ntAccount = New-Object System.Security.Principal.NTAccount($ntAccountString)
                 Write-Verbose "Resolved SID '$sidString' to '$ntAccountString' via LDAP"
                 return $ntAccount
