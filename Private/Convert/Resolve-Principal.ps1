@@ -175,17 +175,32 @@ function Resolve-Principal {
                             $script:Credential.GetNetworkCredential().Password
                         )
                         
-                        $principalObj = [PSCustomObject]@{
+                        # For regular principals without NTAccountName, generate it from SID
+                        $principalNTAccountName = if ($ntAccountName) {
+                            $ntAccountName
+                        } else {
+                            $translated = $sidKey | Convert-SidToIdentityReference -Credential $script:Credential -RootDSE $script:RootDSE
+                            if ($translated -is [System.Security.Principal.NTAccount]) {
+                                $translated.Value
+                            } else {
+                                $null
+                            }
+                        }
+                        
+                        $principalObject = [PSCustomObject]@{
                             distinguishedName = $distinguishedName
                             objectSid = if ($gcResult.Properties['objectSid'].Count -gt 0) { 
                                 (New-Object System.Security.Principal.SecurityIdentifier($gcResult.Properties['objectSid'][0], 0)).Value 
                             } else { $null }
-                            sAMAccountName = if ($gcResult.Properties['sAMAccountName'].Count -gt 0) { $gcResult.Properties['sAMAccountName'][0] } else { $null }
+                            sAMAccountName = if ($gcResult.Properties['sAMAccountName'].Count -gt 0) { 
+                                $gcResult.Properties['sAMAccountName'][0] 
+                            } else { $null }
                             objectClass = if ($gcResult.Properties['objectClass'].Count -gt 0) { 
                                 $classes = @($gcResult.Properties['objectClass'])
                                 $classes[$classes.Count - 1]
                             } else { $null }
                             displayName = if ($gcResult.Properties['displayName'].Count -gt 0) { $gcResult.Properties['displayName'][0] } else { $null }
+                            NTAccountName = $principalNTAccountName
                             userPrincipalName = if ($gcResult.Properties['userPrincipalName'].Count -gt 0) { $gcResult.Properties['userPrincipalName'][0] } else { $null }
                             memberOf = if ($gcResult.Properties['memberOf'].Count -gt 0) { @($gcResult.Properties['memberOf']) } else { @() }
                             ObjectSecurity = $tempEntry.ObjectSecurity
@@ -194,8 +209,8 @@ function Resolve-Principal {
                         $tempEntry.Dispose()
                         
                         # Store the complete principal object using SID as key
-                        $script:PrincipalStore[$sidString] = $principalObj
-                        Write-Verbose "Stored principal object for SID '$sidString': $distinguishedName (objectClass: $($principalObj.objectClass))"
+                        $script:PrincipalStore[$sidString] = $principalObject
+                        Write-Verbose "Stored principal object for SID '$sidString': $distinguishedName (objectClass: $($principalObject.objectClass))"
                         
                         # Return DirectoryEntry for the found object
                         $objectPath = "LDAP://$server/$distinguishedName"
@@ -256,17 +271,32 @@ function Resolve-Principal {
                     $script:Credential.GetNetworkCredential().Password
                 )
                 
-                $principalObj = [PSCustomObject]@{
+                # For regular principals without NTAccountName, generate it from SID
+                $principalNTAccountName = if ($ntAccountName) {
+                    $ntAccountName
+                } else {
+                    $translated = $sidKey | Convert-SidToIdentityReference -Credential $script:Credential -RootDSE $script:RootDSE
+                    if ($translated -is [System.Security.Principal.NTAccount]) {
+                        $translated.Value
+                    } else {
+                        $null
+                    }
+                }
+                
+                $principalObject = [PSCustomObject]@{
                     distinguishedName = $distinguishedName
                     objectSid = if ($result.Properties['objectSid'].Count -gt 0) { 
                         (New-Object System.Security.Principal.SecurityIdentifier($result.Properties['objectSid'][0], 0)).Value 
                     } else { $null }
-                    sAMAccountName = if ($result.Properties['sAMAccountName'].Count -gt 0) { $result.Properties['sAMAccountName'][0] } else { $null }
+                    sAMAccountName = if ($result.Properties['sAMAccountName'].Count -gt 0) { 
+                        $result.Properties['sAMAccountName'][0] 
+                    } else { $null }
                     objectClass = if ($result.Properties['objectClass'].Count -gt 0) { 
                         $classes = @($result.Properties['objectClass'])
                         $classes[$classes.Count - 1]
                     } else { $null }
                     displayName = if ($result.Properties['displayName'].Count -gt 0) { $result.Properties['displayName'][0] } else { $null }
+                    NTAccountName = $principalNTAccountName
                     userPrincipalName = if ($result.Properties['userPrincipalName'].Count -gt 0) { $result.Properties['userPrincipalName'][0] } else { $null }
                     memberOf = if ($result.Properties['memberOf'].Count -gt 0) { @($result.Properties['memberOf']) } else { @() }
                     ObjectSecurity = $tempEntry.ObjectSecurity
@@ -275,8 +305,8 @@ function Resolve-Principal {
                 $tempEntry.Dispose()
                 
                 # Store the complete principal object using SID as key
-                $script:PrincipalStore[$sidString] = $principalObj
-                Write-Verbose "Stored principal object for SID '$sidString': $distinguishedName (objectClass: $($principalObj.objectClass))"
+                $script:PrincipalStore[$sidString] = $principalObject
+                Write-Verbose "Stored principal object for SID '$sidString': $distinguishedName (objectClass: $($principalObject.objectClass))"
                 
                 # Return DirectoryEntry for the found object
                 $objectPath = "LDAP://$server/$distinguishedName"
@@ -303,19 +333,20 @@ function Resolve-Principal {
                         $ntAccountName
                     }
                     
-                    $principalObj = [PSCustomObject]@{
+                    $principalObject = [PSCustomObject]@{
                         distinguishedName = $null  # Well-known SIDs don't have DNs in AD
                         objectSid = $sidString
-                        sAMAccountName = $samAccount
+                        sAMAccountName = $null
                         objectClass = 'wellKnownPrincipal'
-                        displayName = $ntAccountName
+                        displayName = $null
+                        NTAccountName = $ntAccountName
                         userPrincipalName = $null
                         memberOf = @()
                         ObjectSecurity = $null
                     }
                     
                     # Store the principal object
-                    $script:PrincipalStore[$sidString] = $principalObj
+                    $script:PrincipalStore[$sidString] = $principalObject
                     Write-Verbose "Stored well-known principal for SID '$sidString': $ntAccountName"
                 }
                 
