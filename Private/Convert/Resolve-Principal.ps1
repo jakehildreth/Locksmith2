@@ -1,11 +1,12 @@
-function Convert-IdentityReferenceToDirectoryEntry {
+function Resolve-Principal {
     <#
         .SYNOPSIS
-        Converts an IdentityReference (NTAccount or SecurityIdentifier) to a DirectoryEntry.
+        Resolves an IdentityReference to a complete principal object and caches it in the PrincipalStore.
 
         .DESCRIPTION
         Takes a System.Security.Principal.IdentityReference object (either NTAccount or SecurityIdentifier) 
-        and performs an LDAP query to return the corresponding DirectoryEntry object.
+        and resolves it to a complete principal object via LDAP query. The resolved principal is cached in the
+        module-level PrincipalStore for fast subsequent lookups, and a DirectoryEntry is returned.
         
         On domain-joined computers, uses the built-in Translate() method. On non-domain joined computers,
         performs an LDAP query using provided credentials to resolve the SID to an NTAccount.
@@ -33,17 +34,17 @@ function Convert-IdentityReferenceToDirectoryEntry {
 
         .EXAMPLE
         $sid = [System.Security.Principal.SecurityIdentifier]::new('S-1-5-21-...')
-        $sid | Convert-IdentityReferenceToDirectoryEntry -Credential $cred -RootDSE $rootDSE
-        Converts a SID to DirectoryEntry using credentials and RootDSE.
+        $sid | Resolve-Principal -Credential $cred -RootDSE $rootDSE
+        Resolves a SID to a DirectoryEntry and caches the principal.
 
         .EXAMPLE
         $ntAccount = [System.Security.Principal.NTAccount]::new('DOMAIN\User')
-        $ntAccount | Convert-IdentityReferenceToDirectoryEntry -Credential $cred -RootDSE $rootDSE
-        Converts an NTAccount to DirectoryEntry.
+        $ntAccount | Resolve-Principal -Credential $cred -RootDSE $rootDSE
+        Resolves an NTAccount to a DirectoryEntry and caches the principal.
 
         .EXAMPLE
-        $ace.IdentityReference | Convert-IdentityReferenceToDirectoryEntry -Credential $cred -RootDSE $rootDSE
-        Converts IdentityReferences from an ACL to DirectoryEntry objects.
+        $ace.IdentityReference | Resolve-Principal -Credential $cred -RootDSE $rootDSE
+        Resolves IdentityReferences from an ACL to DirectoryEntry objects and caches them.
 
         .NOTES
         Requires Credential and RootDSE parameters for LDAP queries.
@@ -128,6 +129,13 @@ function Convert-IdentityReferenceToDirectoryEntry {
         }
         
         $sidString = $sidKey.Value
+        
+        # Capture NTAccount name if available for well-known principals
+        $ntAccountName = if ($IdentityReference -is [System.Security.Principal.NTAccount]) {
+            $IdentityReference.Value
+        } else {
+            $null
+        }
         
         # Check store first - use SID as store key
         if ($script:PrincipalStore.ContainsKey($sidString)) {
@@ -425,6 +433,35 @@ function Convert-IdentityReferenceToDirectoryEntry {
                 return $objectEntry
             } else {
                 Write-Warning "Could not find SID '$sidString' in Active Directory via LDAP query."
+                
+                # For well-known SIDs that don't exist in AD, create a minimal store entry
+                # This includes BUILTIN groups and other system principals
+                if ($ntAccountName) {
+                    Write-Verbose "Creating store entry for well-known SID '$sidString' with name '$ntAccountName'"
+                    
+                    # Parse the NTAccount name to extract sAMAccountName
+                    $samAccount = if ($ntAccountName -match '^(.+?)\\(.+)$') {
+                        $Matches[2]  # Extract account name after backslash
+                    } else {
+                        $ntAccountName
+                    }
+                    
+                    $principalObj = [PSCustomObject]@{
+                        distinguishedName = $null  # Well-known SIDs don't have DNs in AD
+                        objectSid = $sidString
+                        sAMAccountName = $samAccount
+                        objectClass = 'wellKnownPrincipal'
+                        displayName = $ntAccountName
+                        userPrincipalName = $null
+                        memberOf = @()
+                        ObjectSecurity = $null
+                    }
+                    
+                    # Store the principal object
+                    $script:PrincipalStore[$sidString] = $principalObj
+                    Write-Verbose "Stored well-known principal for SID '$sidString': $ntAccountName"
+                }
+                
                 return $null
             }
         } catch {
