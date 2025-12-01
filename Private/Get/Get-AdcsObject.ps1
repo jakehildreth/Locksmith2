@@ -104,6 +104,9 @@ function Get-AdcsObject {
                         'msPKI-Template-Schema-Version' = if ($objectDirectoryEntry.Properties.Contains('msPKI-Template-Schema-Version')) { $objectDirectoryEntry.Properties['msPKI-Template-Schema-Version'][0] } else { $null }
                         'msPKI-Template-Minor-Revision' = if ($objectDirectoryEntry.Properties.Contains('msPKI-Template-Minor-Revision')) { $objectDirectoryEntry.Properties['msPKI-Template-Minor-Revision'][0] } else { $null }
                         
+                        # CA (pKIEnrollmentService) specific properties
+                        certificateTemplates = if ($objectDirectoryEntry.Properties.Contains('certificateTemplates')) { @($objectDirectoryEntry.certificateTemplates) } else { @() }
+                        
                         # Security descriptor
                         ObjectSecurity = $objectDirectoryEntry.ObjectSecurity
                         
