@@ -86,6 +86,11 @@ function Expand-GroupMembership {
             if ($script:ExpandedGroupCache.ContainsKey($sid)) {
                 $cachedMembers = $script:ExpandedGroupCache[$sid]
                 Write-Verbose "Cache HIT: Group '$sid' has $($cachedMembers.Count) cached member(s)"
+                
+                # Always add the group itself first
+                $allMembers.Add($sid)
+                
+                # Then add all cached members (if any)
                 foreach ($member in $cachedMembers) {
                     $allMembers.Add($member)
                 }
@@ -119,9 +124,10 @@ function Expand-GroupMembership {
                 $memberDNs = @($groupEntry.Properties['member'])
                 
                 if ($memberDNs.Count -eq 0) {
-                    Write-Verbose "Group '$($principal.ntAccountName)' has no members"
-                    # Cache empty result
+                    Write-Verbose "Group '$($principal.ntAccountName)' has no members - keeping group itself in list"
+                    # Cache empty result (but keep the group in the output)
                     $script:ExpandedGroupCache[$sid] = @()
+                    $allMembers.Add($sid)
                     $groupEntry.Dispose()
                     continue
                 }
@@ -161,7 +167,10 @@ function Expand-GroupMembership {
                 $script:ExpandedGroupCache[$sid] = $memberSids.ToArray()
                 Write-Verbose "Cached $($memberSids.Count) member(s) for group '$sid'"
                 
-                # Add members to result
+                # Add the group itself first
+                $allMembers.Add($sid)
+                
+                # Then add all members
                 foreach ($memberSid in $memberSids) {
                     $allMembers.Add($memberSid)
                 }
