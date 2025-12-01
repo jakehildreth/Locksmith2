@@ -43,7 +43,7 @@ function Set-TemplateEnabled {
 
         # Get all CA objects from the store
         $caObjects = $script:AdcsObjectStore.Values | Where-Object { $_.objectClass -contains 'pKIEnrollmentService' }
-        Write-Verbose "Found $($caObjects.Count) CA object(s) in AdcsObjectStore"
+        Write-Verbose "Found $($caObjects.Count) CA object(s) in AD CS Object Store"
 
         # Build a mapping of template CN -> list of CA names
         $templateToCAs = @{}
@@ -88,12 +88,12 @@ function Set-TemplateEnabled {
                     Write-Verbose "  Template '$templateCN' is NOT enabled on any CA"
                 }
 
-                # Update the AdcsObjectStore with the properties
+                # Update the AD CS Object Store with the properties
                 $dn = $template.Properties.distinguishedName[0]
                 if ($script:AdcsObjectStore.ContainsKey($dn)) {
                     $script:AdcsObjectStore[$dn] | Add-Member -NotePropertyName Enabled -NotePropertyValue $enabled -Force
                     $script:AdcsObjectStore[$dn] | Add-Member -NotePropertyName EnabledOn -NotePropertyValue $enabledOnCAs -Force
-                    Write-Verbose "Updated AdcsObjectStore for $dn with Enabled = $enabled and EnabledOn"
+                    Write-Verbose "Updated AD CS Object Store for $dn with Enabled = $enabled and EnabledOn"
                 }
 
                 # Also add to the pipeline object for backward compatibility

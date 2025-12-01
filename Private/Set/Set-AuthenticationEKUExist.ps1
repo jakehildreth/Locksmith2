@@ -121,7 +121,7 @@ function Set-AuthenticationEKUExist {
                 $dn = $_.Properties.distinguishedName[0]
                 if ($script:AdcsObjectStore.ContainsKey($dn)) {
                     $script:AdcsObjectStore[$dn] | Add-Member -NotePropertyName AuthenticationEKUExist -NotePropertyValue $authenticationEKUExist -Force
-                    Write-Verbose "Updated AdcsObjectStore for $dn with AuthenticationEKUExist = $authenticationEKUExist"
+                    Write-Verbose "Updated AD CS Object Store for $dn with AuthenticationEKUExist = $authenticationEKUExist"
                 }
                 
                 # Also add to the pipeline object for backward compatibility

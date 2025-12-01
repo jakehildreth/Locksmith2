@@ -48,7 +48,7 @@ function Get-AdcsObject {
     #requires -Version 5.1 -Modules Microsoft.PowerShell.Security
 
     begin {
-        # Initialize the AdcsObjectStore if it doesn't exist
+        # Initialize the AD CS Object Store if it doesn't exist
         if (-not $script:AdcsObjectStore) {
             $script:AdcsObjectStore = @{}
         }

@@ -103,7 +103,7 @@ function Set-SANAllowed {
                 $dn = $_.Properties.distinguishedName[0]
                 if ($script:AdcsObjectStore.ContainsKey($dn)) {
                     $script:AdcsObjectStore[$dn] | Add-Member -NotePropertyName SANAllowed -NotePropertyValue $sanAllowed -Force
-                    Write-Verbose "Updated AdcsObjectStore for $dn with SANAllowed = $sanAllowed"
+                    Write-Verbose "Updated AD CS Object Store for $dn with SANAllowed = $sanAllowed"
                 }
                 
                 # Also add to the pipeline object for backward compatibility
