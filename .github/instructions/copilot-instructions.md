@@ -169,7 +169,7 @@ All detection functions should return consistent objects:
 #### Unit Tests
 - Write unit tests for all public and complex private functions
 - Use Pester for testing framework
-- Mock external dependencies (AD, ADCS)
+- Mock external dependencies (AD, AD CS)
 - Test edge cases and error conditions
 - Target >80% code coverage
 
