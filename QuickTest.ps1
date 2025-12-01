@@ -54,4 +54,4 @@ Total Execution Time: $($stopwatch.Elapsed.TotalSeconds.ToString('F3')) seconds$
 ========================================
 
 "@
-Write-Host $performanceOutput -ForegroundColor Cyan
+Write-Host $performanceOutput
