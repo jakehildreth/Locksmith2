@@ -60,7 +60,7 @@ function Get-AdcsObject {
             $searchBase = "CN=Public Key Services,CN=Services,$($script:RootDSE.configurationNamingContext)"
             
             Write-Verbose "Searching $searchBase for AD CS objects."
-            Write-Verbose "ADCS Object Store currently has $($script:AdcsObjectStore.Count) entries"
+            Write-Verbose "AD CS Object Store currently has $($script:AdcsObjectStore.Count) entries"
             
             # Create DirectorySearcher for recursive search
             $searcherDirectoryEntry = New-AuthenticatedDirectoryEntry -Path "$($script:RootDSE.Parent)/$searchBase"
@@ -81,7 +81,7 @@ function Get-AdcsObject {
                 
                 Write-Verbose "`nFound object: $distinguishedName`nClass: $($objectDirectoryEntry.objectClass -join ', ')"
                 
-                # Store the ADCS object if not already stored
+                # Store the AD CS object if not already stored
                 if (-not $script:AdcsObjectStore.ContainsKey($distinguishedName)) {
                     # Build store object with all properties
                     $adcsObject = [PSCustomObject]@{
@@ -116,14 +116,14 @@ function Get-AdcsObject {
                     
                     $script:AdcsObjectStore[$distinguishedName] = $adcsObject
                     $cachedCount++
-                    Write-Verbose "Stored ADCS object: $distinguishedName"
+                    Write-Verbose "Stored AD CS object: $distinguishedName"
                 }
                 
                 $objectDirectoryEntry
                 $objectCount++
             }
             Write-Verbose "Found $objectCount total objects in the Public Key Services container and its subtree"
-            Write-Verbose "Stored $cachedCount new ADCS objects (Total store size: $($script:AdcsObjectStore.Count))"
+            Write-Verbose "Stored $cachedCount new AD CS objects (Total store size: $($script:AdcsObjectStore.Count))"
             
             # Clean up
             $searcher.Dispose()
