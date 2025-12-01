@@ -97,30 +97,14 @@ function Convert-IdentityReferenceToSid {
                 $domain = $null
             }
 
-            # Get the default naming context from RootDSE
-            if ($script:RootDSE) {
-                $rootDomainDN = $script:RootDSE.rootDomainNamingContext.Value
-                # Extract server from RootDSE path if available
-                if ($script:RootDSE.Path -match 'LDAP://([^/]+)') {
-                    $server = $Matches[1]
-                } else {
-                    $server = $domain
-                }
-            } else {
-                $server = $domain
-                $rootDomainDN = $null
-            }
-
-            if (-not $server) {
-                Write-Warning "Could not determine server to query for principal '$IdentityReference'."
-                return $IdentityReference
-            }
+            # Get the root domain DN for GC searches
+            $rootDomainDN = if ($script:RootDSE) { $script:RootDSE.rootDomainNamingContext.Value } else { $null }
 
             # First try Global Catalog search for forest-wide lookup
             if ($rootDomainDN) {
                 Write-Verbose "Attempting Global Catalog search for '$IdentityReference'"
                 $gcSearcher = New-Object System.DirectoryServices.DirectorySearcher
-                $gcPath = "GC://$server/$rootDomainDN"
+                $gcPath = "GC://$script:Server/$rootDomainDN"
                 
                 $gcSearcher.SearchRoot = New-AuthenticatedDirectoryEntry -Path $gcPath
                 $gcSearcher.Filter = "(sAMAccountName=$samAccountName)"
@@ -153,7 +137,7 @@ function Convert-IdentityReferenceToSid {
             
             # Create LDAP searcher with credentials
             $searcher = New-Object System.DirectoryServices.DirectorySearcher
-            $ldapPath = if ($domainDN) { "LDAP://$server/$domainDN" } else { "LDAP://$server" }
+            $ldapPath = if ($domainDN) { "LDAP://$script:Server/$domainDN" } else { "LDAP://$script:Server" }
             
             $searcher.SearchRoot = New-AuthenticatedDirectoryEntry -Path $ldapPath
             $searcher.Filter = "(sAMAccountName=$samAccountName)"

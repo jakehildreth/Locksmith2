@@ -98,16 +98,8 @@ function Resolve-Principal {
             $storedPrincipal = $script:PrincipalStore[$sidString]
             Write-Verbose "Store HIT: Found stored principal for SID '$sidString': $($storedPrincipal.distinguishedName)"
             
-            # Extract server from RootDSE
-            if ($script:RootDSE.Path -match 'LDAP://([^/]+)') {
-                $server = $Matches[1]
-            } else {
-                Write-Warning "Could not extract server from RootDSE path."
-                return $null
-            }
-            
             # Create fresh DirectoryEntry from stored DN
-            $objectPath = "LDAP://$server/$($storedPrincipal.distinguishedName)"
+            $objectPath = "LDAP://$script:Server/$($storedPrincipal.distinguishedName)"
             $objectEntry = New-AuthenticatedDirectoryEntry -Path $objectPath
             
             return $objectEntry
@@ -116,25 +108,14 @@ function Resolve-Principal {
         Write-Verbose "Store MISS: No stored DN found for SID '$sidString', performing LDAP lookup"
         
         try {
-            # Extract server from RootDSE
-            if ($script:RootDSE) {
-                $rootDomainDN = $script:RootDSE.rootDomainNamingContext.Value
-                if ($script:RootDSE.Path -match 'LDAP://([^/]+)') {
-                    $server = $Matches[1]
-                } else {
-                    Write-Warning "Could not extract server from RootDSE path."
-                    return $null
-                }
-            } else {
-                Write-Warning "RootDSE parameter required for SID resolution."
-                return $null
-            }
+            # Get root domain DN for GC searches
+            $rootDomainDN = if ($script:RootDSE) { $script:RootDSE.rootDomainNamingContext.Value } else { $null }
 
             # First try Global Catalog search for forest-wide lookup
             if ($rootDomainDN) {
                 Write-Verbose "Attempting Global Catalog search for SID '$sidString'"
                 $gcSearcher = New-Object System.DirectoryServices.DirectorySearcher
-                $gcPath = "GC://$server/$rootDomainDN"
+                $gcPath = "GC://$script:Server/$rootDomainDN"
                 
                 $gcSearcher.SearchRoot = New-AuthenticatedDirectoryEntry -Path $gcPath
                 $gcSearcher.Filter = "(objectSid=$sidString)"
@@ -151,14 +132,14 @@ function Resolve-Principal {
                         Write-Verbose "Found SID in GC at: $distinguishedName"
                         
                         # Build complete principal object for store
-                        $principalObject = [LS2Principal]::new($gcResult, $server, $sidKey, $ntAccountName)
+                        $principalObject = [LS2Principal]::new($gcResult, $script:Server, $sidKey, $ntAccountName)
                         
                         # Store the complete principal object using SID as key
                         $script:PrincipalStore[$sidString] = $principalObject
                         Write-Verbose "Stored principal object for SID '$sidString': $distinguishedName (objectClass: $($principalObject.objectClass))"
                         
                         # Return DirectoryEntry for the found object
-                        $objectPath = "LDAP://$server/$distinguishedName"
+                        $objectPath = "LDAP://$script:Server/$distinguishedName"
                         $objectEntry = New-AuthenticatedDirectoryEntry -Path $objectPath
                         
                         Write-Verbose "Resolved SID '$sidString' to '$distinguishedName' via Global Catalog"
@@ -182,7 +163,7 @@ function Resolve-Principal {
             
             # Create LDAP searcher with credentials
             $searcher = New-Object System.DirectoryServices.DirectorySearcher
-            $ldapPath = "LDAP://$server/$domainDN"
+            $ldapPath = "LDAP://$script:Server/$domainDN"
             
             $searcher.SearchRoot = New-AuthenticatedDirectoryEntry -Path $ldapPath
             $searcher.Filter = "(objectSid=$sidString)"
@@ -197,14 +178,14 @@ function Resolve-Principal {
                 $distinguishedName = $result.Properties['distinguishedName'][0]
                 
                 # Build complete principal object for store
-                $principalObject = [LS2Principal]::new($result, $server, $sidKey, $ntAccountName)
+                $principalObject = [LS2Principal]::new($result, $script:Server, $sidKey, $ntAccountName)
                 
                 # Store the complete principal object using SID as key
                 $script:PrincipalStore[$sidString] = $principalObject
                 Write-Verbose "Stored principal object for SID '$sidString': $distinguishedName (objectClass: $($principalObject.objectClass))"
                 
                 # Return DirectoryEntry for the found object
-                $objectPath = "LDAP://$server/$distinguishedName"
+                $objectPath = "LDAP://$script:Server/$distinguishedName"
                 $objectEntry = New-AuthenticatedDirectoryEntry -Path $objectPath
                 
                 Write-Verbose "Resolved SID '$sidString' to '$distinguishedName' via LDAP"

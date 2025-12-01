@@ -99,25 +99,14 @@ function Convert-IdentityReferenceToNTAccount {
             # Get the SID string
             $sidString = $SecurityIdentifier.Value
 
-            # Extract server from RootDSE
-            if ($RootDSE) {
-                $rootDomainDN = $RootDSE.rootDomainNamingContext.Value
-                if ($RootDSE.Path -match 'LDAP://([^/]+)') {
-                    $server = $Matches[1]
-                } else {
-                    Write-Warning "Could not extract server from RootDSE path."
-                    return $SecurityIdentifier
-                }
-            } else {
-                Write-Warning "RootDSE parameter required for non-domain joined SID resolution."
-                return $SecurityIdentifier
-            }
+            # Get root domain DN for GC searches
+            $rootDomainDN = if ($RootDSE) { $RootDSE.rootDomainNamingContext.Value } else { $null }
 
             # First try Global Catalog search for forest-wide lookup
             if ($rootDomainDN) {
                 Write-Verbose "Attempting Global Catalog search for SID '$sidString'"
                 $gcSearcher = New-Object System.DirectoryServices.DirectorySearcher
-                $gcPath = "GC://$server/$rootDomainDN"
+                $gcPath = "GC://$script:Server/$rootDomainDN"
                 
                 $gcSearcher.SearchRoot = New-AuthenticatedDirectoryEntry -Path $gcPath
                 $gcSearcher.Filter = "(objectSid=$sidString)"
@@ -172,7 +161,7 @@ function Convert-IdentityReferenceToNTAccount {
             
             # Create LDAP searcher with credentials
             $searcher = New-Object System.DirectoryServices.DirectorySearcher
-            $ldapPath = "LDAP://$server/$domainDN"
+            $ldapPath = "LDAP://$script:Server/$domainDN"
             
             $searcher.SearchRoot = New-AuthenticatedDirectoryEntry -Path $ldapPath
             $searcher.Filter = "(objectSid=$sidString)"
