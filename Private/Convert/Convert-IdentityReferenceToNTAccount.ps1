@@ -99,21 +99,11 @@ function Convert-IdentityReferenceToNTAccount {
             # Get the SID string
             $sidString = $SecurityIdentifier.Value
 
-            # Get root domain DN for GC searches
-            $rootDomainDN = if ($RootDSE) { $RootDSE.rootDomainNamingContext.Value } else { $null }
-
             # First try Global Catalog search for forest-wide lookup
-            if ($rootDomainDN) {
-                Write-Verbose "Attempting Global Catalog search for SID '$sidString'"
-                $gcSearcher = New-Object System.DirectoryServices.DirectorySearcher
-                $gcPath = "GC://$script:Server/$rootDomainDN"
-                
-                $gcSearcher.SearchRoot = New-AuthenticatedDirectoryEntry -Path $gcPath
-                $gcSearcher.Filter = "(objectSid=$sidString)"
-                $gcSearcher.PropertiesToLoad.AddRange(@('distinguishedName', 'sAMAccountName')) | Out-Null
-                $gcSearcher.SearchScope = [System.DirectoryServices.SearchScope]::Subtree
-                $gcSearcher.PageSize = 1000
-
+            Write-Verbose "Attempting Global Catalog search for SID '$sidString'"
+            $gcSearcher = New-GCSearcher -Filter "(objectSid=$sidString)" -PropertiesToLoad @('distinguishedName', 'sAMAccountName')
+            
+            if ($gcSearcher) {
                 try {
                     $gcResult = $gcSearcher.FindOne()
                     
@@ -160,14 +150,7 @@ function Convert-IdentityReferenceToNTAccount {
             }
             
             # Create LDAP searcher with credentials
-            $searcher = New-Object System.DirectoryServices.DirectorySearcher
-            $ldapPath = "LDAP://$script:Server/$domainDN"
-            
-            $searcher.SearchRoot = New-AuthenticatedDirectoryEntry -Path $ldapPath
-            $searcher.Filter = "(objectSid=$sidString)"
-            $searcher.PropertiesToLoad.AddRange(@('sAMAccountName', 'distinguishedName')) | Out-Null
-            $searcher.SearchScope = [System.DirectoryServices.SearchScope]::Subtree
-            $searcher.PageSize = 1000
+            $searcher = New-LDAPSearcher -DomainDN $domainDN -Filter "(objectSid=$sidString)" -PropertiesToLoad @('sAMAccountName', 'distinguishedName')
 
             $result = $searcher.FindOne()
 

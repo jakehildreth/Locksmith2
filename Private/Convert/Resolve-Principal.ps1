@@ -108,22 +108,11 @@ function Resolve-Principal {
         Write-Verbose "Store MISS: No stored DN found for SID '$sidString', performing LDAP lookup"
         
         try {
-            # Get root domain DN for GC searches
-            $rootDomainDN = if ($script:RootDSE) { $script:RootDSE.rootDomainNamingContext.Value } else { $null }
-
             # First try Global Catalog search for forest-wide lookup
-            if ($rootDomainDN) {
-                Write-Verbose "Attempting Global Catalog search for SID '$sidString'"
-                $gcSearcher = New-Object System.DirectoryServices.DirectorySearcher
-                $gcPath = "GC://$script:Server/$rootDomainDN"
-                
-                $gcSearcher.SearchRoot = New-AuthenticatedDirectoryEntry -Path $gcPath
-                $gcSearcher.Filter = "(objectSid=$sidString)"
-                # Load all principal properties for complete store object
-                $gcSearcher.PropertiesToLoad.AddRange(@('distinguishedName', 'objectSid', 'sAMAccountName', 'objectClass', 'displayName', 'memberOf', 'userPrincipalName')) | Out-Null
-                $gcSearcher.SearchScope = [System.DirectoryServices.SearchScope]::Subtree
-                $gcSearcher.PageSize = 1000
-
+            Write-Verbose "Attempting Global Catalog search for SID '$sidString'"
+            $gcSearcher = New-GCSearcher -Filter "(objectSid=$sidString)" -PropertiesToLoad @('distinguishedName', 'objectSid', 'sAMAccountName', 'objectClass', 'displayName', 'memberOf', 'userPrincipalName')
+            
+            if ($gcSearcher) {
                 try {
                     $gcResult = $gcSearcher.FindOne()
                     
@@ -162,15 +151,7 @@ function Resolve-Principal {
             }
             
             # Create LDAP searcher with credentials
-            $searcher = New-Object System.DirectoryServices.DirectorySearcher
-            $ldapPath = "LDAP://$script:Server/$domainDN"
-            
-            $searcher.SearchRoot = New-AuthenticatedDirectoryEntry -Path $ldapPath
-            $searcher.Filter = "(objectSid=$sidString)"
-            # Load all principal properties for complete store object
-            $searcher.PropertiesToLoad.AddRange(@('distinguishedName', 'objectSid', 'sAMAccountName', 'objectClass', 'displayName', 'memberOf', 'userPrincipalName')) | Out-Null
-            $searcher.SearchScope = [System.DirectoryServices.SearchScope]::Subtree
-            $searcher.PageSize = 1000
+            $searcher = New-LDAPSearcher -DomainDN $domainDN -Filter "(objectSid=$sidString)" -PropertiesToLoad @('distinguishedName', 'objectSid', 'sAMAccountName', 'objectClass', 'displayName', 'memberOf', 'userPrincipalName')
 
             $result = $searcher.FindOne()
 
