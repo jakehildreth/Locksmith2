@@ -94,10 +94,10 @@ function Set-CAComputerPrincipal {
                                 $computerSID = $sid.Value
                                 Write-Verbose "  Computer SID: $computerSID"
                                 
-                                # Resolve and store the principal using existing infrastructure
-                                # This will populate PrincipalStore for later use
+                                # Resolve and cache the computer principal for later security auditing
+                                # This populates PrincipalStore so subsequent nTSecurityDescriptor audits don't require LDAP queries
                                 $principal = Resolve-Principal -IdentityReference $sid
-                                Write-Verbose "  Stored computer principal: $computerSID"
+                                Write-Verbose "  Cached computer principal in PrincipalStore: $computerSID"
                                 
                             } else {
                                 Write-Verbose "  Computer object not found for dNSHostName '$dnsHostName'"
