@@ -116,32 +116,15 @@ function Set-CAComputerPrincipal {
                     }
                 }
                 
-                # Extract CA name
-                $caName = if ($ca.Properties.Contains('cn')) {
-                    $ca.Properties['cn'][0]
-                } else {
-                    $null
-                }
-                
-                # Combine CA name and dNSHostName into CAFullName
-                $caFullName = if ($caName -and $dnsHostName) {
-                    "$dnsHostName\$caName"
-                } elseif ($caName) {
-                    $caName
-                } else {
-                    $null
-                }
-                
-                # Update the AD CS Object Store with all CA-related properties
+                # Update the AD CS Object Store with ComputerPrincipal property
+                # Note: CAFullName is now a ScriptProperty on LS2AdcsObject and calculates automatically
                 $dn = $ca.Properties.distinguishedName[0]
                 if ($script:AdcsObjectStore.ContainsKey($dn)) {
-                    $script:AdcsObjectStore[$dn] | Add-Member -NotePropertyName CAFullName -NotePropertyValue $caFullName -Force
-                    $script:AdcsObjectStore[$dn] | Add-Member -NotePropertyName ComputerPrincipal -NotePropertyValue $computerSID -Force
-                    Write-Verbose "Updated AD CS Object Store for $dn with CAFullName = $caFullName, ComputerPrincipal = $computerSID"
+                    $script:AdcsObjectStore[$dn].ComputerPrincipal = $computerSID
+                    Write-Verbose "Updated AD CS Object Store for $dn with ComputerPrincipal = $computerSID"
                 }
                 
                 # Also add to the pipeline object for backward compatibility
-                $ca | Add-Member -NotePropertyName CAFullName -NotePropertyValue $caFullName -Force
                 $ca | Add-Member -NotePropertyName ComputerPrincipal -NotePropertyValue $computerSID -Force
                 
                 # Return the modified object

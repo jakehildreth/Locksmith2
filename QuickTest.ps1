@@ -1,10 +1,12 @@
-Set-Location ~\Documents\Locksmith2\
+# Set-Location ~\Documents\Locksmith2\
 Import-Module .\Locksmith2.psd1 -Force
 
 if (-not $Credential) {
     $Credential = New-Credential -User 'adcs.goat\Administrator'
 }
-$Forest = 'adcs.goat'
+if (-not $Forest) {
+    $Forest = 'adcs.goat'
+}
 
 # Start performance measurement
 $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
@@ -16,7 +18,7 @@ $results = Invoke-Locksmith2 -Forest $Forest -Credential $Credential -Verbose -S
 $stopwatch.Stop()
 
 # Get previous run time for this PS version
-$logPath = "~\Documents\Locksmith2\performance.log"
+$logPath = ".\performance.log"
 $currentVersion = $PSVersionTable.PSVersion.ToString()
 $previousRuns = Get-Content -Path $logPath -ErrorAction SilentlyContinue | Where-Object { $_ -match "PS $([regex]::Escape($currentVersion))" }
 $previousTime = $null
