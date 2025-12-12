@@ -89,9 +89,10 @@ function Set-CAEditFlags {
                 
                 Write-Verbose "Processing CA: $caName"
                 
-                # Get CAFullName from the object
-                $caFullName = if ($ca.PSObject.Properties['CAFullName']) {
-                    $ca.CAFullName
+                # Get CAFullName from the AdcsObjectStore (where LS2AdcsObject has CAFullName ScriptProperty)
+                $dn = $ca.Properties.distinguishedName[0]
+                $caFullName = if ($script:AdcsObjectStore.ContainsKey($dn)) {
+                    $script:AdcsObjectStore[$dn].CAFullName
                 } else {
                     $null
                 }

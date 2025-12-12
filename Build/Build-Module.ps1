@@ -40,10 +40,10 @@ Build-Module -ModuleName 'Locksmith2' {
     New-ConfigurationManifest @Manifest
 
     # Add standard module dependencies (directly, but can be used with loop as well)
-    #New-ConfigurationModule -Type RequiredModule -Name 'PSSharedGoods' -Guid 'Auto' -Version 'Latest'
+    New-ConfigurationModule -Type RequiredModule -Name 'PSCertutil' -Guid 'Auto' -Version 'Latest'
 
     # Add external module dependencies, using loop for simplicity
-    $RequiredModules = @(
+    $RequiredExternalModules = @(
         'Microsoft.PowerShell.Utility',
         'Microsoft.PowerShell.Archive',
         'Microsoft.PowerShell.Management',
@@ -51,7 +51,7 @@ Build-Module -ModuleName 'Locksmith2' {
         'PowerShellGet',
         'CimCmdlets'
     )
-    foreach ($Module in $RequiredModules) {
+    foreach ($Module in $RequiredExternalModules) {
         New-ConfigurationModule -Type ExternalModule -Name $Module
     }
 
@@ -95,7 +95,7 @@ Build-Module -ModuleName 'Locksmith2' {
     }
     # format PSD1 and PSM1 files when merging into a single file
     # enable formatting is not required as Configuration is provided
-    New-ConfigurationFormat -ApplyTo 'OnMergePSM1', 'OnMergePSD1' -Sort None @ConfigurationFormat
+    # New-ConfigurationFormat -ApplyTo 'OnMergePSM1', 'OnMergePSD1' -Sort None @ConfigurationFormat
     # format PSD1 and PSM1 files within the module
     # enable formatting is required to make sure that formatting is applied (with default settings)
     New-ConfigurationFormat -ApplyTo 'DefaultPSD1', 'DefaultPSM1' -EnableFormatting -Sort None
