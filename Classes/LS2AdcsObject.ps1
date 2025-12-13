@@ -36,8 +36,10 @@ class LS2AdcsObject {
     [Nullable[bool]]$Enabled
     [string[]]$EnabledOn
     [string]$ComputerPrincipal
+    [Nullable[bool]]$RPCEncryptionNotRequired
     [object[]]$EditFlags
     [Nullable[bool]]$SANFlagEnabled
+    [object[]]$InterfaceFlags
     
     # Schema class name for easy type checking
     [string]$SchemaClassName
@@ -94,6 +96,7 @@ class LS2AdcsObject {
         $this.AuthorizedSignatureRequired = $null
         $this.Enabled = $null
         $this.EnabledOn = @()
+        $this.RPCEncryptionNotRequired = $null
         $this.SANFlagEnabled = $null
         
         # Add CAFullName as a ScriptProperty for CA objects
