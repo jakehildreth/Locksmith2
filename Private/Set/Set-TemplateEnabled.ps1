@@ -91,17 +91,13 @@ function Set-TemplateEnabled {
                 # Update the AD CS Object Store with the properties
                 $dn = $template.Properties.distinguishedName[0]
                 if ($script:AdcsObjectStore.ContainsKey($dn)) {
-                    $script:AdcsObjectStore[$dn] | Add-Member -NotePropertyName Enabled -NotePropertyValue $enabled -Force
-                    $script:AdcsObjectStore[$dn] | Add-Member -NotePropertyName EnabledOn -NotePropertyValue $enabledOnCAs -Force
+                    $script:AdcsObjectStore[$dn].Enabled = $enabled
+                    $script:AdcsObjectStore[$dn].EnabledOn = $enabledOnCAs
                     Write-Verbose "Updated AD CS Object Store for $dn with Enabled = $enabled and EnabledOn"
                 }
 
-                # Also add to the pipeline object for backward compatibility
-                $template | Add-Member -NotePropertyName Enabled -NotePropertyValue $enabled -Force
-                $template | Add-Member -NotePropertyName EnabledOn -NotePropertyValue $enabledOnCAs -Force
-
                 # Return the modified object
-                $_
+                $template
 
             } catch {
                 $errorRecord = [System.Management.Automation.ErrorRecord]::new(

@@ -33,7 +33,8 @@ class LS2AdcsObject {
     [Nullable[bool]]$LowPrivilegeEnrollee
     [Nullable[bool]]$ManagerApprovalRequired
     [Nullable[bool]]$AuthorizedSignatureRequired
-    [Nullable[bool]]$TemplateEnabled
+    [Nullable[bool]]$Enabled
+    [string[]]$EnabledOn
     [string]$ComputerPrincipal
     [object[]]$EditFlags
     [Nullable[bool]]$SANFlagEnabled
@@ -91,7 +92,8 @@ class LS2AdcsObject {
         $this.LowPrivilegeEnrollee = $null
         $this.ManagerApprovalRequired = $null
         $this.AuthorizedSignatureRequired = $null
-        $this.TemplateEnabled = $null
+        $this.Enabled = $null
+        $this.EnabledOn = @()
         $this.SANFlagEnabled = $null
         
         # Add CAFullName as a ScriptProperty for CA objects
