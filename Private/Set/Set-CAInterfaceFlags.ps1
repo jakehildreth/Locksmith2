@@ -59,22 +59,9 @@ function Set-CAInterfaceFlags {
 
     begin {
         Write-Verbose "Querying InterfaceFlags for Certification Authorities..."
-        
-        # Check if PSCertutil module is available
-        if (-not (Get-Command Get-PCInterfaceFlag -ErrorAction SilentlyContinue)) {
-            Write-Warning "PSCertutil module is not loaded. Cannot query InterfaceFlags. Please import PSCertutil module."
-            $script:SkipInterfaceFlagQueries = $true
-        } else {
-            $script:SkipInterfaceFlagQueries = $false
-        }
     }
 
     process {
-        if ($script:SkipInterfaceFlagQueries) {
-            # Pass through objects without modification
-            $AdcsObject
-            return
-        }
 
         foreach ($ca in $AdcsObject) {
             try {

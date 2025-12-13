@@ -59,22 +59,9 @@ function Set-CAEditFlags {
 
     begin {
         Write-Verbose "Querying EditFlags for Certification Authorities..."
-        
-        # Check if PSCertutil module is available
-        if (-not (Get-Command Get-PCEditFlag -ErrorAction SilentlyContinue)) {
-            Write-Warning "PSCertutil module is not loaded. Cannot query EditFlags. Please import PSCertutil module."
-            $script:SkipEditFlagQueries = $true
-        } else {
-            $script:SkipEditFlagQueries = $false
-        }
     }
 
     process {
-        if ($script:SkipEditFlagQueries) {
-            # Pass through objects without modification
-            $AdcsObject
-            return
-        }
 
         foreach ($ca in $AdcsObject) {
             try {
