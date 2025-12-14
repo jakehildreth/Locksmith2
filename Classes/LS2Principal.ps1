@@ -96,6 +96,11 @@ class LS2Principal {
         if ($tempEntry) {
             $tempEntry.Dispose()
         }
+        
+        # Add nTSecurityDescriptor as an alias for ObjectSecurity
+        $this | Add-Member -MemberType ScriptProperty -Name nTSecurityDescriptor -Value {
+            return $this.ObjectSecurity
+        }
     }
     
     # Constructor for well-known principals that don't exist in AD

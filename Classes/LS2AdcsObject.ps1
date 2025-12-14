@@ -30,6 +30,10 @@ class LS2AdcsObject {
     [string[]]$DangerousCAAdministratorNames
     [string[]]$LowPrivilegeCAAdministrator
     [string[]]$LowPrivilegeCAAdministratorNames
+    [string[]]$DangerousCACertificateManager
+    [string[]]$DangerousCACertificateManagerNames
+    [string[]]$LowPrivilegeCACertificateManager
+    [string[]]$LowPrivilegeCACertificateManagerNames
     
     # Computed properties (added by Set-* functions)
     [Nullable[bool]]$SANAllowed
@@ -112,6 +116,10 @@ class LS2AdcsObject {
         $this.DangerousCAAdministratorNames = @()
         $this.LowPrivilegeCAAdministrator = @()
         $this.LowPrivilegeCAAdministratorNames = @()
+        $this.DangerousCACertificateManager = @()
+        $this.DangerousCACertificateManagerNames = @()
+        $this.LowPrivilegeCACertificateManager = @()
+        $this.LowPrivilegeCACertificateManagerNames = @()
         
         # Add CAFullName as a ScriptProperty for CA objects
         if ($this.IsCertificationAuthority()) {
@@ -124,6 +132,11 @@ class LS2AdcsObject {
                     return $null
                 }
             }
+        }
+        
+        # Add nTSecurityDescriptor as an alias for ObjectSecurity
+        $this | Add-Member -MemberType ScriptProperty -Name nTSecurityDescriptor -Value {
+            return $this.ObjectSecurity
         }
     }
     
