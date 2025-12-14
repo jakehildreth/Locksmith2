@@ -50,6 +50,7 @@ class LS2AdcsObject {
     [object[]]$EditFlags
     [Nullable[bool]]$SANFlagEnabled
     [object[]]$InterfaceFlags
+    [Nullable[int]]$AuditFilter
     
     # Schema class name for easy type checking
     [string]$SchemaClassName
@@ -108,6 +109,7 @@ class LS2AdcsObject {
         $this.EnabledOn = @()
         $this.RPCEncryptionNotRequired = $null
         $this.SANFlagEnabled = $null
+        $this.AuditFilter = $null
         
         # Initialize CA-specific properties
         $this.CAAdministrators = @()
