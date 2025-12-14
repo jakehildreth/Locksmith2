@@ -62,14 +62,13 @@ function Set-CAInterfaceFlags {
     }
 
     process {
-
-        foreach ($ca in $AdcsObject) {
+        $AdcsObject | Where-Object SchemaClassName -eq pKIEnrollmentService | ForEach-Object {
             try {
                 # Extract CA name for logging
-                $caName = if ($ca.Properties -and $ca.Properties.Contains('cn')) {
-                    $ca.Properties['cn'][0]
-                } elseif ($ca.cn) {
-                    $ca.cn
+                $caName = if ($_.Properties -and $_.Properties.Contains('cn')) {
+                    $_.Properties['cn'][0]
+                } elseif ($_.cn) {
+                    $_.cn
                 } else {
                     'Unknown CA'
                 }
@@ -77,7 +76,7 @@ function Set-CAInterfaceFlags {
                 Write-Verbose "Processing CA: $caName"
                 
                 # Get CAFullName from the AdcsObjectStore (where LS2AdcsObject has CAFullName ScriptProperty)
-                $dn = $ca.Properties.distinguishedName[0]
+                $dn = $_.Properties.distinguishedName[0]
                 $caFullName = if ($script:AdcsObjectStore.ContainsKey($dn)) {
                     $script:AdcsObjectStore[$dn].CAFullName
                 } else {
@@ -86,7 +85,7 @@ function Set-CAInterfaceFlags {
                 
                 if (-not $caFullName) {
                     Write-Verbose "  CA '$caName' has no CAFullName property - skipping InterfaceFlags query"
-                    $ca
+                    $_
                     continue
                 }
                 
@@ -103,14 +102,10 @@ function Set-CAInterfaceFlags {
                         $encryptionFlag = $interfaceFlags | Where-Object { $_.InterfaceFlag.ToString() -eq 'IF_ENFORCEENCRYPTICERTREQUEST' }
                         $rpcEncryptionNotRequired = if ($encryptionFlag) { -not $encryptionFlag.Enabled } else { $true }
                         
-                        if ($rpcEncryptionNotRequired) {
-                            Write-Warning "CA '$caName' does NOT require RPC encryption (ESC11 vulnerability)"
-                        } else {
-                            Write-Verbose "  IF_ENFORCEENCRYPTICERTREQUEST is enabled - RPC encryption required"
-                        }
+                        Write-Verbose "  IF_ENFORCEENCRYPTICERTREQUEST is $(if ($rpcEncryptionNotRequired) { 'disabled or missing - RPC encryption not required' } else { 'enabled - RPC encryption required' })"
                         
                         # Update the AD CS Object Store
-                        $dn = $ca.Properties.distinguishedName[0]
+                        $dn = $_.Properties.distinguishedName[0]
                         if ($script:AdcsObjectStore.ContainsKey($dn)) {
                             $script:AdcsObjectStore[$dn] | Add-Member -NotePropertyName InterfaceFlags -NotePropertyValue $interfaceFlags -Force
                             $script:AdcsObjectStore[$dn] | Add-Member -NotePropertyName RPCEncryptionNotRequired -NotePropertyValue $rpcEncryptionNotRequired -Force
@@ -118,8 +113,8 @@ function Set-CAInterfaceFlags {
                         }
                         
                         # Also add to the pipeline object for backward compatibility
-                        $ca | Add-Member -NotePropertyName InterfaceFlags -NotePropertyValue $interfaceFlags -Force
-                        $ca | Add-Member -NotePropertyName RPCEncryptionNotRequired -NotePropertyValue $rpcEncryptionNotRequired -Force
+                        $_ | Add-Member -NotePropertyName InterfaceFlags -NotePropertyValue $interfaceFlags -Force
+                        $_ | Add-Member -NotePropertyName RPCEncryptionNotRequired -NotePropertyValue $rpcEncryptionNotRequired -Force
                         
                     } else {
                         Write-Verbose "  No InterfaceFlags returned from Get-PCInterfaceFlag"
@@ -131,7 +126,7 @@ function Set-CAInterfaceFlags {
                 }
                 
                 # Return the modified object
-                $ca
+                $_
                 
             } catch {
                 $errorRecord = [System.Management.Automation.ErrorRecord]::new(
@@ -143,7 +138,7 @@ function Set-CAInterfaceFlags {
                 $PSCmdlet.WriteError($errorRecord)
                 
                 # Still return the object even if processing failed
-                $ca
+                $_
             }
         }
     }

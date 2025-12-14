@@ -62,14 +62,13 @@ function Set-CAEditFlags {
     }
 
     process {
-
-        foreach ($ca in $AdcsObject) {
+        $AdcsObject | Where-Object SchemaClassName -eq pKIEnrollmentService | ForEach-Object {
             try {
                 # Extract CA name for logging
-                $caName = if ($ca.Properties -and $ca.Properties.Contains('cn')) {
-                    $ca.Properties['cn'][0]
-                } elseif ($ca.cn) {
-                    $ca.cn
+                $caName = if ($_.Properties -and $_.Properties.Contains('cn')) {
+                    $_.Properties['cn'][0]
+                } elseif ($_.cn) {
+                    $_.cn
                 } else {
                     'Unknown CA'
                 }
@@ -77,7 +76,7 @@ function Set-CAEditFlags {
                 Write-Verbose "Processing CA: $caName"
                 
                 # Get CAFullName from the AdcsObjectStore (where LS2AdcsObject has CAFullName ScriptProperty)
-                $dn = $ca.Properties.distinguishedName[0]
+                $dn = $_.Properties.distinguishedName[0]
                 $caFullName = if ($script:AdcsObjectStore.ContainsKey($dn)) {
                     $script:AdcsObjectStore[$dn].CAFullName
                 } else {
@@ -86,7 +85,7 @@ function Set-CAEditFlags {
                 
                 if (-not $caFullName) {
                     Write-Verbose "  CA '$caName' has no CAFullName property - skipping EditFlags query"
-                    $ca
+                    $_
                     continue
                 }
                 
@@ -103,14 +102,10 @@ function Set-CAEditFlags {
                         $sANFlag = $editFlags | Where-Object { $_.EditFlag -eq 'EDITF_ATTRIBUTESUBJECTALTNAME2' }
                         $sANFlagEnabled = if ($sANFlag) { $sANFlag.Enabled } else { $false }
                         
-                        if ($sANFlagEnabled) {
-                            Write-Warning "CA '$caName' has EDITF_ATTRIBUTESUBJECTALTNAME2 ENABLED (ESC6 vulnerability)"
-                        } else {
-                            Write-Verbose "  EDITF_ATTRIBUTESUBJECTALTNAME2 is disabled"
-                        }
+                        Write-Verbose "  EDITF_ATTRIBUTESUBJECTALTNAME2 is $(if ($sANFlagEnabled) { 'enabled' } else { 'disabled' })"
                         
                         # Update the AD CS Object Store
-                        $dn = $ca.Properties.distinguishedName[0]
+                        $dn = $_.Properties.distinguishedName[0]
                         if ($script:AdcsObjectStore.ContainsKey($dn)) {
                             $script:AdcsObjectStore[$dn] | Add-Member -NotePropertyName EditFlags -NotePropertyValue $editFlags -Force
                             $script:AdcsObjectStore[$dn] | Add-Member -NotePropertyName SANFlagEnabled -NotePropertyValue $sANFlagEnabled -Force
@@ -118,8 +113,8 @@ function Set-CAEditFlags {
                         }
                         
                         # Also add to the pipeline object for backward compatibility
-                        $ca | Add-Member -NotePropertyName EditFlags -NotePropertyValue $editFlags -Force
-                        $ca | Add-Member -NotePropertyName SANFlagEnabled -NotePropertyValue $sANFlagEnabled -Force
+                        $_ | Add-Member -NotePropertyName EditFlags -NotePropertyValue $editFlags -Force
+                        $_ | Add-Member -NotePropertyName SANFlagEnabled -NotePropertyValue $sANFlagEnabled -Force
                         
                     } else {
                         Write-Verbose "  No EditFlags returned from Get-PCEditFlag"
@@ -131,7 +126,7 @@ function Set-CAEditFlags {
                 }
                 
                 # Return the modified object
-                $ca
+                $_
                 
             } catch {
                 $errorRecord = [System.Management.Automation.ErrorRecord]::new(
@@ -143,7 +138,7 @@ function Set-CAEditFlags {
                 $PSCmdlet.WriteError($errorRecord)
                 
                 # Still return the object even if processing failed
-                $ca
+                $_
             }
         }
     }

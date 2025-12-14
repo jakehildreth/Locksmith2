@@ -46,22 +46,22 @@ function Set-CAComputerPrincipal {
     }
 
     process {
-        foreach ($ca in $AdcsObject) {
+        $AdcsObject | Where-Object SchemaClassName -eq pKIEnrollmentService | ForEach-Object {
             try {
                 # Extract CA name - check both DirectoryEntry Properties and direct property
-                $caName = if ($ca.Properties -and $ca.Properties.Contains('cn')) {
-                    $ca.Properties['cn'][0]
-                } elseif ($ca.cn) {
-                    $ca.cn
+                $caName = if ($_.Properties -and $_.Properties.Contains('cn')) {
+                    $_.Properties['cn'][0]
+                } elseif ($_.cn) {
+                    $_.cn
                 } else {
                     $null
                 }
                 
                 # Extract dNSHostName - check both DirectoryEntry Properties and direct property
-                $dnsHostName = if ($ca.Properties -and $ca.Properties.Contains('dNSHostName')) {
-                    $ca.Properties['dNSHostName'][0]
-                } elseif ($ca.dNSHostName) {
-                    $ca.dNSHostName
+                $dnsHostName = if ($_.Properties -and $_.Properties.Contains('dNSHostName')) {
+                    $_.Properties['dNSHostName'][0]
+                } elseif ($_.dNSHostName) {
+                    $_.dNSHostName
                 } else {
                     $null
                 }
@@ -118,17 +118,17 @@ function Set-CAComputerPrincipal {
                 
                 # Update the AD CS Object Store with ComputerPrincipal property
                 # Note: CAFullName is now a ScriptProperty on LS2AdcsObject and calculates automatically
-                $dn = $ca.Properties.distinguishedName[0]
+                $dn = $_.Properties.distinguishedName[0]
                 if ($script:AdcsObjectStore.ContainsKey($dn)) {
                     $script:AdcsObjectStore[$dn].ComputerPrincipal = $computerSID
                     Write-Verbose "Updated AD CS Object Store for $dn with ComputerPrincipal = $computerSID"
                 }
                 
                 # Also add to the pipeline object for backward compatibility
-                $ca | Add-Member -NotePropertyName ComputerPrincipal -NotePropertyValue $computerSID -Force
+                $_ | Add-Member -NotePropertyName ComputerPrincipal -NotePropertyValue $computerSID -Force
                 
                 # Return the modified object
-                $ca
+                $_
                 
             } catch {
                 $errorRecord = [System.Management.Automation.ErrorRecord]::new(
@@ -140,7 +140,7 @@ function Set-CAComputerPrincipal {
                 $PSCmdlet.WriteError($errorRecord)
                 
                 # Still return the object even if processing failed
-                $ca
+                $_
             }
         }
     }

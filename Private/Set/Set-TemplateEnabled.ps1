@@ -71,9 +71,9 @@ function Set-TemplateEnabled {
     }
 
     process {
-        foreach ($template in $AdcsObject) {
+        $AdcsObject | Where-Object SchemaClassName -eq pKICertificateTemplate | ForEach-Object {
             try {
-                $templateCN = $template.Properties['cn'][0]
+                $templateCN = $_.Properties['cn'][0]
                 Write-Verbose "Processing template: $templateCN"
 
                 if ($templateToCAs.ContainsKey($templateCN)) {
@@ -89,7 +89,7 @@ function Set-TemplateEnabled {
                 }
 
                 # Update the AD CS Object Store with the properties
-                $dn = $template.Properties.distinguishedName[0]
+                $dn = $_.Properties.distinguishedName[0]
                 if ($script:AdcsObjectStore.ContainsKey($dn)) {
                     $script:AdcsObjectStore[$dn].Enabled = $enabled
                     $script:AdcsObjectStore[$dn].EnabledOn = $enabledOnCAs
@@ -97,7 +97,7 @@ function Set-TemplateEnabled {
                 }
 
                 # Return the modified object
-                $template
+                $_
 
             } catch {
                 $errorRecord = [System.Management.Automation.ErrorRecord]::new(
