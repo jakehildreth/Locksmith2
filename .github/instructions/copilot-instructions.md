@@ -83,7 +83,6 @@ Locksmith2/
 - CimCmdlets
 
 #### Third-Party Modules (Bundle with distribution)
-- PSSQLite
 - PwshSpectreConsole (for TUI)
 - PSWriteHTML (for HTML output)
 - PSCertutil
