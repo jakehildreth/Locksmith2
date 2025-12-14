@@ -24,6 +24,12 @@ class LS2AdcsObject {
     # CA properties (pKIEnrollmentService)
     [string[]]$certificateTemplates
     [string]$dNSHostName
+    [object[]]$CAAdministrators
+    [object[]]$CertificateManagers
+    [string[]]$DangerousCAAdministrator
+    [string[]]$DangerousCAAdministratorNames
+    [string[]]$LowPrivilegeCAAdministrator
+    [string[]]$LowPrivilegeCAAdministratorNames
     
     # Computed properties (added by Set-* functions)
     [Nullable[bool]]$SANAllowed
@@ -98,6 +104,14 @@ class LS2AdcsObject {
         $this.EnabledOn = @()
         $this.RPCEncryptionNotRequired = $null
         $this.SANFlagEnabled = $null
+        
+        # Initialize CA-specific properties
+        $this.CAAdministrators = @()
+        $this.CertificateManagers = @()
+        $this.DangerousCAAdministrator = @()
+        $this.DangerousCAAdministratorNames = @()
+        $this.LowPrivilegeCAAdministrator = @()
+        $this.LowPrivilegeCAAdministratorNames = @()
         
         # Add CAFullName as a ScriptProperty for CA objects
         if ($this.IsCertificationAuthority()) {

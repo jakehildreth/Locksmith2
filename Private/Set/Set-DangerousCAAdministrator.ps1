@@ -135,8 +135,8 @@ function Set-DangerousCAAdministrator {
                 # Update the AD CS Object Store with the DangerousCAAdministrator property
                 $dn = $_.Properties.distinguishedName[0]
                 if ($script:AdcsObjectStore.ContainsKey($dn)) {
-                    $script:AdcsObjectStore[$dn] | Add-Member -NotePropertyName DangerousCAAdministrator -NotePropertyValue $dangerousSids -Force
-                    $script:AdcsObjectStore[$dn] | Add-Member -NotePropertyName DangerousCAAdministratorNames -NotePropertyValue $dangerousNames -Force
+                    $script:AdcsObjectStore[$dn].DangerousCAAdministrator = $dangerousSids
+                    $script:AdcsObjectStore[$dn].DangerousCAAdministratorNames = $dangerousNames
                     Write-Verbose "  Updated AD CS Object Store for $dn with DangerousCAAdministrator"
                 }
                 

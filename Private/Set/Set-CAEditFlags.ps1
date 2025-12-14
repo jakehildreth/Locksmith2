@@ -107,8 +107,8 @@ function Set-CAEditFlags {
                         # Update the AD CS Object Store
                         $dn = $_.Properties.distinguishedName[0]
                         if ($script:AdcsObjectStore.ContainsKey($dn)) {
-                            $script:AdcsObjectStore[$dn] | Add-Member -NotePropertyName EditFlags -NotePropertyValue $editFlags -Force
-                            $script:AdcsObjectStore[$dn] | Add-Member -NotePropertyName SANFlagEnabled -NotePropertyValue $sANFlagEnabled -Force
+                            $script:AdcsObjectStore[$dn].EditFlags = $editFlags
+                            $script:AdcsObjectStore[$dn].SANFlagEnabled = $sANFlagEnabled
                             Write-Verbose "  Updated AD CS Object Store for $dn with EditFlags data"
                         }
                         

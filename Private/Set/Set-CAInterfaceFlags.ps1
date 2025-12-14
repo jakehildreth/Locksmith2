@@ -107,8 +107,8 @@ function Set-CAInterfaceFlags {
                         # Update the AD CS Object Store
                         $dn = $_.Properties.distinguishedName[0]
                         if ($script:AdcsObjectStore.ContainsKey($dn)) {
-                            $script:AdcsObjectStore[$dn] | Add-Member -NotePropertyName InterfaceFlags -NotePropertyValue $interfaceFlags -Force
-                            $script:AdcsObjectStore[$dn] | Add-Member -NotePropertyName RPCEncryptionNotRequired -NotePropertyValue $rpcEncryptionNotRequired -Force
+                            $script:AdcsObjectStore[$dn].InterfaceFlags = $interfaceFlags
+                            $script:AdcsObjectStore[$dn].RPCEncryptionNotRequired = $rpcEncryptionNotRequired
                             Write-Verbose "  Updated AD CS Object Store for $dn with InterfaceFlags data"
                         }
                         

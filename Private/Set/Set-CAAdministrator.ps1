@@ -115,7 +115,7 @@ function Set-CAAdministrator {
                         # Update the AD CS Object Store
                         $dn = $_.Properties.distinguishedName[0]
                         if ($script:AdcsObjectStore.ContainsKey($dn)) {
-                            $script:AdcsObjectStore[$dn] | Add-Member -NotePropertyName CAAdministrators -NotePropertyValue $caAdministrators -Force
+                            $script:AdcsObjectStore[$dn].CAAdministrators = $caAdministrators
                             Write-Verbose "  Updated AD CS Object Store for $dn with CA Administrator data"
                         }
                         

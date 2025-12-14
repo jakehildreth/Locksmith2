@@ -115,7 +115,7 @@ function Set-CACertificateManager {
                         # Update the AD CS Object Store
                         $dn = $_.Properties.distinguishedName[0]
                         if ($script:AdcsObjectStore.ContainsKey($dn)) {
-                            $script:AdcsObjectStore[$dn] | Add-Member -NotePropertyName CertificateManagers -NotePropertyValue $certificateManagers -Force
+                            $script:AdcsObjectStore[$dn].CertificateManagers = $certificateManagers
                             Write-Verbose "  Updated AD CS Object Store for $dn with Certificate Manager data"
                         }
                         
