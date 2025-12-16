@@ -41,8 +41,8 @@ class LS2AdcsObject {
     [Nullable[bool]]$AnyPurposeEKUExist
     [Nullable[bool]]$DangerousEnrollee
     [Nullable[bool]]$LowPrivilegeEnrollee
-    [Nullable[bool]]$ManagerApprovalRequired
-    [Nullable[bool]]$AuthorizedSignatureRequired
+    [Nullable[bool]]$ManagerApprovalNotRequired
+    [Nullable[bool]]$AuthorizedSignatureNotRequired
     [Nullable[bool]]$Enabled
     [string[]]$EnabledOn
     [string]$ComputerPrincipal
@@ -104,8 +104,8 @@ class LS2AdcsObject {
         $this.AnyPurposeEKUExist = $null
         $this.DangerousEnrollee = $null
         $this.LowPrivilegeEnrollee = $null
-        $this.ManagerApprovalRequired = $null
-        $this.AuthorizedSignatureRequired = $null
+        $this.ManagerApprovalNotRequired = $null
+        $this.AuthorizedSignatureNotRequired = $null
         $this.Enabled = $null
         $this.EnabledOn = @()
         $this.RPCEncryptionNotRequired = $null
