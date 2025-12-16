@@ -119,13 +119,15 @@ function Set-LowPrivilegeCACertificateManager {
                             $ntAccount = New-Object System.Security.Principal.NTAccount($manager.CertificateManager)
                             
                             # Translate to SID
-                            $sid = $ntAccount.Translate([System.Security.Principal.SecurityIdentifier])
+                            $sid = $ntAccount | Convert-IdentityReferenceToSid
                             
                             # Check if this is a low-privilege principal
                             $isLowPrivilege = $sid.Value | Test-IsLowPrivilegePrincipal
                             
                             if ($isLowPrivilege) {
                                 Write-Verbose "  Low-privilege Certificate Manager: $($manager.CertificateManager) ($($sid.Value))"
+                                # Ensure principal is in PrincipalStore
+                                $null = $ntAccount | Resolve-Principal
                                 $sid.Value
                             }
                         } catch {

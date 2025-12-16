@@ -99,13 +99,15 @@ function Set-DangerousCACertificateManager {
                             $ntAccount = New-Object System.Security.Principal.NTAccount($manager.CertificateManager)
                             
                             # Translate to SID
-                            $sid = $ntAccount.Translate([System.Security.Principal.SecurityIdentifier])
+                            $sid = $ntAccount | Convert-IdentityReferenceToSid
                             
                             # Check if this is a dangerous principal
                             $isDangerous = $sid.Value | Test-IsDangerousPrincipal
                             
                             if ($isDangerous) {
                                 Write-Verbose "  Dangerous Certificate Manager found: $($manager.CertificateManager)"
+                                # Ensure principal is in PrincipalStore
+                                $null = $ntAccount | Resolve-Principal
                                 $sid.Value
                             }
                         } catch {

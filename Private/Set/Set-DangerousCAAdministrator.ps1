@@ -98,11 +98,13 @@ function Set-DangerousCAAdministrator {
                     try {
                         # Convert the admin name to NTAccount and then to SID
                         $ntAccount = New-Object System.Security.Principal.NTAccount($admin.CAAdministrator)
-                        $sid = $ntAccount.Translate([System.Security.Principal.SecurityIdentifier])
+                        $sid = $ntAccount | Convert-IdentityReferenceToSid
                         
                         $isDangerous = $sid | Test-IsDangerousPrincipal
                         if ($isDangerous) {
                             Write-Verbose "  Dangerous CA Administrator found: $($admin.CAAdministrator)"
+                            # Ensure principal is in PrincipalStore
+                            $null = $ntAccount | Resolve-Principal
                             $sid.Value
                         }
                     } catch {

@@ -119,13 +119,15 @@ function Set-LowPrivilegeCAAdministrator {
                             $ntAccount = New-Object System.Security.Principal.NTAccount($admin.CAAdministrator)
                             
                             # Translate to SID
-                            $sid = $ntAccount.Translate([System.Security.Principal.SecurityIdentifier])
+                            $sid = $ntAccount | Convert-IdentityReferenceToSid
                             
                             # Check if this is a low-privilege principal
                             $isLowPrivilege = $sid.Value | Test-IsLowPrivilegePrincipal
                             
                             if ($isLowPrivilege) {
                                 Write-Verbose "  Low-privilege CA Administrator: $($admin.CAAdministrator) ($($sid.Value))"
+                                # Ensure principal is in PrincipalStore
+                                $null = $ntAccount | Resolve-Principal
                                 $sid.Value
                             }
                         } catch {
