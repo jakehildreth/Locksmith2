@@ -4,7 +4,7 @@ function Get-Locksmith2Stores {
         Returns the internal data stores used by Locksmith2.
 
         .DESCRIPTION
-        Provides access to the three internal hashtable stores that cache data during
+        Provides access to the four internal hashtable stores that cache data during
         Locksmith2 execution:
         
         - PrincipalStore: Keyed by SID, contains resolved principal objects with properties
@@ -16,13 +16,16 @@ function Get-Locksmith2Stores {
         - DomainStore: Keyed by distinguishedName, contains domain information including
           nETBIOSName and dnsRoot.
         
+        - IssueStore: Keyed by technique name (ESC1, ESC6, etc.), contains arrays of discovered
+          security vulnerabilities with details about the issue, fix, and revert scripts.
+        
         These stores are populated during the execution of Invoke-Locksmith2 and persist
         for the duration of the PowerShell session.
 
         .OUTPUTS
         PSCustomObject
-        Returns an object with three properties (PrincipalStore, AdcsObjectStore, DomainStore),
-        each containing a hashtable of cached data.
+        Returns an object with four properties (PrincipalStore, AdcsObjectStore, DomainStore, 
+        IssueStore), each containing a hashtable of cached data.
 
         .EXAMPLE
         $stores = Get-Locksmith2Stores
@@ -57,5 +60,6 @@ function Get-Locksmith2Stores {
         PrincipalStore = $script:PrincipalStore
         AdcsObjectStore = $script:AdcsObjectStore
         DomainStore = $script:DomainStore
+        IssueStore = $script:IssueStore
     }
 }
