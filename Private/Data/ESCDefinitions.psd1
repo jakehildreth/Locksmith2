@@ -1,0 +1,220 @@
+@{
+    ESC1 = @{
+        # ESC1: Misconfigured Certificate Templates
+        Technique = 'ESC1'
+        
+        # Conditions that make a template vulnerable
+        Conditions = @(
+            @{ Property = 'SANAllowed'; Value = $true }
+            @{ Property = 'AuthenticationEKUExist'; Value = $true }
+            @{ Property = 'ManagerApprovalNotRequired'; Value = $true }
+            @{ Property = 'AuthorizedSignatureNotRequired'; Value = $true }
+        )
+        
+        # Which enrollee properties to check (pre-calculated by Set-* functions)
+        EnrolleeProperties = @(
+            'DangerousEnrollee'
+            'LowPrivilegeEnrollee'
+        )
+        
+        # Issue description template (supports variables: $(IdentityReference), $(TemplateName))
+        IssueTemplate = @(
+            "`$(IdentityReference) can provide a Subject Alternative Name (SAN) while enrolling in this Client "
+            "Authentication template, and enrollment does not require Manager Approval.`n`n"
+            "The resultant certificate can be used by an attacker to authenticate as any principal listed in the SAN "
+            "up to and including Domain Admins, Enterprise Admins, or Domain Controllers.`n`n"
+            "More info:`n"
+            "  - https://posts.specterops.io/certified-pre-owned-d95910965cd2"
+        )
+        
+        # Fix script template (supports variable: $(DistinguishedName))
+        FixTemplate = @(
+            "# Enable Manager Approval"
+            "`$Object = '`$(DistinguishedName)'"
+            "Get-ADObject `$Object | Set-ADObject -Replace @{'msPKI-Enrollment-Flag' = 2}"
+        )
+        
+        # Revert script template (supports variable: $(DistinguishedName))
+        RevertTemplate = @(
+            "# Disable Manager Approval"
+            "`$Object = '`$(DistinguishedName)'"
+            "Get-ADObject `$Object | Set-ADObject -Replace @{'msPKI-Enrollment-Flag' = 0}"
+        )
+    }
+
+    ESC2 = @{
+        Technique = 'ESC2'
+        
+        # Conditions that templates must match to be vulnerable
+        Conditions = @(
+            @{ Property = 'AnyPurposeEKUExist'; Value = $true }
+            @{ Property = 'ManagerApprovalNotRequired'; Value = $true }
+            @{ Property = 'AuthorizedSignatureNotRequired'; Value = $true }
+        )
+        
+        # Properties to check for problematic enrollees
+        EnrolleeProperties = @(
+            'DangerousEnrollee'
+            'LowPrivilegeEnrollee'
+        )
+        
+        # Issue description template
+        IssueTemplate = @(
+            "`$(IdentityReference) can use the `$(TemplateName) template to request any type of certificate - including "
+            "Enrollment Agent certificates and Subordinate Certification Authority (SubCA) certificate - without Manager "
+            "Approval.`n`n"
+            "If an attacker requests an Enrollment Agent certificate and there exists at least one enabled ESC3 Condition 2 "
+            "or ESC15 template available that does not require Manager Approval, the attacker can request a certificate on "
+            "behalf of another principal. The risk presented depends on the privileges granted to the other principal.`n`n"
+            "If an attacker requests a SubCA certificate, the resultant certificate can be used by an attacker to "
+            "instantiate their own SubCA which is trusted by AD.`n`n"
+            "By default, certificates created from this attacker-controlled SubCA cannot be used for authentication, but "
+            "they can be used for other purposes such as TLS certs and code signing."
+        )
+
+        # Remediation script template
+        FixTemplate = @(
+            "# Enable Manager Approval"
+            "`$Object = '`$(DistinguishedName)'"
+            "Get-ADObject `$Object | Set-ADObject -Replace @{'msPKI-Enrollment-Flag' = 2}"
+        )
+
+        # Revert script template
+        RevertTemplate = @(
+            "# Disable Manager Approval"
+            "`$Object = '`$(DistinguishedName)'"
+            "Get-ADObject `$Object | Set-ADObject -Replace @{'msPKI-Enrollment-Flag' = 0}"
+        )
+    }
+
+    ESC3C1 = @{
+        Technique = 'ESC3C1'
+        
+        # Conditions that templates must match to be vulnerable
+        Conditions = @(
+            @{ Property = 'EnrollmentAgentEKUExist'; Value = $true }
+            @{ Property = 'ManagerApprovalNotRequired'; Value = $true }
+            @{ Property = 'AuthorizedSignatureNotRequired'; Value = $true }
+        )
+        
+        # Properties to check for problematic enrollees
+        EnrolleeProperties = @(
+            'DangerousEnrollee'
+            'LowPrivilegeEnrollee'
+        )
+        
+        # Issue description template
+        IssueTemplate = @(
+            "`$(IdentityReference) can use the `$(TemplateName) template to request an Enrollment Agent certificate without "
+            "Manager Approval.`n`n"
+            "The resulting certificate can be used to enroll in any template that allows an Enrollment Agent to submit the "
+            "request.`n`n"
+            "More info:`n"
+            "  - https://posts.specterops.io/certified-pre-owned-d95910965cd2"
+        )
+
+        # Remediation script template
+        FixTemplate = @(
+            "# Enable Manager Approval"
+            "`$Object = '`$(DistinguishedName)'"
+            "Get-ADObject `$Object | Set-ADObject -Replace @{'msPKI-Enrollment-Flag' = 2}"
+        )
+
+        # Revert script template
+        RevertTemplate = @(
+            "# Disable Manager Approval"
+            "`$Object = '`$(DistinguishedName)'"
+            "Get-ADObject `$Object | Set-ADObject -Replace @{'msPKI-Enrollment-Flag' = 0}"
+        )
+    }
+
+    ESC3C2 = @{
+        Technique = 'ESC3C2'
+        
+        # Conditions that templates must match to be vulnerable
+        Conditions = @(
+            @{ Property = 'AuthenticationEKUExist'; Value = $true }
+            @{ Property = 'ManagerApprovalNotRequired'; Value = $true }
+            @{ Property = 'RequiresEnrollmentAgentSignature'; Value = $true }
+        )
+        
+        # Properties to check for problematic enrollees
+        EnrolleeProperties = @(
+            'DangerousEnrollee'
+            'LowPrivilegeEnrollee'
+        )
+        
+        # Issue description template
+        IssueTemplate = @(
+            "If the holder of a SubCA, Any Purpose, or Enrollment Agent certificate requests a certificate using the "
+            "`$(TemplateName) template, they will receive a certificate which allows them to authenticate as "
+            "`$(IdentityReference).`n`n"
+            "More info:`n"
+            "  - https://posts.specterops.io/certified-pre-owned-d95910965cd2"
+        )
+
+        # Remediation script template
+        FixTemplate = @(
+            "# First, eliminate unused Enrollment Agent templates."
+            "# Then, tightly scope any Enrollment Agent templates that remain and:"
+            "# Enable Manager Approval"
+            "`$Object = '`$(DistinguishedName)'"
+            "Get-ADObject `$Object | Set-ADObject -Replace @{'msPKI-Enrollment-Flag' = 2}"
+        )
+
+        # Revert script template
+        RevertTemplate = @(
+            "# Disable Manager Approval"
+            "`$Object = '`$(DistinguishedName)'"
+            "Get-ADObject `$Object | Set-ADObject -Replace @{'msPKI-Enrollment-Flag' = 0}"
+        )
+    }
+
+    ESC9 = @{
+        Technique = 'ESC9'
+        
+        # Conditions that templates must match to be vulnerable
+        Conditions = @(
+            @{ Property = 'AuthenticationEKUExist'; Value = $true }
+            @{ Property = 'NoSecurityExtension'; Value = $true }
+        )
+        
+        # Properties to check for problematic enrollees
+        EnrolleeProperties = @(
+            'DangerousEnrollee'
+            'LowPrivilegeEnrollee'
+        )
+        
+        # Issue description template
+        IssueTemplate = @(
+            "The `$(TemplateName) template has the szOID_NTDS_CA_SECURITY_EXT security extension disabled. "
+            "Certificates issued from this template will not enforce strong certificate binding. Depending on the "
+            "current Certificate Binding Enforcement level ESC6 status, it may be possible to request and receive "
+            "certificates that rely on weak (aka attacker-controllable) binding methods.`n`n"
+            "An attacker can abuse this weakness by:`n"
+            "1. Getting access to a user or computer account.`n"
+            "2. Modifying the user's userPrincipalName attribute (or the computer's dNSHostName attribute) to match a "
+            "higher-privileged account.`n"
+            "3. Requesting a client authentication certificate from this template with szOID_NTDS_CA_SECURITY_EXT disabled.`n"
+            "4. Using the client authentication certificate to authenticate as the higher-privileged account.`n"
+            "5. Profiting.`n`n"
+            "More info:`n"
+            "  - ESC9 description: https://github.com/ly4k/Certipy/wiki/06-%E2%80%90-Privilege-Escalation#esc9-no-security-extension-on-certificate-template`n"
+            "  - Strong Mapping/Enforcement Mode: https://support.microsoft.com/en-us/topic/kb5014754-certificate-based-authentication-changes-on-windows-domain-controllers-ad2c23b0-15d8-4340-a468-4d4f3b188f16"
+        )
+
+        # Remediation script template
+        FixTemplate = @(
+            "# Enable Manager Approval"
+            "`$Object = '`$(DistinguishedName)'"
+            "Get-ADObject `$Object | Set-ADObject -Replace @{'msPKI-Enrollment-Flag' = 2}"
+        )
+
+        # Revert script template
+        RevertTemplate = @(
+            "# Disable Manager Approval"
+            "`$Object = '`$(DistinguishedName)'"
+            "Get-ADObject `$Object | Set-ADObject -Replace @{'msPKI-Enrollment-Flag' = 0}"
+        )
+    }
+}
