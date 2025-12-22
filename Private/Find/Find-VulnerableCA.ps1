@@ -10,9 +10,10 @@ function Find-VulnerableCA {
         ESC6: Detects CAs with EDITF_ATTRIBUTESUBJECTALTNAME2 enabled
         ESC7: Detects dangerous CA Administrator and Certificate Manager role assignments
         ESC11: Detects CAs that don't require RPC encryption
+        ESC16: Detects CAs with disabled CRL/AIA extensions
 
     .PARAMETER Technique
-        ESC technique name to scan for (e.g., 'ESC6', 'ESC7', 'ESC11')
+        ESC technique name to scan for (e.g., 'ESC6', 'ESC7', 'ESC11', 'ESC16')
 
     .EXAMPLE
         Find-VulnerableCA -Technique ESC6
@@ -32,7 +33,7 @@ function Find-VulnerableCA {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
-        [ValidateSet('ESC6', 'ESC7', 'ESC11')]
+        [ValidateSet('ESC6', 'ESC7', 'ESC11', 'ESC16')]
         [string]$Technique
     )
 
@@ -168,6 +169,107 @@ function Find-VulnerableCA {
                     # Output to pipeline
                     $issue
                 }
+            }
+        }
+    }
+    # ESC16 requires special handling to check DisableExtensionList
+    elseif ($Technique -eq 'ESC16') {
+        # Critical extension OID that should not be disabled
+        # Microsoft Certificate Template Information: 1.3.6.1.4.1.311.25.2
+        $criticalExtensions = @('1.3.6.1.4.1.311.25.2')
+        
+        foreach ($ca in $allCAs) {
+            $caName = if ($ca.cn) { $ca.cn } elseif ($ca.Properties -and $ca.Properties.Contains('cn')) { $ca.Properties['cn'][0] } else { 'Unknown CA' }
+            
+            # Check if CA has DisableExtensionList property
+            if (-not $ca.PSObject.Properties['DisableExtensionList'] -or $null -eq $ca.DisableExtensionList) {
+                Write-Verbose "  CA '$caName' has no DisableExtensionList data - skipping"
+                continue
+            }
+            
+            # Check if any critical extensions are disabled
+            $disabledCritical = $ca.DisableExtensionList | Where-Object { $criticalExtensions -contains $_ }
+            
+            if ($disabledCritical -and $disabledCritical.Count -gt 0) {
+                Write-Verbose "  VULNERABLE CA: $caName has disabled critical extensions: $($disabledCritical -join ', ')"
+                
+                # Get CAFullName for certutil commands
+                $caFullName = if ($ca.CAFullName) { $ca.CAFullName } else { $null }
+                
+                if (-not $caFullName) {
+                    Write-Verbose "    CA '$caName' has no CAFullName property - skipping issue creation"
+                    continue
+                }
+                
+                # Get forest name from DN
+                $forestName = if ($ca.distinguishedName -match 'DC=([^,]+)') {
+                    $ca.distinguishedName -replace '^.*?DC=(.*)$', '$1' -replace ',DC=', '.'
+                } else {
+                    'Unknown'
+                }
+                
+                # Format disabled extensions for display
+                $disabledExtensionsStr = $disabledCritical -join ', '
+                
+                # Join templates if they're arrays
+                $issueTemplate = if ($config.IssueTemplate -is [array]) {
+                    $config.IssueTemplate -join ''
+                } else {
+                    $config.IssueTemplate
+                }
+                
+                $fixTemplate = if ($config.FixTemplate -is [array]) {
+                    $config.FixTemplate -join "`n"
+                } else {
+                    $config.FixTemplate
+                }
+                
+                $revertTemplate = if ($config.RevertTemplate -is [array]) {
+                    $config.RevertTemplate -join "`n"
+                } else {
+                    $config.RevertTemplate
+                }
+                
+                # Expand template variables
+                $issueText = $issueTemplate `
+                    -replace '\$\(CAName\)', $caName `
+                    -replace '\$\(CAFullName\)', $caFullName `
+                    -replace '\$\(DisabledExtensions\)', $disabledExtensionsStr
+                
+                $fixScript = $fixTemplate `
+                    -replace '\$\(CAFullName\)', $caFullName
+                
+                $revertScript = $revertTemplate `
+                    -replace '\$\(CAFullName\)', $caFullName `
+                    -replace '\$\(DisabledExtensions\)', $disabledExtensionsStr
+                
+                # Create LS2Issue object
+                $issue = [LS2Issue]@{
+                    Technique         = $Technique
+                    Forest            = $forestName
+                    Name              = $caName
+                    DistinguishedName = $ca.distinguishedName
+                    CAFullName        = $caFullName
+                    Issue             = $issueText
+                    Fix               = $fixScript
+                    Revert            = $revertScript
+                }
+                
+                # Initialize IssueStore structure if needed
+                $dn = $ca.distinguishedName
+                if (-not $script:IssueStore.ContainsKey($dn)) {
+                    $script:IssueStore[$dn] = @{}
+                }
+                if (-not $script:IssueStore[$dn].ContainsKey($Technique)) {
+                    $script:IssueStore[$dn][$Technique] = @()
+                }
+                
+                # Store in IssueStore
+                $script:IssueStore[$dn][$Technique] += $issue
+                $issueCount++
+                
+                # Output to pipeline
+                $issue
             }
         }
     }
