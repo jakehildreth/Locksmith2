@@ -296,4 +296,64 @@
             "Restart-Service -Name CertSvc -Force"
         )
     }
+
+    ESC7 = @{
+        Technique = 'ESC7'
+        
+        # Properties to check for problematic CA administrators/managers
+        AdminProperties = @(
+            'DangerousCAAdministrator'
+            'LowPrivilegeCAAdministrator'
+            'DangerousCACertificateManager'
+            'LowPrivilegeCACertificateManager'
+        )
+        
+        # Issue description template for CA Administrators
+        IssueTemplateCAAdmin = @(
+            "`$(IdentityReference) has CA Administrator rights on `$(CAName).`n`n"
+            "CA Administrators can manage CA configuration, approve certificate requests, and modify "
+            "security settings. This principal should not have these rights.`n`n"
+            "An attacker with these rights can:`n"
+            "1. Approve pending certificate requests (including malicious ones)`n"
+            "2. Disable manager approval on templates`n"
+            "3. Publish vulnerable certificate templates`n"
+            "4. Modify CA configuration to enable additional attack vectors`n`n"
+            "More info:`n"
+            "  - https://posts.specterops.io/certified-pre-owned-d95910965cd2"
+        )
+        
+        # Issue description template for Certificate Managers
+        IssueTemplateCertManager = @(
+            "`$(IdentityReference) has Certificate Manager rights on `$(CAName).`n`n"
+            "Certificate Managers can approve/deny certificate requests and revoke certificates. "
+            "This principal should not have these rights.`n`n"
+            "An attacker with these rights can approve malicious certificate requests that would "
+            "normally require manager approval.`n`n"
+            "More info:`n"
+            "  - https://posts.specterops.io/certified-pre-owned-d95910965cd2"
+        )
+        
+        # Remediation requires manual review
+        FixTemplate = @(
+            "# Remove CA Administrator/Certificate Manager role"
+            "# For CA Administrators:"
+            "certutil -config `$(CAFullName) -delreg ca\\Security\\Roles\\Administrators\\`$(IdentityReference)"
+            "# For Certificate Managers:"
+            "certutil -config `$(CAFullName) -delreg ca\\Security\\Roles\\Officers\\`$(IdentityReference)"
+            "# Restart Certificate Services"
+            "Restart-Service -Name CertSvc -Force"
+            "# NOTE: Review whether this principal needs these rights before removing"
+        )
+        
+        # Revert template
+        RevertTemplate = @(
+            "# Re-add CA Administrator/Certificate Manager role"
+            "# For CA Administrators:"
+            "certutil -config `$(CAFullName) -setreg ca\\Security\\Roles\\Administrators\\`$(IdentityReference) +ManageCA"
+            "# For Certificate Managers:"
+            "certutil -config `$(CAFullName) -setreg ca\\Security\\Roles\\Officers\\`$(IdentityReference) +ManageCertificates"
+            "# Restart Certificate Services"
+            "Restart-Service -Name CertSvc -Force"
+        )
+    }
 }
