@@ -217,4 +217,43 @@
             "Get-ADObject `$Object | Set-ADObject -Replace @{'msPKI-Enrollment-Flag' = 0}"
         )
     }
+
+    ESC6 = @{
+        Technique = 'ESC6'
+        
+        # Conditions that CAs must match to be vulnerable
+        Conditions = @(
+            @{ Property = 'SANFlagEnabled'; Value = $true }
+        )
+        
+        # Issue description template
+        IssueTemplate = @(
+            "The Certification Authority `$(CAName) has the EDITF_ATTRIBUTESUBJECTALTNAME2 flag enabled. "
+            "This allows ANY certificate request to specify Subject Alternative Names (SANs) regardless of "
+            "template configuration.`n`n"
+            "An attacker with enrollment rights to ANY template on this CA can request certificates with "
+            "arbitrary SANs, enabling authentication as any principal (including Domain Admins, Enterprise "
+            "Admins, or Domain Controllers).`n`n"
+            "This setting overrides template-level SAN restrictions and should be disabled unless absolutely "
+            "necessary with strict template controls.`n`n"
+            "More info:`n"
+            "  - https://posts.specterops.io/certified-pre-owned-d95910965cd2"
+        )
+        
+        # Remediation script template
+        FixTemplate = @(
+            "# Disable EDITF_ATTRIBUTESUBJECTALTNAME2 on the CA"
+            "certutil -config `$(CAFullName) -setreg policy\\EditFlags -EDITF_ATTRIBUTESUBJECTALTNAME2"
+            "# Restart Certificate Services for the change to take effect"
+            "Restart-Service -Name CertSvc -Force"
+        )
+        
+        # Revert script template
+        RevertTemplate = @(
+            "# Re-enable EDITF_ATTRIBUTESUBJECTALTNAME2 on the CA"
+            "certutil -config `$(CAFullName) -setreg policy\\EditFlags +EDITF_ATTRIBUTESUBJECTALTNAME2"
+            "# Restart Certificate Services"
+            "Restart-Service -Name CertSvc -Force"
+        )
+    }
 }
