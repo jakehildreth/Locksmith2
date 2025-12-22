@@ -256,4 +256,44 @@
             "Restart-Service -Name CertSvc -Force"
         )
     }
+
+    ESC11 = @{
+        Technique = 'ESC11'
+        
+        # Conditions that CAs must match to be vulnerable
+        Conditions = @(
+            @{ Property = 'RPCEncryptionNotRequired'; Value = $true }
+        )
+        
+        # Issue description template
+        IssueTemplate = @(
+            "The Certification Authority `$(CAName) does not require RPC encryption for certificate "
+            "requests (IF_ENFORCEENCRYPTICERTREQUEST flag is disabled).`n`n"
+            "This allows certificate requests to be submitted over unencrypted RPC/DCOM connections, "
+            "which can be intercepted and manipulated via network-based attacks (NTLM relay).`n`n"
+            "An attacker positioned on the network can:`n"
+            "1. Relay NTLM authentication to the CA's RPC interface`n"
+            "2. Request certificates on behalf of the relayed victim`n"
+            "3. Use the obtained certificate to authenticate as the victim`n`n"
+            "This is particularly dangerous when combined with coercion techniques.`n`n"
+            "More info:`n"
+            "  - https://posts.specterops.io/certificates-and-pwnage-and-patches-oh-my-8ae0f4304c1d"
+        )
+        
+        # Remediation script template
+        FixTemplate = @(
+            "# Enable IF_ENFORCEENCRYPTICERTREQUEST on the CA"
+            "certutil -config `$(CAFullName) -setreg CA\\InterfaceFlags +IF_ENFORCEENCRYPTICERTREQUEST"
+            "# Restart Certificate Services"
+            "Restart-Service -Name CertSvc -Force"
+        )
+        
+        # Revert script template
+        RevertTemplate = @(
+            "# Disable IF_ENFORCEENCRYPTICERTREQUEST on the CA"
+            "certutil -config `$(CAFullName) -setreg CA\\InterfaceFlags -IF_ENFORCEENCRYPTICERTREQUEST"
+            "# Restart Certificate Services"
+            "Restart-Service -Name CertSvc -Force"
+        )
+    }
 }
