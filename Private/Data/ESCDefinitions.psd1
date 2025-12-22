@@ -356,4 +356,44 @@
             "Restart-Service -Name CertSvc -Force"
         )
     }
+
+    ESC16 = @{
+        Technique = 'ESC16'
+        
+        # Note: ESC16 requires custom logic in Find-VulnerableCA to check DisableExtensionList
+        # for Microsoft Certificate Template Information extension (OID: 1.3.6.1.4.1.311.25.2)
+        
+        # Issue description template
+        IssueTemplate = @(
+            "The Certification Authority `$(CAName) has disabled the Certificate Template Information extension (OID: 1.3.6.1.4.1.311.25.2).`n`n"
+            "This extension contains critical information about the certificate template used to issue certificates. "
+            "Disabling this extension prevents proper certificate template validation and can allow certificate "
+            "template abuse.`n`n"
+            "When this extension is disabled:`n"
+            "1. Certificate template information is not embedded in issued certificates`n"
+            "2. Template-based security controls cannot be enforced`n"
+            "3. Certificate template identification becomes unreliable`n`n"
+            "This can be exploited to bypass template-level restrictions.`n`n"
+            "More info:`n"
+            "  - https://posts.specterops.io/certificates-and-pwnage-and-patches-oh-my-8ae0f4304c1d"
+        )
+        
+        # Remediation script template
+        FixTemplate = @(
+            "# Re-enable disabled extensions on the CA"
+            "# Remove the extension OIDs from the DisableExtensionList registry value"
+            "certutil -config `$(CAFullName) -delreg policy\\DisableExtensionList"
+            "# Restart Certificate Services"
+            "Restart-Service -Name CertSvc -Force"
+            "# NOTE: Review which extensions should be enabled before applying this fix"
+        )
+        
+        # Revert script template
+        RevertTemplate = @(
+            "# Re-disable the extensions (use with caution)"
+            "certutil -config `$(CAFullName) -setreg policy\\DisableExtensionList `$(DisabledExtensions)"
+            "# Restart Certificate Services"
+            "Restart-Service -Name CertSvc -Force"
+        )
+    }
 }
