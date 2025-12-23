@@ -25,7 +25,7 @@
 - Follow verb-noun naming: `Verb-LS2Noun` (e.g., `Find-LS2VulnerableTemplate`)
 - Use PascalCase for function names, parameters, and variables
 - Always include comment-based help with `.SYNOPSIS`, `.DESCRIPTION`, `.PARAMETER`, `.EXAMPLE`, and `.OUTPUTS`
-- Use `[CmdletBinding()]` for advanced functions
+- Use `[CmdletBinding()]` for all functions
 - Use proper parameter attributes: `[Parameter()]`, type constraints, validation attributes
 - Support pipeline input where appropriate
 - Use `Write-Verbose` for diagnostic messages
