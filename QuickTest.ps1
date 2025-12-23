@@ -12,7 +12,7 @@ if (-not $Forest) {
 $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
 
 # Run main function
-$results = Invoke-Locksmith2 -Forest $Forest -Credential $Credential -SkipPowerShellCheck # -Verbose
+$results = Invoke-Locksmith2 -Forest $Forest -Credential $Credential -SkipPowerShellCheck -Verbose
 
 # Stop performance measurement and display results
 $stopwatch.Stop()
