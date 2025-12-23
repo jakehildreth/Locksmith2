@@ -360,8 +360,10 @@
     ESC16 = @{
         Technique = 'ESC16'
         
-        # Note: ESC16 requires custom logic in Find-VulnerableCA to check DisableExtensionList
-        # for Microsoft Certificate Template Information extension (OID: 1.3.6.1.4.1.311.25.2)
+        # Conditions that CAs must match to be vulnerable
+        Conditions = @(
+            @{ Property = 'SecurityExtensionDisabled'; Value = $true }
+        )
         
         # Issue description template
         IssueTemplate = @(

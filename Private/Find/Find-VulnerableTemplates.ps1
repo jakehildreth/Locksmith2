@@ -33,7 +33,7 @@ function Find-VulnerableTemplates {
     # Query AdcsObjectStore for templates, then filter by conditions
     $allTemplates = $script:AdcsObjectStore.Values | Where-Object { $_.IsCertificateTemplate() }
     
-    $vulnerableTemplates = foreach ($template in $allTemplates) {
+    $vulnerableTemplates = @(foreach ($template in $allTemplates) {
         $matchesAllConditions = $true
         
         foreach ($condition in $config.Conditions) {
@@ -47,7 +47,7 @@ function Find-VulnerableTemplates {
         if ($matchesAllConditions) {
             $template
         }
-    }
+    })
 
     Write-Verbose "Found $($vulnerableTemplates.Count) template(s) with $technique-vulnerable configuration"
 

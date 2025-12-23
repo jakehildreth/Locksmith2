@@ -52,6 +52,7 @@ class LS2AdcsObject {
     [object[]]$InterfaceFlags
     [Nullable[int]]$AuditFilter
     [object[]]$DisableExtensionList
+    [Nullable[bool]]$SecurityExtensionDisabled
     
     # Schema class name for easy type checking
     [string]$SchemaClassName
