@@ -53,22 +53,55 @@
 ```
 Locksmith2/
 ├── .github/
-│   └── instructions/
+│   └── instructions/         # Copilot instructions and guidelines
+├── Artefacts/
+│   ├── Packed/              # Built module packages
+│   └── Unpacked/            # Unpacked module artifacts
 ├── Build/
-│   └── Build-Module.ps1
-├── Private/           # Internal functions not exported
-├── Public/            # Exported functions
-├── Locksmith2.psd1    # Module manifest
-├── Locksmith2.psm1    # Root module
+│   └── Build-Module.ps1     # Module build script
+├── Classes/                 # PowerShell classes (LS2Principal, LS2AdcsObject, LS2Issue)
+│   ├── LS2Principal.ps1
+│   ├── LS2AdcsObject.ps1
+│   └── LS2Issue.ps1
+├── Docs/                    # Documentation
+├── Notes/                   # Development notes and tasks
+├── Private/                 # Internal functions not exported
+│   ├── Convert/             # Identity/principal conversion functions
+│   ├── Data/                # Data files (ESCDefinitions.psd1, DangerousAces.psd1)
+│   ├── Find/                # Vulnerability detection functions
+│   ├── Get/                 # LDAP/AD query functions
+│   ├── Initialize/          # Initialization functions (DomainStore, DirectoryConnections)
+│   ├── New/                 # Object creation functions (LDAP searchers, directory entries)
+│   ├── Set/                 # Property computation functions (Set-CAEditFlags, Set-SANAllowed, etc.)
+│   ├── Test/                # Test/validation functions (Test-IsDA, Test-IsDangerousPrincipal, etc.)
+│   ├── UI/                  # UI/display functions
+│   └── Utility/             # Utility functions
+├── Public/                  # Exported functions
+│   ├── Get-Locksmith2Stores.ps1
+│   └── Invoke-Locksmith2.ps1
+├── Unused/                  # Deprecated/unused code
+├── Locksmith2.psd1          # Module manifest
+├── Locksmith2.psm1          # Root module
+├── QuickTest.ps1            # Quick test script
 ├── README.MD
 ├── CHANGELOG.MD
-├── License
-└── Tasks.md
+└── License
 ```
 
 ### Function Organization
-- **Public/** - Functions exported to users (cmdlets)
-- **Private/** - Internal helper functions (not exported)
+- **Public/** - Functions exported to users (cmdlets like Invoke-Locksmith2, Get-Locksmith2Stores)
+- **Private/** - Internal helper functions organized by responsibility:
+  - **Convert/** - Identity/SID/NTAccount conversion
+  - **Data/** - Configuration data files (.psd1)
+  - **Find/** - Vulnerability detection (Find-VulnerableCA, Find-VulnerableTemplates)
+  - **Get/** - LDAP queries and object retrieval
+  - **Initialize/** - Store initialization (DomainStore, DirectoryConnections)
+  - **New/** - Factory functions for creating objects
+  - **Set/** - Property computation functions that enrich objects
+  - **Test/** - Boolean test/validation functions
+  - **UI/** - Display and formatting functions
+  - **Utility/** - General utility functions
+- **Classes/** - PowerShell class definitions loaded via ScriptsToProcess
 - All functions should be in separate `.ps1` files
 - File names must match function names exactly
 
