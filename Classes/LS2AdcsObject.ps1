@@ -103,8 +103,12 @@ class LS2AdcsObject {
             $this.Owner = $null
         }
         
-        # Initialize HasNonStandardOwner (will be computed by Set-* functions)
-        $this.HasNonStandardOwner = $null
+        # Initialize HasNonStandardOwner (preserve value if already set by Set-HasNonStandardOwner)
+        if ($DirectoryEntry.PSObject.Properties['HasNonStandardOwner'] -and $null -ne $DirectoryEntry.HasNonStandardOwner) {
+            $this.HasNonStandardOwner = $DirectoryEntry.HasNonStandardOwner
+        } else {
+            $this.HasNonStandardOwner = $null
+        }
         
         # Initialize computed properties to defaults
         $this.SANAllowed = $null

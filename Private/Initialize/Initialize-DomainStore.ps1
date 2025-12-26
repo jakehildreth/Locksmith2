@@ -30,7 +30,7 @@ function Initialize-DomainStore {
         
         Store structure:
         - Key: Domain Distinguished Name
-        - Value: PSCustomObject with distinguishedName, nETBIOSName, dnsRoot
+        - Value: PSCustomObject with distinguishedName, nETBIOSName, dnsRoot, objectSid
     #>
     [CmdletBinding()]
     param()
@@ -72,6 +72,9 @@ function Initialize-DomainStore {
                 $partitionsSearcher.PropertiesToLoad.AddRange(@('nCName', 'nETBIOSName', 'dnsRoot')) | Out-Null
                 $partitionsSearcher.SearchScope = [System.DirectoryServices.SearchScope]::OneLevel
                 
+                # We'll need to query each domain directly for its objectSid
+                # as crossRef objects don't contain the domain's SID
+                
                 $allPartitions = $partitionsSearcher.FindAll()
                 
                 $domainCount = 0
@@ -81,14 +84,28 @@ function Initialize-DomainStore {
                         
                         # Create domain store entry with all properties
                         if (-not $script:DomainStore.ContainsKey($domainDN)) {
+                            # Query the domain directly for its objectSid
+                            $domainSid = $null
+                            try {
+                                $domainEntry = New-AuthenticatedDirectoryEntry -Path "LDAP://$server/$domainDN"
+                                if ($domainEntry.Properties['objectSid'].Count -gt 0) {
+                                    $sidBytes = $domainEntry.Properties['objectSid'][0]
+                                    $domainSid = (New-Object System.Security.Principal.SecurityIdentifier($sidBytes, 0)).Value
+                                }
+                                $domainEntry.Dispose()
+                            } catch {
+                                Write-Warning "Failed to retrieve objectSid for domain ${domainDN}: $_"
+                            }
+                            
                             $domainObject = [PSCustomObject]@{
                                 distinguishedName = $domainDN
                                 nETBIOSName = if ($partition.Properties['nETBIOSName'].Count -gt 0) { $partition.Properties['nETBIOSName'][0] } else { $null }
                                 dnsRoot = if ($partition.Properties['dnsRoot'].Count -gt 0) { $partition.Properties['dnsRoot'][0] } else { $null }
+                                objectSid = $domainSid
                             }
                             
                             $script:DomainStore[$domainDN] = $domainObject
-                            Write-Verbose "Stored domain: $domainDN (NetBIOS: $($domainObject.nETBIOSName), DNS: $($domainObject.dnsRoot))"
+                            Write-Verbose "Stored domain: $domainDN (NetBIOS: $($domainObject.nETBIOSName), DNS: $($domainObject.dnsRoot), SID: $($domainObject.objectSid))"
                             $domainCount++
                         }
                     }

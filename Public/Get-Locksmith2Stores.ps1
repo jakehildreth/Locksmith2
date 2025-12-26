@@ -4,7 +4,7 @@ function Get-Locksmith2Stores {
         Returns the internal data stores used by Locksmith2.
 
         .DESCRIPTION
-        Provides access to the four internal hashtable stores that cache data during
+        Provides access to the internal hashtable and array stores that cache data during
         Locksmith2 execution:
         
         - PrincipalStore: Keyed by SID, contains resolved principal objects with properties
@@ -14,18 +14,28 @@ function Get-Locksmith2Stores {
           etc.) with computed security properties.
         
         - DomainStore: Keyed by distinguishedName, contains domain information including
-          nETBIOSName and dnsRoot.
+          nETBIOSName, dnsRoot, and objectSid.
         
         - IssueStore: Keyed by technique name (ESC1, ESC6, etc.), contains arrays of discovered
           security vulnerabilities with details about the issue, fix, and revert scripts.
+        
+        - SafePrincipals: Array of SID patterns representing principals considered safe
+          (e.g., Enterprise Admins, Domain Admins, SYSTEM).
+        
+        - DangerousPrincipals: Array of SID patterns representing principals considered dangerous
+          (e.g., Everyone, Authenticated Users, Domain Users).
+        
+        - StandardOwners: Array of SID patterns representing acceptable owners for AD CS objects
+          (includes forest-specific Enterprise Admins SID).
         
         These stores are populated during the execution of Invoke-Locksmith2 and persist
         for the duration of the PowerShell session.
 
         .OUTPUTS
         PSCustomObject
-        Returns an object with four properties (PrincipalStore, AdcsObjectStore, DomainStore, 
-        IssueStore), each containing a hashtable of cached data.
+        Returns an object with seven properties:
+        - PrincipalStore, AdcsObjectStore, DomainStore, IssueStore: Hashtables of cached data
+        - SafePrincipals, DangerousPrincipals, StandardOwners: Arrays of SID patterns
 
         .EXAMPLE
         $stores = Get-Locksmith2Stores
@@ -47,6 +57,11 @@ function Get-Locksmith2Stores {
         $stores.DomainStore.Values | Select-Object nETBIOSName, dnsRoot
         Lists all cached domain information.
 
+        .EXAMPLE
+        $stores = Get-Locksmith2Stores
+        $stores.StandardOwners
+        Shows all SID patterns considered acceptable owners for AD CS objects.
+
         .NOTES
         The stores are module-scoped and shared across all Locksmith2 functions.
         They are initialized by Invoke-Locksmith2 and persist until the module is
@@ -61,5 +76,8 @@ function Get-Locksmith2Stores {
         AdcsObjectStore = $script:AdcsObjectStore
         DomainStore = $script:DomainStore
         IssueStore = $script:IssueStore
+        SafePrincipals = $script:SafePrincipals
+        DangerousPrincipals = $script:DangerousPrincipals
+        StandardOwners = $script:StandardOwners
     }
 }
