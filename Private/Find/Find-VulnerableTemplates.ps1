@@ -19,7 +19,7 @@ function Find-VulnerableTemplates {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
-        [ValidateSet('ESC1', 'ESC2', 'ESC3C1', 'ESC3C2', 'ESC9')]
+        [ValidateSet('ESC1', 'ESC2', 'ESC3C1', 'ESC3C2', 'ESC9', 'ESC4o')]
         [string]$Technique
     )
 
@@ -53,6 +53,60 @@ function Find-VulnerableTemplates {
 
     $issueCount = 0
 
+    # ESC4o: Ownership-based detection (no enrollee checking needed)
+    if ($Technique -eq 'ESC4o') {
+        foreach ($template in $vulnerableTemplates) {
+            $templateName = if ($template.displayName) { $template.displayName } else { $template.Name }
+            $owner = if ($template.Owner) { $template.Owner } else { 'Unknown' }
+
+            Write-Verbose "  Checking template: $templateName"
+
+            # Create issue using template expansion
+            $issueText = ($config.IssueTemplate -join '') `
+                -replace '\$\(TemplateName\)', $templateName `
+                -replace '\$\(Owner\)', $owner
+
+            $fixScript = ($config.FixTemplate -join "`n") `
+                -replace '\$\(DistinguishedName\)', $template.distinguishedName
+
+            $revertScript = ($config.RevertTemplate -join "`n") `
+                -replace '\$\(DistinguishedName\)', $template.distinguishedName `
+                -replace '\$\(OriginalOwner\)', $owner
+
+            # Create issue object
+            $issue = [LS2Issue]::new(@{
+                Technique          = $Technique
+                Forest             = $script:ForestContext.RootDomain
+                Name               = $templateName
+                DistinguishedName  = $template.distinguishedName
+                Owner              = $owner
+                HasNonStandardOwner = $true
+                Enabled            = $template.Enabled
+                EnabledOn          = $template.EnabledOn
+                Issue              = $issueText
+                Fix                = $fixScript
+                Revert             = $revertScript
+            })
+
+            # Store in IssueStore
+            $dn = $template.distinguishedName
+            if (-not $script:IssueStore.ContainsKey($dn)) {
+                $script:IssueStore[$dn] = @{}
+            }
+            if (-not $script:IssueStore[$dn].ContainsKey($Technique)) {
+                $script:IssueStore[$dn][$Technique] = @()
+            }
+            $script:IssueStore[$dn][$Technique] += $issue
+            $issueCount++
+
+            # Output to pipeline
+            $issue
+        }
+        Write-Verbose "$Technique scan complete. Found $issueCount issue(s)."
+        return
+    }
+
+    # Standard enrollee-based detection for other ESC techniques
     foreach ($template in $vulnerableTemplates) {
         Write-Verbose "  Checking enrollees on template: $($template.Name)"
 

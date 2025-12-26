@@ -40,18 +40,44 @@ function Find-VulnerableObjects {
 
     Write-Verbose "Scanning for $Technique using definitions from $definitionsPath"
 
-    # Query AdcsObjectStore for infrastructure objects (exclude templates and CAs which are handled separately)
+    # Query AdcsObjectStore for infrastructure objects and CAs (exclude templates only)
     $allObjects = $script:AdcsObjectStore.Values | Where-Object { 
-        $_.objectClass -notcontains 'pKICertificateTemplate' -and 
-        $_.objectClass -notcontains 'pKIEnrollmentService'
+        $_.objectClass -notcontains 'pKICertificateTemplate'
     }
     
-    Write-Verbose "Found $($allObjects.Count) infrastructure object(s) to check"
+    # Filter objects by conditions
+    $vulnerableObjects = @(foreach ($object in $allObjects) {
+        $matchesAllConditions = $true
+        
+        foreach ($condition in $config.Conditions) {
+            $propertyValue = $object.($condition.Property)
+            
+            $matches = switch ($condition.Operator) {
+                'eq' { $propertyValue -eq $condition.Value }
+                'ne' { $propertyValue -ne $condition.Value }
+                'gt' { $propertyValue -gt $condition.Value }
+                'lt' { $propertyValue -lt $condition.Value }
+                'contains' { $propertyValue -contains $condition.Value }
+                default { $false }
+            }
+            
+            if (-not $matches) {
+                $matchesAllConditions = $false
+                break
+            }
+        }
+        
+        if ($matchesAllConditions) {
+            $object
+        }
+    })
+    
+    Write-Verbose "Found $($vulnerableObjects.Count) object(s) to check (CAs and infrastructure)"
 
     $issueCount = 0
 
-    # ESC5: Check for non-standard owners
-    foreach ($object in $allObjects) {
+    # Process vulnerable objects
+    foreach ($object in $vulnerableObjects) {
         $objectName = if ($object.displayName) { 
             $object.displayName 
         } elseif ($object.name) { 
@@ -62,76 +88,68 @@ function Find-VulnerableObjects {
             'Unknown Object' 
         }
         
-        Write-Verbose "  Checking object: $objectName"
-
-        # Skip objects without HasNonStandardOwner property set
-        if ($null -eq $object.HasNonStandardOwner) {
-            Write-Verbose "    HasNonStandardOwner not set - skipping"
-            continue
+        $owner = if ($object.Owner) { $object.Owner } else { 'Unknown' }
+        
+        Write-Verbose "  Checking object: $objectName (owned by $owner)"
+        
+        $issueCount++
+        
+        # Get object type for issue description
+        $objectType = if ($object.objectClass -contains 'container') {
+            'Container'
+        } elseif ($object.objectClass -contains 'certificationAuthority') {
+            'Certification Authority Container'
+        } elseif ($object.objectClass -contains 'pKIEnrollmentService') {
+            'Certification Authority'
+        } elseif ($object.objectClass -contains 'computer') {
+            'Computer Account'
+        } else {
+            'PKI Object'
         }
 
-        # Check for non-standard owner
-        if ($object.HasNonStandardOwner -eq $true) {
-            $issueCount++
-            
-            # Get owner for issue description
-            $owner = if ($object.Owner) { 
-                $object.Owner 
-            } else { 
-                'Unknown' 
-            }
-            
-            # Get object type for issue description
-            $objectType = if ($object.objectClass -contains 'container') {
-                'Container'
-            } elseif ($object.objectClass -contains 'certificationAuthority') {
-                'Certification Authority Container'
-            } elseif ($object.objectClass -contains 'computer') {
-                'Computer Account'
-            } else {
-                'PKI Object'
-            }
+        # Expand issue template with variables
+        $issueText = ($config.IssueTemplate -join '') `
+            -replace '\$\(ObjectName\)', $objectName `
+            -replace '\$\(ObjectType\)', $objectType `
+            -replace '\$\(Owner\)', $owner
 
-            # Expand issue template with variables
-            $issueText = ($config.IssueTemplate -join '') `
-                -replace '\$\(ObjectName\)', $objectName `
-                -replace '\$\(ObjectType\)', $objectType `
-                -replace '\$\(Owner\)', $owner
+        # Expand fix script template with variables
+        $fixScript = ($config.FixTemplate -join "`n") `
+            -replace '\$\(DistinguishedName\)', $object.distinguishedName
 
-            # Expand fix script template with variables
-            $fixScript = ($config.FixTemplate -join "`n") `
-                -replace '\$\(DistinguishedName\)', $object.distinguishedName
+        # Expand revert script template with variables
+        $revertScript = ($config.RevertTemplate -join "`n") `
+            -replace '\$\(DistinguishedName\)', $object.distinguishedName `
+            -replace '\$\(OriginalOwner\)', $owner
 
-            # Expand revert script template with variables
-            $revertScript = ($config.RevertTemplate -join "`n") `
-                -replace '\$\(DistinguishedName\)', $object.distinguishedName `
-                -replace '\$\(OriginalOwner\)', $owner
+        # Create issue object
+        $issue = [LS2Issue]::new(@{
+            Technique          = $Technique
+            Forest             = $script:ForestContext.RootDomain
+            Name               = $objectName
+            DistinguishedName  = $object.distinguishedName
+            Owner              = $owner
+            HasNonStandardOwner = $true
+            Issue              = $issueText
+            Fix                = $fixScript
+            Revert             = $revertScript
+        })
 
-            # Create issue object
-            $issue = [LS2Issue]::new(
-                $Technique,
-                $object.distinguishedName,
-                $issueText,
-                $fixScript,
-                $revertScript
-            )
-
-            # Add issue to IssueStore
-            if (-not $script:IssueStore.ContainsKey($object.distinguishedName)) {
-                $script:IssueStore[$object.distinguishedName] = @{}
-            }
-            
-            if (-not $script:IssueStore[$object.distinguishedName].ContainsKey($Technique)) {
-                $script:IssueStore[$object.distinguishedName][$Technique] = @()
-            }
-            
-            $script:IssueStore[$object.distinguishedName][$Technique] += $issue
-
-            Write-Verbose "    VULNERABLE: $objectType '$objectName' owned by $owner"
-
-            # Return the issue
-            $issue
+        # Add issue to IssueStore
+        if (-not $script:IssueStore.ContainsKey($object.distinguishedName)) {
+            $script:IssueStore[$object.distinguishedName] = @{}
         }
+        
+        if (-not $script:IssueStore[$object.distinguishedName].ContainsKey($Technique)) {
+            $script:IssueStore[$object.distinguishedName][$Technique] = @()
+        }
+        
+        $script:IssueStore[$object.distinguishedName][$Technique] += $issue
+
+        Write-Verbose "    VULNERABLE: $objectType '$objectName' owned by $owner"
+
+        # Return the issue
+        $issue
     }
 
     Write-Verbose "$Technique scan complete. Found $issueCount issue(s)."
