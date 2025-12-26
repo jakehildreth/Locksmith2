@@ -40,13 +40,12 @@ function Find-VulnerableObjects {
 
     Write-Verbose "Scanning for $Technique using definitions from $definitionsPath"
 
-    # Query AdcsObjectStore for infrastructure objects (exclude templates and CAs which are handled separately)
+    # Query AdcsObjectStore for infrastructure objects (exclude templates only)
     $allObjects = $script:AdcsObjectStore.Values | Where-Object { 
-        $_.objectClass -notcontains 'pKICertificateTemplate' -and 
-        $_.objectClass -notcontains 'pKIEnrollmentService'
+        $_.objectClass -notcontains 'pKICertificateTemplate'
     }
     
-    Write-Verbose "Found $($allObjects.Count) infrastructure object(s) to check"
+    Write-Verbose "Found $($allObjects.Count) object(s) to check (CAs and infrastructure)"
 
     $issueCount = 0
 
@@ -108,13 +107,17 @@ function Find-VulnerableObjects {
                 -replace '\$\(OriginalOwner\)', $owner
 
             # Create issue object
-            $issue = [LS2Issue]::new(
-                $Technique,
-                $object.distinguishedName,
-                $issueText,
-                $fixScript,
-                $revertScript
-            )
+            $issue = [LS2Issue]::new(@{
+                Technique          = $Technique
+                Forest             = $script:ForestContext.RootDomain
+                Name               = $objectName
+                DistinguishedName  = $object.distinguishedName
+                Owner              = $owner
+                HasNonStandardOwner = $true
+                Issue              = $issueText
+                Fix                = $fixScript
+                Revert             = $revertScript
+            })
 
             # Add issue to IssueStore
             if (-not $script:IssueStore.ContainsKey($object.distinguishedName)) {
