@@ -472,9 +472,10 @@
             "An attacker who controls the owner principal can:`n"
             "1. Modify object permissions (WriteDacl)`n"
             "2. Grant themselves additional rights`n"
-            "3. For containers: Create vulnerable templates or CAs`n"
-            "4. For computer objects: Modify CA host configuration`n"
-            "5. Manipulate PKI trust relationships`n`n"
+            "3. For CAs: Modify CA configuration, disable security extensions, grant dangerous permissions`n"
+            "4. For containers: Create vulnerable templates or CAs`n"
+            "5. For computer objects: Modify CA host configuration`n"
+            "6. Manipulate PKI trust relationships`n`n"
             "More info:`n"
             "  - https://posts.specterops.io/certified-pre-owned-d95910965cd2"
         )
