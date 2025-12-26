@@ -1,4 +1,4 @@
-function Find-VulnerableObjects {
+function Find-LS2VulnerableObject {
     <#
     .SYNOPSIS
         Identifies vulnerable AD CS infrastructure objects (containers, computer accounts).
@@ -11,14 +11,14 @@ function Find-VulnerableObjects {
         - Computer objects hosting CAs with non-standard owners
         - Other PKI infrastructure objects with non-standard owners
         
-        This function complements Find-VulnerableTemplates (templates) and Find-VulnerableCA (CAs)
+        This function complements Find-LS2VulnerableTemplate (templates) and Find-LS2VulnerableCA (CAs)
         by focusing on the supporting infrastructure objects.
 
     .PARAMETER Technique
         ESC technique name to scan for. Currently supports 'ESC5'.
 
     .EXAMPLE
-        Find-VulnerableObjects -Technique ESC5
+        Find-LS2VulnerableObject -Technique ESC5o
         Checks for AD CS infrastructure objects with non-standard owners.
 
     .OUTPUTS

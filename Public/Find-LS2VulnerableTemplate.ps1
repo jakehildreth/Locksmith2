@@ -1,4 +1,4 @@
-function Find-VulnerableTemplates {
+function Find-LS2VulnerableTemplate {
     <#
     .SYNOPSIS
         Identifies vulnerable AD CS templates based on ESC technique definitions.
@@ -11,7 +11,7 @@ function Find-VulnerableTemplates {
         ESC technique name to scan for (e.g., 'ESC1', 'ESC2', 'ESC3C1', 'ESC3C2')
 
     .EXAMPLE
-        Find-VulnerableTemplates -Technique ESC1
+        Find-LS2VulnerableTemplate -Technique ESC1
 
     .OUTPUTS
         LS2Issue objects for each vulnerability found
