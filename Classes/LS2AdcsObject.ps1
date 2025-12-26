@@ -7,6 +7,8 @@ class LS2AdcsObject {
     [string]$cn
     [System.DirectoryServices.ActiveDirectorySecurity]$ObjectSecurity
     [string]$Path
+    [string]$Owner
+    [Nullable[bool]]$HasNonStandardOwner
     
     # Certificate Template properties (pKICertificateTemplate)
     [Nullable[int]]$flags
@@ -91,13 +93,18 @@ class LS2AdcsObject {
         $this.TemplateSchemaVersion = if ($DirectoryEntry.Properties.Contains('msPKI-Template-Schema-Version')) { [int]$DirectoryEntry.Properties['msPKI-Template-Schema-Version'][0] } else { $null }
         $this.TemplateMinorRevision = if ($DirectoryEntry.Properties.Contains('msPKI-Template-Minor-Revision')) { [int]$DirectoryEntry.Properties['msPKI-Template-Minor-Revision'][0] } else { $null }
         
-        # Security descriptor
+        # Security descriptor and ownership
         try {
             $this.ObjectSecurity = $DirectoryEntry.ObjectSecurity
+            $this.Owner = $this.ObjectSecurity.Owner
         } catch {
             Write-Verbose "Could not retrieve ObjectSecurity for '$($this.distinguishedName)': $_"
             $this.ObjectSecurity = $null
+            $this.Owner = $null
         }
+        
+        # Initialize HasNonStandardOwner (will be computed by Set-* functions)
+        $this.HasNonStandardOwner = $null
         
         # Initialize computed properties to defaults
         $this.SANAllowed = $null
