@@ -132,46 +132,13 @@ function Set-HasNonStandardOwner {
                 } else {
                     Write-Verbose "Owner: $owner"
                     
-                    # Convert owner to SID if it's not already
-                    $ownerSid = $null
-                    if ($owner -match '^S-1-') {
-                        $ownerSid = $owner
-                    } else {
-                        try {
-                            $ownerPrincipal = New-Object System.Security.Principal.NTAccount($owner)
-                            $ownerSid = $ownerPrincipal.Translate([System.Security.Principal.SecurityIdentifier]).Value
-                            Write-Verbose "Translated owner to SID: $ownerSid"
-                        } catch {
-                            Write-Warning "Could not translate owner '$owner' to SID for $objectName : $_"
-                            $hasNonStandardOwner = $null
-                        }
-                    }
+                    # Test if owner is a standard owner
+                    $isStandardOwner = Test-IsStandardOwner -OwnerIdentity $owner
                     
-                    if ($ownerSid) {
-                        # Check if owner SID matches any standard owner pattern
-                        $isStandardOwner = $false
-                        
-                        foreach ($pattern in $script:StandardOwners) {
-                            # Check for exact SID match
-                            if ($pattern -eq $ownerSid) {
-                                $isStandardOwner = $true
-                                Write-Verbose "Owner $owner ($ownerSid) matches standard owner pattern (exact): $pattern"
-                                break
-                            }
-                            # Check for regex pattern match (patterns ending in $)
-                            elseif ($pattern -match '\$$' -and $ownerSid -match $pattern) {
-                                $isStandardOwner = $true
-                                Write-Verbose "Owner $owner ($ownerSid) matches standard owner pattern (regex): $pattern"
-                                break
-                            }
-                        }
-                        
-                        if ($isStandardOwner) {
-                            $hasNonStandardOwner = $false
-                        } else {
-                            $hasNonStandardOwner = $true
-                            Write-Verbose "Owner $owner ($ownerSid) is NOT a standard owner"
-                        }
+                    if ($isStandardOwner) {
+                        $hasNonStandardOwner = $false
+                    } else {
+                        $hasNonStandardOwner = $true
                     }
                 }
                 

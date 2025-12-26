@@ -399,8 +399,69 @@
         )
     }
 
+    # ============================================================================
+    # ESC4o: Vulnerable Certificate Template Ownership
+    # ============================================================================
+    ESC4o = @{
+        Technique = 'ESC4o'
+        
+        # Conditions to identify vulnerable templates
+        Conditions = @(
+            @{
+                Property = 'HasNonStandardOwner'
+                Operator = 'eq'
+                Value    = $true
+            }
+        )
+        
+        # Issue description template
+        IssueTemplate = @(
+            "The certificate template '`$(TemplateName)' is owned by `$(Owner), which is not a standard owner.`n`n"
+            "Per Microsoft security best practices, certificate templates should be owned exclusively "
+            "by the forest's Enterprise Admins group. Templates with non-standard owners can be exploited "
+            "by the owner to modify critical template properties without proper authorization.`n`n"
+            "An attacker who controls the template owner can:`n"
+            "1. Modify enrollment permissions (grant themselves enrollment rights)`n"
+            "2. Change template EKUs to enable authentication or code signing`n"
+            "3. Disable security extensions or manager approval requirements`n"
+            "4. Enable subject name flexibility (ENROLLEE_SUPPLIES_SUBJECT)`n"
+            "5. Create ESC1, ESC2, ESC3, or ESC9 conditions on the template`n`n"
+            "More info:`n"
+            "  - https://posts.specterops.io/certified-pre-owned-d95910965cd2"
+        )
+        
+        # Remediation script template
+        FixTemplate = @(
+            "# Transfer ownership to Enterprise Admins"
+            "`$Template = [ADSI]'LDAP://`$(DistinguishedName)'"
+            "`$Owner = New-Object System.Security.Principal.NTAccount('Enterprise Admins')"
+            "`$TemplateSecurity = `$Template.ObjectSecurity"
+            "`$TemplateSecurity.SetOwner(`$Owner)"
+            "`$Template.CommitChanges()"
+        )
+        
+        # Revert script template
+        RevertTemplate = @(
+            "# Restore original owner"
+            "`$Template = [ADSI]'LDAP://`$(DistinguishedName)'"
+            "`$Owner = New-Object System.Security.Principal.NTAccount('`$(OriginalOwner)')"
+            "`$TemplateSecurity = `$Template.ObjectSecurity"
+            "`$TemplateSecurity.SetOwner(`$Owner)"
+            "`$Template.CommitChanges()"
+        )
+    }
+
     ESC5o = @{
         Technique = 'ESC5o'
+        
+        # Conditions to identify vulnerable objects
+        Conditions = @(
+            @{
+                Property = 'HasNonStandardOwner'
+                Operator = 'eq'
+                Value    = $true
+            }
+        )
         
         # Issue description template
         IssueTemplate = @(
