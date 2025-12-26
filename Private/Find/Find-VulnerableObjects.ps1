@@ -27,7 +27,7 @@ function Find-VulnerableObjects {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
-        [ValidateSet('ESC5')]
+        [ValidateSet('ESC5o')]
         [string]$Technique
     )
 

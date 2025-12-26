@@ -399,8 +399,8 @@
         )
     }
 
-    ESC5 = @{
-        Technique = 'ESC5'
+    ESC5o = @{
+        Technique = 'ESC5o'
         
         # Issue description template
         IssueTemplate = @(
