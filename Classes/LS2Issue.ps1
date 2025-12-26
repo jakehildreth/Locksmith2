@@ -17,6 +17,10 @@ class LS2Issue {
     # CA-specific properties
     [string]$CAFullName             # For CA issues: SERVER\CA
     
+    # Ownership properties
+    [string]$Owner                  # Owner of the vulnerable object
+    [Nullable[bool]]$HasNonStandardOwner  # Whether object has non-standard owner
+    
     # Issue details
     [string]$Issue                  # Description of the vulnerability
     [string]$Fix                    # PowerShell script to remediate
@@ -41,6 +45,10 @@ class LS2Issue {
         
         # CA properties (may be null for template issues)
         $this.CAFullName = $Properties.CAFullName
+        
+        # Ownership properties
+        $this.Owner = $Properties.Owner
+        $this.HasNonStandardOwner = $Properties.HasNonStandardOwner
         
         # Issue details
         $this.Issue = $Properties.Issue
