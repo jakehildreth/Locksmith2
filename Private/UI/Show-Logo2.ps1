@@ -145,7 +145,8 @@ public class VirtualTerminal {
     $fgColor = "$esc[38;2;$($ForegroundRGB[0]);$($ForegroundRGB[1]);$($ForegroundRGB[2])m"
     $bgColor = "$esc[48;2;$($BackgroundRGB[0]);$($BackgroundRGB[1]);$($BackgroundRGB[2])m"
     $reset = "$esc[0m"
-
+    
+    # main font (lightly modified to shorten t): https://www.dafont.com/04b-09.font?fpp=200
     $logo = @(
         '█▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀███▀▀▀▀███',
         '█ ██ ▄▄▄▄▄▄ ▄▄▄▄▄▄ ██ ▄▄▄ ▄▄▄▄▄▄ ▄▄▄▄▄▄▄▄ ▀▀ ▄██▄▄ ██▄▄▄▄ ██▄████ ██ ',
