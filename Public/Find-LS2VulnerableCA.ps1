@@ -40,7 +40,7 @@ function Find-LS2VulnerableCA {
     #requires -Version 5.1
 
     # Load all ESC definitions
-    $definitionsPath = Join-Path $PSScriptRoot '..\Data\ESCDefinitions.psd1'
+    $definitionsPath = Join-Path $PSScriptRoot '..\Private\Data\ESCDefinitions.psd1'
     $allDefinitions = Import-PowerShellDataFile -Path $definitionsPath
     $config = $allDefinitions[$Technique]
 

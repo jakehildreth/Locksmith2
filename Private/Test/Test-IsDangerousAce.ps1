@@ -102,14 +102,14 @@ function Test-IsDangerousAce {
     begin {
         # Load dangerous ACE definitions from PSD1 data file
         if (-not $script:DangerousAces) {
-            $dataFilePath = Join-Path $PSScriptRoot '..\Data\DangerousAces.psd1'
+            $dataFilePath = Join-Path $PSScriptRoot '..\Data\AceDefinitions.psd1'
             
             if (Test-Path $dataFilePath) {
                 $data = Import-PowerShellDataFile -Path $dataFilePath
                 $script:DangerousAces = $data.DangerousAces
                 Write-Verbose "Loaded $($script:DangerousAces.Count) dangerous ACE definitions from $dataFilePath"
             } else {
-                Write-Warning "DangerousAces.psd1 not found at $dataFilePath. Unable to test for dangerous permissions."
+                Write-Warning "AceDefinitions.psd1 not found at $dataFilePath. Unable to test for dangerous permissions."
                 return
             }
         } else {

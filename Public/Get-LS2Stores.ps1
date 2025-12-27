@@ -1,4 +1,4 @@
-function Get-Locksmith2Stores {
+function Get-LS2Stores {
     <#
         .SYNOPSIS
         Returns the internal data stores used by Locksmith2.
@@ -38,27 +38,27 @@ function Get-Locksmith2Stores {
         - SafePrincipals, DangerousPrincipals, StandardOwners: Arrays of SID patterns
 
         .EXAMPLE
-        $stores = Get-Locksmith2Stores
+        $stores = Get-LS2Stores
         $stores.PrincipalStore.Count
         Shows the number of principals that have been resolved and cached.
 
         .EXAMPLE
-        $stores = Get-Locksmith2Stores
+        $stores = Get-LS2Stores
         $stores.PrincipalStore['S-1-5-21-...'] | Format-List *
         Displays all properties of a specific principal by SID.
 
         .EXAMPLE
-        $stores = Get-Locksmith2Stores
+        $stores = Get-LS2Stores
         $stores.AdcsObjectStore.Values | Where-Object DangerousEnrollee
         Shows all AD CS objects that have dangerous enrollees.
 
         .EXAMPLE
-        $stores = Get-Locksmith2Stores
+        $stores = Get-LS2Stores
         $stores.DomainStore.Values | Select-Object nETBIOSName, dnsRoot
         Lists all cached domain information.
 
         .EXAMPLE
-        $stores = Get-Locksmith2Stores
+        $stores = Get-LS2Stores
         $stores.StandardOwners
         Shows all SID patterns considered acceptable owners for AD CS objects.
 

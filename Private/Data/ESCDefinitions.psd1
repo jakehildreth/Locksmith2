@@ -400,6 +400,57 @@
     }
 
     # ============================================================================
+    # ESC4a: Vulnerable Certificate Template Access Control (ACE-based)
+    # ============================================================================
+    ESC4a = @{
+        Technique = 'ESC4a'
+        
+        # No conditions - all templates are checked for dangerous ACEs
+        Conditions = @()
+        
+        # Which editor properties to check (pre-calculated by Set-* functions)
+        EditorProperties = @(
+            'DangerousTemplateEditor'
+            'LowPrivilegeTemplateEditor'
+        )
+        
+        # Issue description template
+        IssueTemplate = @(
+            "`$(IdentityReference) has `$(ActiveDirectoryRights) rights on the '`$(TemplateName)' certificate template.`n`n"
+            "This permission allows the principal to modify template settings without proper authorization. "
+            "Per Microsoft security best practices, only highly privileged administrators (Domain Admins, "
+            "Enterprise Admins) should have write access to certificate templates.`n`n"
+            "An attacker with these permissions can:`n"
+            "1. Modify enrollment permissions (grant themselves enrollment rights)`n"
+            "2. Change template EKUs to enable authentication or code signing`n"
+            "3. Disable security extensions or manager approval requirements`n"
+            "4. Enable subject name flexibility (ENROLLEE_SUPPLIES_SUBJECT)`n"
+            "5. Create ESC1, ESC2, ESC3, or ESC9 conditions on the template`n`n"
+            "More info:`n"
+            "  - https://posts.specterops.io/certified-pre-owned-d95910965cd2"
+        )
+        
+        # Remediation script template
+        FixTemplate = @(
+            "# Remove write permissions for `$(IdentityReference)"
+            "`$Template = [ADSI]'LDAP://`$(DistinguishedName)'"
+            "`$Identity = New-Object System.Security.Principal.NTAccount('`$(IdentityReference)')"
+            "`$TemplateSecurity = `$Template.ObjectSecurity"
+            "# Remove all ACEs for this identity"
+            "`$TemplateSecurity.Access | Where-Object { `$_.IdentityReference -eq `$Identity } | ForEach-Object {"
+            "    `$TemplateSecurity.RemoveAccessRule(`$_) | Out-Null"
+            "}"
+            "`$Template.CommitChanges()"
+        )
+        
+        # Revert script template
+        RevertTemplate = @(
+            "# Manual restoration required - review original ACL and restore appropriate permissions"
+            "# Get-ADObject '`$(DistinguishedName)' -Properties nTSecurityDescriptor"
+        )
+    }
+
+    # ============================================================================
     # ESC4o: Vulnerable Certificate Template Ownership
     # ============================================================================
     ESC4o = @{

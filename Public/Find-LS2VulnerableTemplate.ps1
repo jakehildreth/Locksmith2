@@ -19,12 +19,12 @@ function Find-LS2VulnerableTemplate {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
-        [ValidateSet('ESC1', 'ESC2', 'ESC3c1', 'ESC3c2', 'ESC9', 'ESC4o')]
+        [ValidateSet('ESC1', 'ESC2', 'ESC3c1', 'ESC3c2', 'ESC9', 'ESC4a', 'ESC4o')]
         [string]$Technique
     )
 
     # Load all ESC definitions
-    $definitionsPath = Join-Path $PSScriptRoot '..\Data\ESCDefinitions.psd1'
+    $definitionsPath = Join-Path $PSScriptRoot '..\Private\Data\ESCDefinitions.psd1'
     $allDefinitions = Import-PowerShellDataFile -Path $definitionsPath
     $config = $allDefinitions[$Technique]
 
@@ -52,6 +52,120 @@ function Find-LS2VulnerableTemplate {
     Write-Verbose "Found $($vulnerableTemplates.Count) template(s) with $technique-vulnerable configuration"
 
     $issueCount = 0
+
+    # ESC4a: ACE-based template editor detection
+    if ($Technique -eq 'ESC4a') {
+        foreach ($template in $vulnerableTemplates) {
+            Write-Verbose "  Checking editors on template: $($template.Name)"
+
+            # Get problematic editors based on config
+            $problematicEditors = @()
+            foreach ($editorProperty in $config.EditorProperties) {
+                $problematicEditors += @($template.$editorProperty)
+            }
+            $problematicEditors = @($problematicEditors | Select-Object -Unique)
+
+            if ($problematicEditors.Count -eq 0) {
+                Write-Verbose "    No problematic editors found"
+                continue
+            }
+
+            Write-Verbose "    Found $($problematicEditors.Count) problematic editor(s)"
+
+            # Check ObjectSecurity for ACE details
+            if (-not $template.ObjectSecurity) {
+                Write-Verbose "    No ObjectSecurity available for template: $($template.Name)"
+                continue
+            }
+
+            # For each problematic editor, find their ACE and create an issue
+            foreach ($editorSid in $problematicEditors) {
+                # Find the ACE for this SID
+                $ace = $template.ObjectSecurity.Access | Where-Object {
+                    $aceSid = ($_.IdentityReference | Convert-IdentityReferenceToSid).Value
+                    $aceSid -eq $editorSid
+                } | Select-Object -First 1
+
+                if (-not $ace) {
+                    Write-Verbose "    Could not find ACE for SID: $editorSid"
+                    continue
+                }
+
+                Write-Verbose "    VULNERABLE: $($ace.IdentityReference) ($editorSid) has write rights"
+
+                # Get domain/forest name from DN
+                $forestName = if ($template.distinguishedName -match 'DC=([^,]+)') {
+                    $template.distinguishedName -replace '^.*?DC=(.*)$', '$1' -replace ',DC=', '.'
+                } else {
+                    'Unknown'
+                }
+
+                # Join templates if they're arrays, then expand variables
+                $issueTemplate = if ($config.IssueTemplate -is [array]) {
+                    $config.IssueTemplate -join ''
+                } else {
+                    $config.IssueTemplate
+                }
+                
+                $fixTemplate = if ($config.FixTemplate -is [array]) {
+                    $config.FixTemplate -join "`n"
+                } else {
+                    $config.FixTemplate
+                }
+                
+                $revertTemplate = if ($config.RevertTemplate -is [array]) {
+                    $config.RevertTemplate -join "`n"
+                } else {
+                    $config.RevertTemplate
+                }
+
+                # Expand template variables in Issue, Fix, and Revert strings
+                $issueText = $issueTemplate `
+                    -replace '\$\(IdentityReference\)', $ace.IdentityReference `
+                    -replace '\$\(TemplateName\)', $template.Name `
+                    -replace '\$\(ActiveDirectoryRights\)', $ace.ActiveDirectoryRights
+                
+                $fixScript = $fixTemplate `
+                    -replace '\$\(DistinguishedName\)', $template.distinguishedName `
+                    -replace '\$\(IdentityReference\)', $ace.IdentityReference
+                
+                $revertScript = $revertTemplate `
+                    -replace '\$\(DistinguishedName\)', $template.distinguishedName
+
+                # Create LS2Issue object
+                $issue = [LS2Issue]@{
+                    Technique             = $technique
+                    Forest                = $forestName
+                    Name                  = $template.Name
+                    DistinguishedName     = $template.distinguishedName
+                    IdentityReference     = $ace.IdentityReference
+                    IdentityReferenceSID  = $editorSid
+                    ActiveDirectoryRights = $ace.ActiveDirectoryRights
+                    Enabled               = $template.Enabled
+                    EnabledOn             = $template.EnabledOn
+                    Issue                 = $issueText
+                    Fix                   = $fixScript
+                    Revert                = $revertScript
+                }
+
+                # Store in IssueStore
+                $dn = $template.distinguishedName
+                if (-not $script:IssueStore.ContainsKey($dn)) {
+                    $script:IssueStore[$dn] = @{}
+                }
+                if (-not $script:IssueStore[$dn].ContainsKey($Technique)) {
+                    $script:IssueStore[$dn][$Technique] = @()
+                }
+                $script:IssueStore[$dn][$Technique] += $issue
+                $issueCount++
+
+                # Output to pipeline
+                $issue
+            }
+        }
+        Write-Verbose "$Technique scan complete. Found $issueCount issue(s)."
+        return
+    }
 
     # ESC4o: Ownership-based detection (no enrollee checking needed)
     if ($Technique -eq 'ESC4o') {
