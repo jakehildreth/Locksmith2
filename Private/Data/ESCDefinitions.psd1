@@ -87,8 +87,8 @@
         )
     }
 
-    ESC3C1 = @{
-        Technique = 'ESC3C1'
+    ESC3c1 = @{
+        Technique = 'ESC3c1'
         
         # Conditions that templates must match to be vulnerable
         Conditions = @(
@@ -128,8 +128,8 @@
         )
     }
 
-    ESC3C2 = @{
-        Technique = 'ESC3C2'
+    ESC3c2 = @{
+        Technique = 'ESC3c2'
         
         # Conditions that templates must match to be vulnerable
         Conditions = @(

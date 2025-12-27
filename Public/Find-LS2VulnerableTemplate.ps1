@@ -8,7 +8,7 @@ function Find-LS2VulnerableTemplate {
         for matching templates, and generates issues for problematic enrollees.
 
     .PARAMETER Technique
-        ESC technique name to scan for (e.g., 'ESC1', 'ESC2', 'ESC3C1', 'ESC3C2')
+        ESC technique name to scan for (e.g., 'ESC1', 'ESC2', 'ESC3c1', 'ESC3c2')
 
     .EXAMPLE
         Find-LS2VulnerableTemplate -Technique ESC1
@@ -19,7 +19,7 @@ function Find-LS2VulnerableTemplate {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
-        [ValidateSet('ESC1', 'ESC2', 'ESC3C1', 'ESC3C2', 'ESC9', 'ESC4o')]
+        [ValidateSet('ESC1', 'ESC2', 'ESC3c1', 'ESC3c2', 'ESC9', 'ESC4o')]
         [string]$Technique
     )
 
