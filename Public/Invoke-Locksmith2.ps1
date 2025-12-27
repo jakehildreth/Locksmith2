@@ -117,6 +117,8 @@ function Invoke-Locksmith2 {
         Set-NoSecurityExtension |
         Set-DangerousEnrollee |
         Set-LowPrivilegeEnrollee |
+        Set-DangerousTemplateEditor |
+        Set-LowPrivilegeTemplateEditor |
         Set-ManagerApprovalNotRequired |
         Set-AuthorizedSignatureNotRequired |
         Set-TemplateEnabled |
@@ -176,6 +178,10 @@ function Invoke-Locksmith2 {
         Write-Verbose "Checking for ESC9 (No Security Extension)..."
         [array]$ESC9Issues = Find-LS2VulnerableTemplate -Technique ESC9
         Write-Verbose "Found $(Get-IssueCount -Technique 'ESC9') ESC9 issue(s)"
+        
+        Write-Verbose "Checking for ESC4a (Vulnerable Certificate Template Access Control)..."
+        [array]$ESC4aIssues = Find-LS2VulnerableTemplate -Technique ESC4a
+        Write-Verbose "Found $(Get-IssueCount -Technique 'ESC4a') ESC4a issue(s)"
         
         Write-Verbose "Checking for ESC4o (Vulnerable Certificate Template Ownership)..."
         [array]$ESC4oIssues = Find-LS2VulnerableTemplate -Technique ESC4o

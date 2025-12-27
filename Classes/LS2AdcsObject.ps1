@@ -43,6 +43,10 @@ class LS2AdcsObject {
     [Nullable[bool]]$AnyPurposeEKUExist
     [Nullable[bool]]$DangerousEnrollee
     [Nullable[bool]]$LowPrivilegeEnrollee
+    [string[]]$DangerousTemplateEditor
+    [string[]]$DangerousTemplateEditorNames
+    [string[]]$LowPrivilegeTemplateEditor
+    [string[]]$LowPrivilegeTemplateEditorNames
     [Nullable[bool]]$ManagerApprovalNotRequired
     [Nullable[bool]]$AuthorizedSignatureNotRequired
     [Nullable[bool]]$Enabled
@@ -116,6 +120,10 @@ class LS2AdcsObject {
         $this.AnyPurposeEKUExist = $null
         $this.DangerousEnrollee = $null
         $this.LowPrivilegeEnrollee = $null
+        $this.DangerousTemplateEditor = @()
+        $this.DangerousTemplateEditorNames = @()
+        $this.LowPrivilegeTemplateEditor = @()
+        $this.LowPrivilegeTemplateEditorNames = @()
         $this.ManagerApprovalNotRequired = $null
         $this.AuthorizedSignatureNotRequired = $null
         $this.Enabled = $null
