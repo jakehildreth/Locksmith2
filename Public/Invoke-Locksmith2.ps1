@@ -117,8 +117,8 @@ function Invoke-Locksmith2 {
         Set-NoSecurityExtension |
         Set-DangerousEnrollee |
         Set-LowPrivilegeEnrollee |
-        Set-DangerousTemplateEditor |
-        Set-LowPrivilegeTemplateEditor |
+        Set-DangerousEditor |
+        Set-LowPrivilegeEditor |
         Set-ManagerApprovalNotRequired |
         Set-AuthorizedSignatureNotRequired |
         Set-TemplateEnabled |
@@ -149,7 +149,10 @@ function Invoke-Locksmith2 {
         $otherObjectCount = @($OtherObjects).Count
         Write-Verbose "Processing $otherObjectCount infrastructure object(s)..."
         
-        $OtherObjects = $OtherObjects | Set-HasNonStandardOwner
+        $OtherObjects = $OtherObjects | 
+        Set-DangerousEditor |
+        Set-LowPrivilegeEditor |
+        Set-HasNonStandardOwner
         
         Write-Verbose "Audit complete. Store statistics:"
         Write-Verbose "  - Principals stored: $($script:PrincipalStore.Count)"
@@ -202,6 +205,10 @@ function Invoke-Locksmith2 {
         Write-Verbose "Checking for ESC16 (Disabled Security Extension)..."
         [array]$ESC16Issues = Find-LS2VulnerableCA -Technique ESC16
         Write-Verbose "Found $(Get-IssueCount -Technique 'ESC16') ESC16 issue(s)"
+        
+        Write-Verbose "Checking for ESC5a (Vulnerable PKI Object Access Control)..."
+        [array]$ESC5aIssues = Find-LS2VulnerableObject -Technique ESC5a
+        Write-Verbose "Found $(Get-IssueCount -Technique 'ESC5a') ESC5a issue(s)"
         
         Write-Verbose "Checking for ESC5o (Vulnerable PKI Object Ownership)..."
         [array]$ESC5oIssues = Find-LS2VulnerableObject -Technique ESC5o

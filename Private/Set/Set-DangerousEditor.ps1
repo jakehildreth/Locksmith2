@@ -1,42 +1,41 @@
-function Set-DangerousTemplateEditor {
+function Set-DangerousEditor {
     <#
         .SYNOPSIS
-        Adds a DangerousTemplateEditor property to AD CS certificate template objects.
+        Adds a DangerousEditor property to AD CS objects.
 
         .DESCRIPTION
         Examines the access control lists (ACLs) of Active Directory Certificate Services
-        certificate template objects to identify principals with dangerous write/modify permissions.
+        objects to identify principals with dangerous write/modify permissions.
         
-        The function checks for permissions that allow principals to modify template settings,
+        The function checks for permissions that allow principals to modify object settings,
         granted to well-known dangerous principals that represent overly broad groups. These
-        should typically not have write access to templates, as they can lead to privilege
-        escalation vulnerabilities through ESC4 attacks.
+        should typically not have write access to PKI objects, as they can lead to privilege
+        escalation vulnerabilities through ESC4 and ESC5 attacks.
         
         Dangerous permissions include GenericAll, GenericWrite, WriteDacl, WriteOwner, and
-        WriteProperty on security-critical template attributes (msPKI-Certificate-Name-Flag,
-        pKIExtendedKeyUsage, msPKI-Enrollment-Flag, etc.).
+        WriteProperty on security-critical attributes.
         
-        This is a critical check for ESC4 vulnerability detection, as templates with dangerous
-        editors can be modified to create ESC1, ESC2, ESC3, or ESC9 conditions.
+        This is a critical check for ESC4 and ESC5 vulnerability detection, as objects with
+        dangerous editors can be modified to create additional vulnerabilities.
         
-        The function adds two properties to each template object:
-        1. DangerousTemplateEditor: Array of SIDs for dangerous principals with write access
-        2. DangerousTemplateEditorNames: Array of human-readable names formatted as "DOMAIN\User (SID)"
+        The function adds two properties to each object:
+        1. DangerousEditor: Array of SIDs for dangerous principals with write access
+        2. DangerousEditorNames: Array of human-readable names formatted as "DOMAIN\User (SID)"
            or "SID (could not resolve)" if the principal cannot be resolved.
 
         .PARAMETER AdcsObject
-        One or more DirectoryEntry objects representing AD CS certificate templates.
+        One or more DirectoryEntry objects representing AD CS objects.
         These objects must contain ObjectSecurity.Access information.
 
         .INPUTS
         System.DirectoryServices.DirectoryEntry[]
-        You can pipe certificate template DirectoryEntry objects to this function.
+        You can pipe AD CS DirectoryEntry objects to this function.
 
         .OUTPUTS
         System.DirectoryServices.DirectoryEntry[]
         Returns the input objects with added properties:
-        - DangerousTemplateEditor: Array of SIDs
-        - DangerousTemplateEditorNames: Array of human-readable names
+        - DangerousEditor: Array of SIDs
+        - DangerousEditorNames: Array of human-readable names
 
         .EXAMPLE
         $templates = Get-AdcsObject | 
@@ -86,11 +85,11 @@ function Set-DangerousTemplateEditor {
     #requires -Version 5.1
 
     begin {
-        Write-Verbose "Identifying templates with dangerous principals that have write access..."
+        Write-Verbose "Identifying AD CS objects with dangerous principals that have write access..."
     }
 
     process {
-        $AdcsObject | Where-Object SchemaClassName -eq pKICertificateTemplate | ForEach-Object {
+        $AdcsObject | ForEach-Object {
             try {
                 $objectName = if ($_.Properties.displayName.Count -gt 0) {
                     $_.Properties.displayName[0] 
@@ -101,9 +100,22 @@ function Set-DangerousTemplateEditor {
                 }
                 Write-Verbose "Processing template: $objectName"
                 
+                # Determine object class for ACE testing
+                $objectClass = if ($_.SchemaClassName) {
+                    $_.SchemaClassName
+                } elseif ($_.objectClass -and $_.objectClass.Count -gt 0) {
+                    $_.objectClass[$_.objectClass.Count - 1]
+                } else {
+                    $null
+                }
+                
                 [array]$dangerousIdentityReference = foreach ($ace in $_.ObjectSecurity.Access) {
                     # Test if ACE grants dangerous write permissions first
-                    $isDangerousAce = $ace | Test-IsDangerousAce -ObjectClass 'pKICertificateTemplate'
+                    $isDangerousAce = if ($objectClass) {
+                        $ace | Test-IsDangerousAce -ObjectClass $objectClass
+                    } else {
+                        $ace | Test-IsDangerousAce
+                    }
                     if ($isDangerousAce.IsDangerous) {
                         # Now check if the principal holding this ACE is dangerous
                         $aceSid = $ace.IdentityReference | Convert-IdentityReferenceToSid
@@ -140,17 +152,17 @@ function Set-DangerousTemplateEditor {
                     }
                 } | Sort-Object -Unique
 
-                # Update the AD CS Object Store with the DangerousTemplateEditor property
+                # Update the AD CS Object Store with the DangerousEditor property
                 $dn = $_.Properties.distinguishedName[0]
                 if ($script:AdcsObjectStore.ContainsKey($dn)) {
-                    $script:AdcsObjectStore[$dn] | Add-Member -NotePropertyName DangerousTemplateEditor -NotePropertyValue $dangerousIdentityReference -Force
-                    $script:AdcsObjectStore[$dn] | Add-Member -NotePropertyName DangerousTemplateEditorNames -NotePropertyValue $dangerousEditorNames -Force
-                    Write-Verbose "Updated AD CS Object Store for $dn with DangerousTemplateEditor"
+                    $script:AdcsObjectStore[$dn] | Add-Member -NotePropertyName DangerousEditor -NotePropertyValue $dangerousIdentityReference -Force
+                    $script:AdcsObjectStore[$dn] | Add-Member -NotePropertyName DangerousEditorNames -NotePropertyValue $dangerousEditorNames -Force
+                    Write-Verbose "Updated AD CS Object Store for $dn with DangerousEditor"
                 }
 
                 # Also add to the pipeline object for backward compatibility
-                $_ | Add-Member -NotePropertyName DangerousTemplateEditor -NotePropertyValue $dangerousIdentityReference -Force
-                $_ | Add-Member -NotePropertyName DangerousTemplateEditorNames -NotePropertyValue $dangerousEditorNames -Force
+                $_ | Add-Member -NotePropertyName DangerousEditor -NotePropertyValue $dangerousIdentityReference -Force
+                $_ | Add-Member -NotePropertyName DangerousEditorNames -NotePropertyValue $dangerousEditorNames -Force
                 
                 # Return the modified object
                 $_

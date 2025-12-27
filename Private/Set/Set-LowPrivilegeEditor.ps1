@@ -1,15 +1,15 @@
-function Set-LowPrivilegeTemplateEditor {
+function Set-LowPrivilegeEditor {
     <#
         .SYNOPSIS
-        Adds a LowPrivilegeTemplateEditor property to AD CS certificate template objects.
+        Adds a LowPrivilegeEditor property to AD CS objects.
 
         .DESCRIPTION
         Examines the access control lists (ACLs) of Active Directory Certificate Services
-        certificate template objects to identify write/modify permissions granted to principals
-        that are neither high-privilege administrators nor overly broad dangerous groups.
+        objects to identify write/modify permissions granted to principals that are neither
+        high-privilege administrators nor overly broad dangerous groups.
         
         This function identifies "middle ground" editors - specific users or groups that have
-        dangerous write permissions on templates but aren't part of the standard administrative
+        dangerous write permissions on PKI objects but aren't part of the standard administrative
         hierarchy or the dangerous principals that represent broad attack surfaces.
         
         The function excludes two categories of principals:
@@ -18,26 +18,26 @@ function Set-LowPrivilegeTemplateEditor {
         
         What remains are custom editors that may represent specific service accounts, security
         groups, or users that have been granted write permissions outside the standard model.
-        These should be reviewed as they can modify templates to create ESC4-style vulnerabilities.
+        These should be reviewed as they can modify objects to create ESC4 or ESC5-style vulnerabilities.
         
-        The function adds two properties to each template object:
-        1. LowPrivilegeTemplateEditor: Array of SIDs for custom editors with write access
-        2. LowPrivilegeTemplateEditorNames: Array of human-readable names formatted as "DOMAIN\User (SID)"
+        The function adds two properties to each object:
+        1. LowPrivilegeEditor: Array of SIDs for custom editors with write access
+        2. LowPrivilegeEditorNames: Array of human-readable names formatted as "DOMAIN\User (SID)"
            or "SID (could not resolve)" if the principal cannot be resolved.
 
         .PARAMETER AdcsObject
-        One or more DirectoryEntry objects representing AD CS certificate templates.
+        One or more DirectoryEntry objects representing AD CS objects.
         These objects must contain ObjectSecurity.Access information.
 
         .INPUTS
         System.DirectoryServices.DirectoryEntry[]
-        You can pipe certificate template DirectoryEntry objects to this function.
+        You can pipe AD CS DirectoryEntry objects to this function.
 
         .OUTPUTS
         System.DirectoryServices.DirectoryEntry[]
         Returns the input objects with added properties:
-        - LowPrivilegeTemplateEditor: Array of SIDs
-        - LowPrivilegeTemplateEditorNames: Array of human-readable names
+        - LowPrivilegeEditor: Array of SIDs
+        - LowPrivilegeEditorNames: Array of human-readable names
 
         .EXAMPLE
         $templates = Get-AdcsObject | 
@@ -88,11 +88,11 @@ function Set-LowPrivilegeTemplateEditor {
     #requires -Version 5.1
 
     begin {
-        Write-Verbose "Identifying templates with low-privilege principals that have write access..."
+        Write-Verbose "Identifying AD CS objects with low-privilege principals that have write access..."
     }
 
     process {
-        $AdcsObject | Where-Object SchemaClassName -eq pKICertificateTemplate | ForEach-Object {
+        $AdcsObject | ForEach-Object {
             try {
                 $objectName = if ($_.Properties.displayName.Count -gt 0) {
                     $_.Properties.displayName[0] 
@@ -103,9 +103,22 @@ function Set-LowPrivilegeTemplateEditor {
                 }
                 Write-Verbose "Processing template: $objectName"
                 
+                # Determine object class for ACE testing
+                $objectClass = if ($_.SchemaClassName) {
+                    $_.SchemaClassName
+                } elseif ($_.objectClass -and $_.objectClass.Count -gt 0) {
+                    $_.objectClass[$_.objectClass.Count - 1]
+                } else {
+                    $null
+                }
+                
                 [array]$lowPrivilegeIdentityReference = foreach ($ace in $_.ObjectSecurity.Access) {
                     # Test if ACE grants dangerous write permissions first
-                    $isDangerousAce = $ace | Test-IsDangerousAce -ObjectClass 'pKICertificateTemplate'
+                    $isDangerousAce = if ($objectClass) {
+                        $ace | Test-IsDangerousAce -ObjectClass $objectClass
+                    } else {
+                        $ace | Test-IsDangerousAce
+                    }
                     if ($isDangerousAce.IsDangerous) {
                         # Now check if the principal holding this ACE is low-privilege
                         $aceSid = $ace.IdentityReference | Convert-IdentityReferenceToSid
@@ -147,17 +160,17 @@ function Set-LowPrivilegeTemplateEditor {
                     }
                 } | Sort-Object -Unique
 
-                # Update the AD CS Object Store with the LowPrivilegeTemplateEditor property
+                # Update the AD CS Object Store with the LowPrivilegeEditor property
                 $dn = $_.Properties.distinguishedName[0]
                 if ($script:AdcsObjectStore.ContainsKey($dn)) {
-                    $script:AdcsObjectStore[$dn] | Add-Member -NotePropertyName LowPrivilegeTemplateEditor -NotePropertyValue $lowPrivilegeIdentityReference -Force
-                    $script:AdcsObjectStore[$dn] | Add-Member -NotePropertyName LowPrivilegeTemplateEditorNames -NotePropertyValue $lowPrivilegeEditorNames -Force
-                    Write-Verbose "Updated AD CS Object Store for $dn with LowPrivilegeTemplateEditor"
+                    $script:AdcsObjectStore[$dn] | Add-Member -NotePropertyName LowPrivilegeEditor -NotePropertyValue $lowPrivilegeIdentityReference -Force
+                    $script:AdcsObjectStore[$dn] | Add-Member -NotePropertyName LowPrivilegeEditorNames -NotePropertyValue $lowPrivilegeEditorNames -Force
+                    Write-Verbose "Updated AD CS Object Store for $dn with LowPrivilegeEditor"
                 }
 
                 # Also add to the pipeline object for backward compatibility
-                $_ | Add-Member -NotePropertyName LowPrivilegeTemplateEditor -NotePropertyValue $lowPrivilegeIdentityReference -Force
-                $_ | Add-Member -NotePropertyName LowPrivilegeTemplateEditorNames -NotePropertyValue $lowPrivilegeEditorNames -Force
+                $_ | Add-Member -NotePropertyName LowPrivilegeEditor -NotePropertyValue $lowPrivilegeIdentityReference -Force
+                $_ | Add-Member -NotePropertyName LowPrivilegeEditorNames -NotePropertyValue $lowPrivilegeEditorNames -Force
                 
                 # Return the modified object
                 $_

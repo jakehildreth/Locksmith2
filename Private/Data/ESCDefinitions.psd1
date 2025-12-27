@@ -410,8 +410,8 @@
         
         # Which editor properties to check (pre-calculated by Set-* functions)
         EditorProperties = @(
-            'DangerousTemplateEditor'
-            'LowPrivilegeTemplateEditor'
+            'DangerousEditor'
+            'LowPrivilegeEditor'
         )
         
         # Issue description template
@@ -499,6 +499,58 @@
             "`$TemplateSecurity = `$Template.ObjectSecurity"
             "`$TemplateSecurity.SetOwner(`$Owner)"
             "`$Template.CommitChanges()"
+        )
+    }
+
+    # ============================================================================
+    # ESC5a: Vulnerable PKI Object Access Control
+    # ============================================================================
+    ESC5a = @{
+        Technique = 'ESC5a'
+        
+        # Conditions are empty since we check editor properties directly
+        Conditions = @()
+        
+        # Which editor properties to check (pre-calculated by Set-* functions)
+        EditorProperties = @(
+            'DangerousEditor'
+            'LowPrivilegeEditor'
+        )
+        
+        # Issue description template
+        IssueTemplate = @(
+            "`$(IdentityReference) has `$(ActiveDirectoryRights) rights on the '`$(ObjectName)' PKI object.`n`n"
+            "This permission allows the principal to modify PKI infrastructure settings without proper authorization. "
+            "Per Microsoft security best practices, only highly privileged administrators (Domain Admins, "
+            "Enterprise Admins) should have write access to PKI infrastructure objects.`n`n"
+            "An attacker with these permissions can:`n"
+            "1. Modify object permissions (WriteDacl)`n"
+            "2. Grant themselves additional rights`n"
+            "3. For CAs: Modify CA configuration, disable security extensions, grant dangerous permissions`n"
+            "4. For containers: Create vulnerable templates or CAs`n"
+            "5. For computer objects: Modify CA host configuration`n"
+            "6. Manipulate PKI trust relationships and create ESC1, ESC2, ESC3, or ESC4 conditions`n`n"
+            "More info:`n"
+            "  - https://posts.specterops.io/certified-pre-owned-d95910965cd2"
+        )
+        
+        # Remediation script template
+        FixTemplate = @(
+            "# Remove write permissions for `$(IdentityReference)"
+            "`$Object = [ADSI]'LDAP://`$(DistinguishedName)'"
+            "`$Identity = New-Object System.Security.Principal.NTAccount('`$(IdentityReference)')"
+            "`$ObjectSecurity = `$Object.ObjectSecurity"
+            "# Remove all ACEs for this identity"
+            "`$ObjectSecurity.Access | Where-Object { `$_.IdentityReference -eq `$Identity } | ForEach-Object {"
+            "    `$ObjectSecurity.RemoveAccessRule(`$_) | Out-Null"
+            "}"
+            "`$Object.CommitChanges()"
+        )
+        
+        # Revert script template
+        RevertTemplate = @(
+            "# Manual restoration required - review original ACL and restore appropriate permissions"
+            "# Get-ADObject '`$(DistinguishedName)' -Properties nTSecurityDescriptor"
         )
     }
 

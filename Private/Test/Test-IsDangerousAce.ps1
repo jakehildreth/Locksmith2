@@ -93,7 +93,6 @@ function Test-IsDangerousAce {
         [System.DirectoryServices.ActiveDirectoryAccessRule[]]$Ace,
         
         [Parameter(Mandatory)]
-        [ValidateSet('pKICertificateTemplate', 'pKIEnrollmentService', 'certificationAuthority', 'container', 'computer')]
         [string]$ObjectClass
     )
 

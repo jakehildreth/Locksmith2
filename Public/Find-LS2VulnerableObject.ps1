@@ -27,7 +27,7 @@ function Find-LS2VulnerableObject {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
-        [ValidateSet('ESC5o')]
+        [ValidateSet('ESC5a', 'ESC5o')]
         [string]$Technique
     )
 
@@ -45,7 +45,116 @@ function Find-LS2VulnerableObject {
         $_.objectClass -notcontains 'pKICertificateTemplate'
     }
     
-    # Filter objects by conditions
+    # Handle ESC5a special logic (check EditorProperties)
+    if ($config.EditorProperties) {
+        Write-Verbose "ESC5a: Checking EditorProperties for vulnerable objects"
+        
+        $issueCount = 0
+        
+        foreach ($object in $allObjects) {
+            $objectName = if ($object.displayName) { 
+                $object.displayName 
+            } elseif ($object.name) { 
+                $object.name 
+            } elseif ($object.cn) {
+                $object.cn
+            } else { 
+                'Unknown Object' 
+            }
+            
+            Write-Verbose "  Checking object: $objectName"
+            
+            # Check each editor property
+            foreach ($editorProperty in $config.EditorProperties) {
+                $editors = $object.$editorProperty
+                
+                if (-not $editors -or $editors.Count -eq 0) {
+                    continue
+                }
+                
+                Write-Verbose "    Found $($editors.Count) editor(s) in $editorProperty"
+                
+                # Create an issue for each problematic editor
+                foreach ($editor in $editors) {
+                    $issueCount++
+                    
+                    # Get corresponding names property
+                    $namesProperty = $editorProperty + 'Names'
+                    $editorNames = $object.$namesProperty
+                    $editorDisplayName = if ($editorNames) {
+                        ($editorNames | Where-Object { $_ -like "*$editor*" })[0]
+                    } else {
+                        $editor
+                    }
+                    
+                    # Get object type for issue description
+                    $objectType = if ($object.objectClass -contains 'container') {
+                        'Container'
+                    } elseif ($object.objectClass -contains 'certificationAuthority') {
+                        'Certification Authority Container'
+                    } elseif ($object.objectClass -contains 'pKIEnrollmentService') {
+                        'Certification Authority'
+                    } elseif ($object.objectClass -contains 'computer') {
+                        'Computer Account'
+                    } else {
+                        'PKI Object'
+                    }
+                    
+                    # Determine what rights were granted (simplified for now)
+                    $activeDirectoryRights = 'Write/Modify'
+                    
+                    # Expand issue template with variables
+                    $issueText = ($config.IssueTemplate -join '') `
+                        -replace '\$\(ObjectName\)', $objectName `
+                        -replace '\$\(ObjectType\)', $objectType `
+                        -replace '\$\(IdentityReference\)', $editorDisplayName `
+                        -replace '\$\(ActiveDirectoryRights\)', $activeDirectoryRights
+                    
+                    # Expand fix script template with variables
+                    $fixScript = ($config.FixTemplate -join "`n") `
+                        -replace '\$\(DistinguishedName\)', $object.distinguishedName `
+                        -replace '\$\(IdentityReference\)', $editor
+                    
+                    # Expand revert script template with variables
+                    $revertScript = ($config.RevertTemplate -join "`n") `
+                        -replace '\$\(DistinguishedName\)', $object.distinguishedName
+                    
+                    # Create issue object
+                    $issue = [LS2Issue]::new(@{
+                        Technique          = $Technique
+                        Forest             = $script:ForestContext.RootDomain
+                        Name               = $objectName
+                        DistinguishedName  = $object.distinguishedName
+                        IdentityReference  = $editor
+                        Issue              = $issueText
+                        Fix                = $fixScript
+                        Revert             = $revertScript
+                    })
+                    
+                    # Add issue to IssueStore
+                    if (-not $script:IssueStore.ContainsKey($object.distinguishedName)) {
+                        $script:IssueStore[$object.distinguishedName] = @{}
+                    }
+                    
+                    if (-not $script:IssueStore[$object.distinguishedName].ContainsKey($Technique)) {
+                        $script:IssueStore[$object.distinguishedName][$Technique] = @()
+                    }
+                    
+                    $script:IssueStore[$object.distinguishedName][$Technique] += $issue
+                    
+                    Write-Verbose "      VULNERABLE: $editorDisplayName has write access"
+                    
+                    # Return the issue
+                    $issue
+                }
+            }
+        }
+        
+        Write-Verbose "$Technique scan complete. Found $issueCount issue(s)."
+        return
+    }
+    
+    # Filter objects by conditions (for non-ESC5a techniques like ESC5o)
     $vulnerableObjects = @(foreach ($object in $allObjects) {
         $matchesAllConditions = $true
         
