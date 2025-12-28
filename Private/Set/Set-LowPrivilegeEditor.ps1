@@ -1,12 +1,15 @@
 function Set-LowPrivilegeEditor {
     <#
         .SYNOPSIS
-        Adds a LowPrivilegeEditor property to AD CS objects.
+        Identifies custom principals with write permissions on AD CS objects.
 
         .DESCRIPTION
-        Examines the access control lists (ACLs) of Active Directory Certificate Services
-        objects to identify write/modify permissions granted to principals that are neither
-        high-privilege administrators nor overly broad dangerous groups.
+        Examines the ObjectSecurity property of AD CS objects (templates, CAs, containers, OIDs)
+        to identify write/modify permissions granted to principals that are neither high-privilege
+        administrators nor overly broad dangerous groups.
+        
+        This function works across all AD CS object types and is used for both ESC4 (templates)
+        and ESC5 (infrastructure objects) vulnerability detection.
         
         This function identifies "middle ground" editors - specific users or groups that have
         dangerous write permissions on PKI objects but aren't part of the standard administrative

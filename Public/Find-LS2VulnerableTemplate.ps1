@@ -12,9 +12,44 @@ function Find-LS2VulnerableTemplate {
 
     .EXAMPLE
         Find-LS2VulnerableTemplate -Technique ESC1
+        Scans for templates vulnerable to ESC1 (misconfigured certificate templates).
+
+    .EXAMPLE
+        Find-LS2VulnerableTemplate -Technique ESC2
+        Scans for templates vulnerable to ESC2 (certificate SubCA abuse).
+
+    .EXAMPLE
+        $esc1Issues = Find-LS2VulnerableTemplate -Technique ESC1 -Verbose
+        Scans for ESC1 issues with verbose output, stores issues in $esc1Issues variable.
 
     .OUTPUTS
-        LS2Issue objects for each vulnerability found
+        LS2Issue
+        LS2Issue objects for each vulnerability found.
+
+    .NOTES
+        Author: Jake Hildreth (@jakehildreth)
+        Module: Locksmith2
+        Requires: PowerShell 5.1+
+        
+        Requires script-scope variables set by Invoke-Locksmith2:
+        - $script:AdcsObjectStore: Cache of AD CS objects
+        - $script:PrincipalStore: Cache of resolved principals
+        
+        Supported techniques:
+        - ESC1: Certificate Request Agent abuse
+        - ESC2: Misconfigured Certificate Templates
+        - ESC3c1/ESC3c2: Enrollment Agent restrictions
+        - ESC4a/ESC4o: Vulnerable ACLs on templates
+        - ESC9: Weak Certificate Mappings
+
+    .LINK
+        Find-LS2VulnerableCA
+
+    .LINK
+        Find-LS2VulnerableObject
+
+    .LINK
+        Invoke-Locksmith2
     #>
     [CmdletBinding()]
     param(

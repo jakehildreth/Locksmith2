@@ -7,6 +7,10 @@ function New-LDAPSearcher {
         Factory function that creates a DirectorySearcher object configured for
         LDAP searches with standard settings (Subtree scope, PageSize 1000).
         This eliminates code duplication across conversion functions.
+        
+        Uses module-level $script:Credential and $script:Forest variables set by
+        Invoke-Locksmith2 to establish authenticated connections via
+        New-AuthenticatedDirectoryEntry.
 
         .PARAMETER DomainDN
         The distinguished name of the domain to search (e.g., "DC=contoso,DC=com").

@@ -1,16 +1,17 @@
 function Set-DangerousEditor {
     <#
         .SYNOPSIS
-        Adds a DangerousEditor property to AD CS objects.
+        Identifies dangerous principals with write permissions on AD CS objects.
 
         .DESCRIPTION
-        Examines the access control lists (ACLs) of Active Directory Certificate Services
-        objects to identify principals with dangerous write/modify permissions.
+        Examines the ObjectSecurity property of AD CS objects (templates, CAs, containers, OIDs)
+        to identify ACEs granting write permissions to dangerous principals defined in PrincipalDefinitions.
         
-        The function checks for permissions that allow principals to modify object settings,
-        granted to well-known dangerous principals that represent overly broad groups. These
-        should typically not have write access to PKI objects, as they can lead to privilege
-        escalation vulnerabilities through ESC4 and ESC5 attacks.
+        This function works across all AD CS object types and is used for both ESC4 (templates)
+        and ESC5 (infrastructure objects) vulnerability detection. The function checks for permissions
+        that allow principals to modify object settings, granted to well-known dangerous principals
+        that represent overly broad groups. These should typically not have write access to PKI
+        objects, as they can lead to privilege escalation vulnerabilities.
         
         Dangerous permissions include GenericAll, GenericWrite, WriteDacl, WriteOwner, and
         WriteProperty on security-critical attributes.

@@ -34,9 +34,9 @@ function Set-HasNonStandardOwner {
         You can pipe AD CS objects to this function.
 
         .OUTPUTS
-        LS2AdcsObject[]
-        System.DirectoryServices.DirectoryEntry[]
-        Returns the input objects with HasNonStandardOwner property set.
+        LS2AdcsObject
+        System.DirectoryServices.DirectoryEntry
+        Returns the input objects with HasNonStandardOwner property added.
 
         .EXAMPLE
         $templates = Get-AdcsObject | Where-Object { $_.IsCertificateTemplate() }

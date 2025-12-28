@@ -9,35 +9,32 @@ function Get-AdcsObject {
         This container contains Certificate Authority objects, Certificate Templates, and other 
         PKI-related objects used by Active Directory Certificate Services (AD CS).
         
-        The function performs a recursive LDAP search and returns DirectoryEntry objects for 
-        all discovered PKI objects, including their properties and ACLs.
-
-        .PARAMETER RootDSE
-        A DirectoryEntry object for the RootDSE. Used to determine the configuration naming 
-        context for LDAP queries. This parameter is mandatory.
-
-        .PARAMETER Credential
-        PSCredential for authenticating to Active Directory. Used to create authenticated 
-        LDAP connections to the directory service.
+        Uses module-level $script:Credential, $script:RootDSE, and $script:AdcsObjectStore
+        variables set by Invoke-Locksmith2. The function performs a recursive LDAP search and
+        returns LS2AdcsObject instances for all discovered PKI objects, including their
+        properties and ACLs.
 
         .INPUTS
         None. This function does not accept pipeline input.
 
         .OUTPUTS
-        System.DirectoryServices.DirectoryEntry
-        Returns DirectoryEntry objects for all objects found in the Public Key Services 
+        LS2AdcsObject
+        Returns LS2AdcsObject instances for all objects found in the Public Key Services 
         container and its subtree.
 
         .EXAMPLE
-        $rootDSE = Get-RootDSE -Forest 'contoso.com' -Credential $cred
-        Get-AdcsObject -RootDSE $rootDSE -Credential $cred
-        Retrieves all AD CS objects using the specified forest and credentials.
+        Get-AdcsObject
+        Retrieves all AD CS objects using script-scope credentials and root DSE.
 
         .EXAMPLE
-        $rootDSE = Get-RootDSE
-        $templates = Get-AdcsObject -RootDSE $rootDSE -Credential $cred | 
-            Where-Object { $_.objectClass -contains 'pKICertificateTemplate' }
-        Retrieves only certificate template objects from the PKI container.
+        $templates = Get-AdcsObject | Where-Object { $_.IsCertificateTemplate() }
+        Retrieves all certificate template objects from the PKI container.
+
+        .NOTES
+        Requires script-scope variables set by Invoke-Locksmith2:
+        - $script:Credential: Credentials for AD access
+        - $script:RootDSE: Forest configuration naming context
+        - $script:AdcsObjectStore: Cache of retrieved objects
 
         .LINK
         https://learn.microsoft.com/en-us/windows-server/identity/ad-cs/

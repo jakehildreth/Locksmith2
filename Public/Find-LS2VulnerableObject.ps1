@@ -21,8 +21,40 @@ function Find-LS2VulnerableObject {
         Find-LS2VulnerableObject -Technique ESC5o
         Checks for AD CS infrastructure objects with non-standard owners.
 
+    .EXAMPLE
+        Find-LS2VulnerableObject -Technique ESC5a
+        Checks for AD CS objects with dangerous editors (write permissions).
+
+    .EXAMPLE
+        $issues = Find-LS2VulnerableObject -Technique ESC5o -Verbose
+        Stores ESC5o issues in $issues variable with verbose output.
+
     .OUTPUTS
-        LS2Issue objects for each vulnerability found
+        LS2Issue
+        LS2Issue objects for each vulnerability found.
+
+    .NOTES
+        Author: Jake Hildreth (@jakehildreth)
+        Module: Locksmith2
+        Requires: PowerShell 5.1+
+        
+        Requires script-scope variables set by Invoke-Locksmith2:
+        - $script:AdcsObjectStore: Cache of AD CS objects
+        - $script:PrincipalStore: Cache of resolved principals
+        - $script:StandardOwners: List of acceptable owner SIDs
+        
+        Supported techniques:
+        - ESC5a: Dangerous editors with write access to PKI objects
+        - ESC5o: Non-standard ownership of PKI infrastructure objects
+
+    .LINK
+        Find-LS2VulnerableCA
+
+    .LINK
+        Find-LS2VulnerableTemplate
+
+    .LINK
+        Invoke-Locksmith2
     #>
     [CmdletBinding()]
     param(
