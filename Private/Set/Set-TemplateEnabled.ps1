@@ -15,6 +15,10 @@ function Set-TemplateEnabled {
         A template is considered "enabled" if it appears in the certificateTemplates
         property of at least one pKIEnrollmentService (CA) object. Templates that are
         defined but not published on any CA will have Enabled = $false and EnabledOn = @().
+        
+        IMPORTANT: This function requires $script:AdcsObjectStore to be populated with all
+        AD CS objects. It must be called after Get-AdcsObject completes or results will be
+        incomplete/incorrect.
 
         .PARAMETER AdcsObject
         One or more DirectoryEntry objects representing AD CS certificate templates.

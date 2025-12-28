@@ -8,16 +8,11 @@ function Test-IsDangerousAce {
         containers, computer accounts) to determine if they grant dangerous permissions that enable
         privilege escalation attacks.
         
-        Dangerous permissions include:
-        - GenericAll: Full control over object
-        - WriteDacl: Can modify permissions
-        - WriteOwner: Can take ownership
-        - GenericWrite: Can modify most properties
-        - WriteProperty: Can modify specific dangerous properties (varies by object class)
-        
-        The function matches ACEs against a comprehensive list of dangerous permission combinations
-        defined in DangerousAces.psd1, filtering by object class to ensure property-specific
-        permissions are only flagged on relevant object types.
+        Dangerous permissions include GenericAll, WriteDacl, WriteOwner, GenericWrite, and specific
+        WriteProperty rights depending on object class. The function matches ACEs against a
+        comprehensive list of dangerous permission combinations defined in AceDefinitions.psd1,
+        filtering by object class to ensure property-specific permissions are only flagged on
+        relevant object types.
         
         Only Allow ACEs are considered dangerous; Deny ACEs always return false.
         

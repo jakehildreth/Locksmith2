@@ -27,11 +27,11 @@
         Displays the logo and subtitle to the console.
 
         .EXAMPLE
-        Show-Logo
+        Show-Logo2
         Displays the logo with a random foreground color and black background.
 
         .EXAMPLE
-        Show-Logo -Version '2025.11.24.0800'
+        Show-Logo2 -Version '2025.11.24.0800'
         Displays the logo with a specific version string.
 
         .EXAMPLE

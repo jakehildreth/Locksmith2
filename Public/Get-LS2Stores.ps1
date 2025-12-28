@@ -31,6 +31,21 @@ function Get-LS2Stores {
         These stores are populated during the execution of Invoke-Locksmith2 and persist
         for the duration of the PowerShell session.
 
+        .PARAMETER Name
+        Optional. Name of a specific store to retrieve. Valid values:
+        - PrincipalStore
+        - AdcsObjectStore
+        - DomainStore
+        - IssueStore
+        - SafePrincipals
+        - DangerousPrincipals
+        - StandardOwners
+        
+        If not specified, returns an object containing all stores.
+
+        .INPUTS
+        None. This function does not accept pipeline input.
+
         .OUTPUTS
         PSCustomObject
         Returns an object with seven properties:
@@ -63,9 +78,28 @@ function Get-LS2Stores {
         Shows all SID patterns considered acceptable owners for AD CS objects.
 
         .NOTES
+        Author: Jake Hildreth (@jakehildreth)
+        Module: Locksmith2
+        Requires: PowerShell 5.1+
+        
         The stores are module-scoped and shared across all Locksmith2 functions.
         They are initialized by Invoke-Locksmith2 and persist until the module is
         reloaded or PowerShell session ends.
+        
+        Use this function to inspect internal module state for debugging
+        or advanced analysis scenarios.
+
+        .LINK
+        Invoke-Locksmith2
+
+        .LINK
+        Find-LS2VulnerableCA
+
+        .LINK
+        Find-LS2VulnerableTemplate
+
+        .LINK
+        Find-LS2VulnerableObject
     #>
     [CmdletBinding()]
     [OutputType([PSCustomObject])]

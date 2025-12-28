@@ -16,19 +16,48 @@ function Find-LS2VulnerableCA {
         ESC technique name to scan for (e.g., 'ESC6', 'ESC7', 'ESC11', 'ESC16')
 
     .EXAMPLE
-        Find-VulnerableCA -Technique ESC6
+        Find-LS2VulnerableCA -Technique ESC6
         Checks for CAs with EDITF_ATTRIBUTESUBJECTALTNAME2 enabled.
 
     .EXAMPLE
-        Find-VulnerableCA -Technique ESC7
+        Find-LS2VulnerableCA -Technique ESC7
         Checks for dangerous CA Administrator and Certificate Manager role assignments.
 
     .EXAMPLE
-        Find-VulnerableCA -Technique ESC11
+        Find-LS2VulnerableCA -Technique ESC11
         Checks for CAs that don't require RPC encryption.
 
+    .EXAMPLE
+        Find-LS2VulnerableCA -Technique ESC16
+        Checks for CAs with disabled security extensions in CRL/AIA.
+
     .OUTPUTS
-        LS2Issue objects for each vulnerability found
+        LS2Issue
+        LS2Issue objects for each vulnerability found.
+
+    .NOTES
+        Author: Jake Hildreth (@jakehildreth)
+        Module: Locksmith2
+        Requires: PowerShell 5.1+
+        
+        Requires script-scope variables set by Invoke-Locksmith2:
+        - $script:AdcsObjectStore: Cache of AD CS objects
+        - $script:PrincipalStore: Cache of resolved principals
+        
+        Supported techniques:
+        - ESC6: EDITF_ATTRIBUTESUBJECTALTNAME2 flag enabled
+        - ESC7: Dangerous CA Administrator/Certificate Manager role assignments
+        - ESC11: Missing RPC encryption requirement
+        - ESC16: Disabled CRL/AIA security extensions
+
+    .LINK
+        Find-LS2VulnerableTemplate
+
+    .LINK
+        Find-LS2VulnerableObject
+
+    .LINK
+        Invoke-Locksmith2
     #>
     [CmdletBinding()]
     param(

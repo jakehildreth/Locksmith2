@@ -12,6 +12,9 @@ function Expand-GroupMembership {
         queries the 'member' attribute via LDAP to retrieve direct member DNs. Each member
         DN is then resolved to its SID and added to the result set.
         
+        IMPORTANT: Returns both the original group SID AND its member SIDs. To get only members
+        without the group itself, filter the output: $result | Where-Object { $_ -ne $groupSid }
+        
         Results are cached to avoid redundant LDAP queries for the same groups.
 
         .PARAMETER SidList
