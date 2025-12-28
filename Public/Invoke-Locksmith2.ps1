@@ -213,6 +213,8 @@ function Invoke-Locksmith2 {
         Write-Verbose "Checking for ESC5o (Vulnerable PKI Object Ownership)..."
         [array]$ESC5oIssues = Find-LS2VulnerableObject -Technique ESC5o
         Write-Verbose "Found $(Get-IssueCount -Technique 'ESC5o') ESC5o issue(s)"
+
+        Get-FlattenedIssues
         
         $script:PrincipalStore
         $script:DomainStore
