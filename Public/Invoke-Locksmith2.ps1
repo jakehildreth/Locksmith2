@@ -147,9 +147,18 @@ function Invoke-Locksmith2 {
         
         Write-Verbose "Starting Locksmith2 AD CS security audit..."
         
-        # Set Forest and Credential
-        Set-LS2Forest -Forest $Forest
-        Set-LS2Credential -Credential $Credential
+        # Set Forest and Credential only if not already set or parameter provided
+        if ($PSBoundParameters.ContainsKey('Forest') -or -not $script:Forest) {
+            Set-LS2Forest -Forest $Forest
+        } else {
+            Write-Verbose "Using existing Forest: $($script:Forest)"
+        }
+        
+        if ($PSBoundParameters.ContainsKey('Credential') -or -not $script:Credential) {
+            Set-LS2Credential -Credential $Credential
+        } else {
+            Write-Verbose "Using existing Credential: $($script:Credential.UserName)"
+        }
         
         $script:RootDSE = Get-RootDSE
         
@@ -168,46 +177,31 @@ function Invoke-Locksmith2 {
         # Run vulnerability scans
         Write-Verbose "`nRunning vulnerability scans..."
         
-        Write-Verbose "Checking for ESC1 (Misconfigured Certificate Templates)..."
-        Write-Verbose "Found $(Get-IssueCount -Technique 'ESC1') ESC1 issue(s)"
+        Write-Verbose "Scanning all certificate template vulnerabilities..."
+        Find-LS2VulnerableTemplate | Out-Null
         
-        Write-Verbose "Checking for ESC2 (Any Purpose / SubCA Templates)..."
-        Write-Verbose "Found $(Get-IssueCount -Technique 'ESC2') ESC2 issue(s)"
+        Write-Verbose "Scanning all CA vulnerabilities..."
+        Find-LS2VulnerableCA | Out-Null
         
-        Write-Verbose "Checking for ESC3 Condition 1 (Enrollment Agent Templates)..."
-        Write-Verbose "Found $(Get-IssueCount -Technique 'ESC3c1') ESC3 Condition 1 issue(s)"
+        Write-Verbose "Scanning all infrastructure object vulnerabilities..."
+        Find-LS2VulnerableObject | Out-Null
         
-        Write-Verbose "Checking for ESC3 Condition 2 (Templates Accepting Agent Certificates)..."
-        Write-Verbose "Found $(Get-IssueCount -Technique 'ESC3c2') ESC3 Condition 2 issue(s)"
-        
-        Write-Verbose "Checking for ESC9 (No Security Extension)..."
-        Write-Verbose "Found $(Get-IssueCount -Technique 'ESC9') ESC9 issue(s)"
-        
-        Write-Verbose "Checking for ESC4a (Vulnerable Certificate Template Access Control)..."
-        Write-Verbose "Found $(Get-IssueCount -Technique 'ESC4a') ESC4a issue(s)"
-        
-        Write-Verbose "Checking for ESC4o (Vulnerable Certificate Template Ownership)..."
-        Write-Verbose "Found $(Get-IssueCount -Technique 'ESC4o') ESC4o issue(s)"
-        
-        Write-Verbose "Checking for ESC6 (CA EDITF_ATTRIBUTESUBJECTALTNAME2 Enabled)..."
-        Write-Verbose "Found $(Get-IssueCount -Technique 'ESC6') ESC6 issue(s)"
-        
-        Write-Verbose "Checking for ESC11 (CA RPC Encryption Not Required)..."
-        Write-Verbose "Found $(Get-IssueCount -Technique 'ESC11') ESC11 issue(s)"
-        
-        Write-Verbose "Checking for ESC7 (Vulnerable CA Access Control)..."
-        Write-Verbose "Found $(Get-IssueCount -Technique 'ESC7') ESC7 issue(s)"
-        
-        Write-Verbose "Checking for ESC16 (Disabled Security Extension)..."
-        Write-Verbose "Found $(Get-IssueCount -Technique 'ESC16') ESC16 issue(s)"
-        
-        Write-Verbose "Checking for ESC5a (Vulnerable PKI Object Access Control)..."
-        Write-Verbose "Found $(Get-IssueCount -Technique 'ESC5a') ESC5a issue(s)"
-        
-        Write-Verbose "Checking for ESC5o (Vulnerable PKI Object Ownership)..."
-        Write-Verbose "Found $(Get-IssueCount -Technique 'ESC5o') ESC5o issue(s)"
+        Write-Verbose "`nScan complete. Issue summary:"
+        Write-Verbose "  ESC1:  $(Get-IssueCount -Technique 'ESC1') issue(s)"
+        Write-Verbose "  ESC2:  $(Get-IssueCount -Technique 'ESC2') issue(s)"
+        Write-Verbose "  ESC3c1: $(Get-IssueCount -Technique 'ESC3c1') issue(s)"
+        Write-Verbose "  ESC3c2: $(Get-IssueCount -Technique 'ESC3c2') issue(s)"
+        Write-Verbose "  ESC4a: $(Get-IssueCount -Technique 'ESC4a') issue(s)"
+        Write-Verbose "  ESC4o: $(Get-IssueCount -Technique 'ESC4o') issue(s)"
+        Write-Verbose "  ESC5a: $(Get-IssueCount -Technique 'ESC5a') issue(s)"
+        Write-Verbose "  ESC5o: $(Get-IssueCount -Technique 'ESC5o') issue(s)"
+        Write-Verbose "  ESC6:  $(Get-IssueCount -Technique 'ESC6') issue(s)"
+        Write-Verbose "  ESC7:  $(Get-IssueCount -Technique 'ESC7') issue(s)"
+        Write-Verbose "  ESC9:  $(Get-IssueCount -Technique 'ESC9') issue(s)"
+        Write-Verbose "  ESC11: $(Get-IssueCount -Technique 'ESC11') issue(s)"
+        Write-Verbose "  ESC16: $(Get-IssueCount -Technique 'ESC16') issue(s)"
 
-        Get-FlattenedIssues # | Out-HtmlView -FilePath .\Ignore\FlattenedIssues.html
+        Get-FlattenedIssues | Sort-Object ObjectName, Technique # | Out-HtmlView -FilePath .\Ignore\FlattenedIssues.html
         
         # $script:PrincipalStore
         # $script:DomainStore
