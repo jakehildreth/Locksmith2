@@ -1,19 +1,91 @@
 function Invoke-Locksmith2 {
     <#
         .SYNOPSIS
-        Help
+        Performs comprehensive AD CS security audit scanning for known ESC vulnerabilities.
 
         .DESCRIPTION
+        Invoke-Locksmith2 audits Active Directory Certificate Services (AD CS) infrastructure
+        for security misconfigurations documented as ESC (Escalation) techniques. It scans:
+        
+        - Certificate templates (ESC1, ESC2, ESC3, ESC4, ESC9)
+        - Certification Authorities (ESC6, ESC7, ESC11, ESC16)
+        - PKI container objects (ESC5)
+        
+        The function initializes four module-level stores:
+        - PrincipalStore: Caches resolved SIDs and NTAccount principals
+        - AdcsObjectStore: Stores all AD CS objects (templates, CAs, OIDs, etc.)
+        - DomainStore: Caches domain information
+        - IssueStore: Collects discovered vulnerabilities by technique
+        
+        Results are returned as structured LS2Issue objects containing vulnerability details,
+        affected principals, and PowerShell remediation scripts.
 
-        .PARAMETER Parameter
+        .PARAMETER Forest
+        Fully qualified domain name of the forest/domain/domain controller to audit.
+        If not specified, prompts interactively for the target forest.
+
+        .PARAMETER Credential
+        PSCredential object for authenticating to the target forest.
+        If not specified, prompts interactively for username and password.
+        Username should be in NTAccount format (DOMAIN\username).
+
+        .PARAMETER SkipVersionCheck
+        Skips checking for module updates from PowerShell Gallery.
+        Use when running in air-gapped environments or to speed up execution.
+
+        .PARAMETER SkipPowerShellCheck
+        Skips validation and remediation of PowerShell environment settings.
+        Use if you've already validated PowerShell profile and encoding settings.
+
+        .PARAMETER SkipForestCheck
+        Reserved for future use. Currently not implemented.
 
         .INPUTS
+        None. This function does not accept pipeline input.
 
         .OUTPUTS
+        Hashtable
+        Returns four hashtables:
+        - PrincipalStore: All resolved principals by SID
+        - DomainStore: All domains in the audited forest
+        - AdcsObjectStore: All AD CS objects
+        - IssueStore: All discovered vulnerabilities grouped by technique
 
         .EXAMPLE
+        Invoke-Locksmith2
+        
+        Runs interactive audit prompting for forest name and credentials.
+
+        .EXAMPLE
+        $cred = Get-Credential CONTOSO\admin
+        Invoke-Locksmith2 -Forest 'dc01.contoso.com' -Credential $cred
+        
+        Audits contoso.com forest using provided credentials.
+
+        .EXAMPLE
+        Invoke-Locksmith2 -Forest 'contoso.com' -Credential $cred -SkipPowerShellCheck
+        
+        Runs audit skipping PowerShell environment validation.
 
         .LINK
+        https://github.com/jakehildreth/Locksmith2
+
+        .LINK
+        Find-LS2VulnerableCA
+
+        .LINK
+        Find-LS2VulnerableTemplate
+
+        .LINK
+        Find-LS2VulnerableObject
+
+        .LINK
+        Get-LS2Stores
+
+        .NOTES
+        Author: Jake Hildreth (@jakehildreth)
+        Requires PowerShell 5.1 or later
+        Requires appropriate AD permissions to read Public Key Services container
     #>
     [CmdletBinding()]
     param (
