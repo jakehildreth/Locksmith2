@@ -58,12 +58,61 @@ function Find-LS2VulnerableObject {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)]
+        [Parameter()]
         [ValidateSet('ESC5a', 'ESC5o')]
-        [string]$Technique
+        [string]$Technique,
+        
+        [Parameter()]
+        [string]$Forest,
+        
+        [Parameter()]
+        [PSCredential]$Credential
     )
 
     #requires -Version 5.1
+
+    # Check if AdcsObjectStore is populated
+    if (-not $script:AdcsObjectStore -or $script:AdcsObjectStore.Count -eq 0) {
+        Write-Verbose "AdcsObjectStore is empty. Setting up prerequisites..."
+        
+        # Set up required context only if not already set or parameter provided
+        if ($PSBoundParameters.ContainsKey('Forest') -or -not $script:Forest) {
+            Set-LS2Forest -Forest $Forest
+        }
+        
+        if ($PSBoundParameters.ContainsKey('Credential') -or -not $script:Credential) {
+            Set-LS2Credential -Credential $Credential
+        }
+        
+        if (-not $script:RootDSE) {
+            $script:RootDSE = Get-RootDSE
+        }
+        
+        if (-not $script:Server) {
+            $script:Server = $script:Forest
+        }
+        
+        # Initialize stores
+        Initialize-DomainStore
+        Initialize-PrincipalDefinitions
+        Initialize-AdcsObjectStore
+        
+        # Check again after initialization attempt
+        if (-not $script:AdcsObjectStore -or $script:AdcsObjectStore.Count -eq 0) {
+            Write-Warning "AdcsObjectStore could not be populated. Verify credentials and forest connectivity."
+            return
+        }
+    }
+
+    # If no technique specified, scan all infrastructure object techniques
+    if (-not $Technique) {
+        $allTechniques = @('ESC5a', 'ESC5o')
+        Write-Verbose "No technique specified. Scanning all infrastructure object techniques: $($allTechniques -join ', ')"
+        foreach ($tech in $allTechniques) {
+            Find-LS2VulnerableObject -Technique $tech
+        }
+        return
+    }
 
     # Load all ESC definitions
     $definitionsPath = Join-Path $PSScriptRoot '..\Private\Data\ESCDefinitions.psd1'
