@@ -48,7 +48,10 @@ function Get-FlattenedIssues {
     begin {
         Write-Verbose "Flattening IssueStore into individual issue entries..."
         
-        if (-not $script:IssueStore -or $script:IssueStore.Count -eq 0) {
+        # Get stores from module scope
+        $stores = Get-LS2Stores
+        
+        if (-not $stores.IssueStore -or $stores.IssueStore.Count -eq 0) {
             Write-Warning "IssueStore is empty or not initialized. Run Invoke-Locksmith2 first."
             return
         }
@@ -58,9 +61,9 @@ function Get-FlattenedIssues {
         $issueCount = 0
 
         # Iterate through each DN in the IssueStore
-        foreach ($dn in $script:IssueStore.Keys) {
+        foreach ($dn in $stores.IssueStore.Keys) {
             # Get the object from AdcsObjectStore to determine object class
-            $adcsObject = $script:AdcsObjectStore[$dn]
+            $adcsObject = $stores.AdcsObjectStore[$dn]
             
             $objectName = if ($adcsObject) {
                 if ($adcsObject.displayName) {
@@ -88,19 +91,29 @@ function Get-FlattenedIssues {
             }
 
             # Iterate through each technique for this DN
-            foreach ($technique in $script:IssueStore[$dn].Keys) {
+            foreach ($technique in $stores.IssueStore[$dn].Keys) {
                 # Get all issues for this DN + technique combination
-                $issues = $script:IssueStore[$dn][$technique]
+                $issues = $stores.IssueStore[$dn][$technique]
 
                 foreach ($issue in $issues) {
                     $issueCount++
+
+                    # Determine principal - use IdentityReference for permission-based issues,
+                    # Owner for ownership-based issues (ESC4o, ESC5o)
+                    $principal = if ($issue.IdentityReference) {
+                        $issue.IdentityReference
+                    } elseif ($issue.Owner) {
+                        $issue.Owner
+                    } else {
+                        $null
+                    }
 
                     # Output flattened object
                     [PSCustomObject]@{
                         ObjectName  = $objectName
                         ObjectClass = $objectClass
                         Technique   = $technique
-                        Principal   = $issue.IdentityReference  # Will be null for ESC6, ESC11, ESC16
+                        Principal   = $principal
                     }
                 }
             }
