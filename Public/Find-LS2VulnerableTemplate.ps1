@@ -234,6 +234,9 @@ function Find-LS2VulnerableTemplate {
 
                 # Store in IssueStore
                 $dn = $template.distinguishedName
+                if (-not $script:IssueStore) {
+                    $script:IssueStore = @{}
+                }
                 if (-not $script:IssueStore.ContainsKey($dn)) {
                     $script:IssueStore[$dn] = @{}
                 }
@@ -288,6 +291,9 @@ function Find-LS2VulnerableTemplate {
 
             # Store in IssueStore
             $dn = $template.distinguishedName
+            if (-not $script:IssueStore) {
+                $script:IssueStore = @{}
+            }
             if (-not $script:IssueStore.ContainsKey($dn)) {
                 $script:IssueStore[$dn] = @{}
             }
@@ -398,6 +404,9 @@ function Find-LS2VulnerableTemplate {
 
             # Initialize IssueStore structure if needed
             $dn = $template.distinguishedName
+            if (-not $script:IssueStore) {
+                $script:IssueStore = @{}
+            }
             if (-not $script:IssueStore.ContainsKey($dn)) {
                 $script:IssueStore[$dn] = @{}
             }

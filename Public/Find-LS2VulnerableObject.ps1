@@ -213,6 +213,9 @@ function Find-LS2VulnerableObject {
                     })
                     
                     # Add issue to IssueStore
+                    if (-not $script:IssueStore) {
+                        $script:IssueStore = @{}
+                    }
                     if (-not $script:IssueStore.ContainsKey($object.distinguishedName)) {
                         $script:IssueStore[$object.distinguishedName] = @{}
                     }
@@ -326,6 +329,9 @@ function Find-LS2VulnerableObject {
         })
 
         # Add issue to IssueStore
+        if (-not $script:IssueStore) {
+            $script:IssueStore = @{}
+        }
         if (-not $script:IssueStore.ContainsKey($object.distinguishedName)) {
             $script:IssueStore[$object.distinguishedName] = @{}
         }

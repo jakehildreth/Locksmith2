@@ -234,6 +234,9 @@ function Find-LS2VulnerableCA {
 
                     # Initialize IssueStore structure if needed
                     $dn = $ca.distinguishedName
+                    if (-not $script:IssueStore) {
+                        $script:IssueStore = @{}
+                    }
                     if (-not $script:IssueStore.ContainsKey($dn)) {
                         $script:IssueStore[$dn] = @{}
                     }
@@ -334,6 +337,9 @@ function Find-LS2VulnerableCA {
 
             # Initialize IssueStore structure if needed
             $dn = $ca.distinguishedName
+            if (-not $script:IssueStore) {
+                $script:IssueStore = @{}
+            }
             if (-not $script:IssueStore.ContainsKey($dn)) {
                 $script:IssueStore[$dn] = @{}
             }
