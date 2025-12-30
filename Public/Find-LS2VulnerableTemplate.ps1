@@ -53,10 +53,59 @@ function Find-LS2VulnerableTemplate {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)]
+        [Parameter()]
         [ValidateSet('ESC1', 'ESC2', 'ESC3c1', 'ESC3c2', 'ESC9', 'ESC4a', 'ESC4o')]
-        [string]$Technique
+        [string]$Technique,
+        
+        [Parameter()]
+        [string]$Forest,
+        
+        [Parameter()]
+        [PSCredential]$Credential
     )
+
+    # Check if AdcsObjectStore is populated
+    if (-not $script:AdcsObjectStore -or $script:AdcsObjectStore.Count -eq 0) {
+        Write-Verbose "AdcsObjectStore is empty. Setting up prerequisites..."
+        
+        # Set up required context only if not already set or parameter provided
+        if ($PSBoundParameters.ContainsKey('Forest') -or -not $script:Forest) {
+            Set-LS2Forest -Forest $Forest
+        }
+        
+        if ($PSBoundParameters.ContainsKey('Credential') -or -not $script:Credential) {
+            Set-LS2Credential -Credential $Credential
+        }
+        
+        if (-not $script:RootDSE) {
+            $script:RootDSE = Get-RootDSE
+        }
+        
+        if (-not $script:Server) {
+            $script:Server = $script:Forest
+        }
+        
+        # Initialize stores
+        Initialize-DomainStore
+        Initialize-PrincipalDefinitions
+        Initialize-AdcsObjectStore
+        
+        # Check again after initialization attempt
+        if (-not $script:AdcsObjectStore -or $script:AdcsObjectStore.Count -eq 0) {
+            Write-Warning "AdcsObjectStore could not be populated. Verify credentials and forest connectivity."
+            return
+        }
+    }
+
+    # If no technique specified, scan all template techniques
+    if (-not $Technique) {
+        $allTechniques = @('ESC1', 'ESC2', 'ESC3c1', 'ESC3c2', 'ESC9', 'ESC4a', 'ESC4o')
+        Write-Verbose "No technique specified. Scanning all template techniques: $($allTechniques -join ', ')"
+        foreach ($tech in $allTechniques) {
+            Find-LS2VulnerableTemplate -Technique $tech
+        }
+        return
+    }
 
     # Load all ESC definitions
     $definitionsPath = Join-Path $PSScriptRoot '..\Private\Data\ESCDefinitions.psd1'
@@ -185,6 +234,9 @@ function Find-LS2VulnerableTemplate {
 
                 # Store in IssueStore
                 $dn = $template.distinguishedName
+                if (-not $script:IssueStore) {
+                    $script:IssueStore = @{}
+                }
                 if (-not $script:IssueStore.ContainsKey($dn)) {
                     $script:IssueStore[$dn] = @{}
                 }
@@ -239,6 +291,9 @@ function Find-LS2VulnerableTemplate {
 
             # Store in IssueStore
             $dn = $template.distinguishedName
+            if (-not $script:IssueStore) {
+                $script:IssueStore = @{}
+            }
             if (-not $script:IssueStore.ContainsKey($dn)) {
                 $script:IssueStore[$dn] = @{}
             }
@@ -349,6 +404,9 @@ function Find-LS2VulnerableTemplate {
 
             # Initialize IssueStore structure if needed
             $dn = $template.distinguishedName
+            if (-not $script:IssueStore) {
+                $script:IssueStore = @{}
+            }
             if (-not $script:IssueStore.ContainsKey($dn)) {
                 $script:IssueStore[$dn] = @{}
             }

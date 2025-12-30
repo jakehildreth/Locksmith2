@@ -37,6 +37,12 @@ function Invoke-Locksmith2 {
         Skips validation and remediation of PowerShell environment settings.
         Use if you've already validated PowerShell profile and encoding settings.
 
+        .PARAMETER Mode
+        Specifies the output mode for displaying scan results.
+        If not specified, returns LS2Issue objects to the pipeline without formatting.
+        - Mode 0: Identify issues, output to console in table format
+        - Mode 1: Identify issues and fixes, output to console in list format
+
         .PARAMETER SkipForestCheck
         Reserved for future use. Currently not implemented.
 
@@ -54,18 +60,28 @@ function Invoke-Locksmith2 {
         .EXAMPLE
         Invoke-Locksmith2
         
-        Runs interactive audit prompting for forest name and credentials.
+        Runs interactive audit and returns LS2Issue objects to the pipeline.
 
         .EXAMPLE
         $cred = Get-Credential CONTOSO\admin
         Invoke-Locksmith2 -Forest 'dc01.contoso.com' -Credential $cred
         
-        Audits contoso.com forest using provided credentials.
+        Audits contoso.com forest and returns LS2Issue objects to the pipeline.
 
         .EXAMPLE
         Invoke-Locksmith2 -Forest 'contoso.com' -Credential $cred -SkipPowerShellCheck
         
         Runs audit skipping PowerShell environment validation.
+
+        .EXAMPLE
+        Invoke-Locksmith2 -Mode 0
+        
+        Runs audit and displays results in table format (default behavior).
+
+        .EXAMPLE
+        Invoke-Locksmith2 -Mode 1
+        
+        Runs audit and displays results in list format with fix scripts.
 
         .LINK
         https://github.com/jakehildreth/Locksmith2
@@ -91,6 +107,8 @@ function Invoke-Locksmith2 {
     param (
         [string]$Forest,
         [System.Management.Automation.PSCredential]$Credential,
+        [ValidateSet(0, 1)]
+        [Nullable[int]]$Mode,
         [switch]$SkipVersionCheck,
         [switch]$SkipPowerShellCheck,
         [switch]$SkipForestCheck
@@ -142,26 +160,24 @@ function Invoke-Locksmith2 {
     end {
         Show-Logo2
         if (-not $SkipPowerShellCheck) {
-            Test-PowerShellEnvironment | Repair-PowerShellEnvironment
+            Test-PowerShellEnvironment | Repair-PowerShellEnvironment | Out-Null
         }
         
         Write-Verbose "Starting Locksmith2 AD CS security audit..."
-        Write-Verbose "Forest: $(if ($Forest) { $Forest } else { 'Current domain' })"
         
-        if (-not $Forest) {
-            $script:Forest = Read-Host 'Enter fully qualified domain controller/domain/forest name'
+        # Set Forest and Credential only if not already set or parameter provided
+        if ($PSBoundParameters.ContainsKey('Forest') -or -not $script:Forest) {
+            Set-LS2Forest -Forest $Forest
         } else {
-            $script:Forest = $Forest
+            Write-Verbose "Using existing Forest: $($script:Forest)"
         }
-
-        if (-not $Credential) {
-            Write-Host "`nPowerShell credential request`nEnter your credentials."
-            $User = Read-Host "Username in NTAccount format (DOMAIN\username)" 
-            $Password = Read-Host "Password for user $User" -AsSecureString
-            $script:Credential = [System.Management.Automation.PSCredential]::New($User, $Password)
+        
+        if ($PSBoundParameters.ContainsKey('Credential') -or -not $script:Credential) {
+            Set-LS2Credential -Credential $Credential
         } else {
-            $script:Credential = $Credential
+            Write-Verbose "Using existing Credential: $($script:Credential.UserName)"
         }
+        
         $script:RootDSE = Get-RootDSE
         
         # Set server for LDAP/GC queries (same as Forest parameter)
@@ -173,122 +189,46 @@ function Invoke-Locksmith2 {
         # Initialize PrincipalDefinitions with forest-specific SIDs
         Initialize-PrincipalDefinitions
         
-        $script:AdcsObject = Get-AdcsObject
-        
-        Write-Verbose "Retrieved $($AdcsObject.Count) AD CS objects from Public Key Services container"
-        
-        $Templates = $AdcsObject | Where-Object SchemaClassName -EQ pKICertificateTemplate
-        Write-Verbose "Processing $($Templates.Count) certificate templates..."
-        
-        $Templates = $Templates |
-        Set-SANAllowed |
-        Set-AuthenticationEKUExist |
-        Set-AnyPurposeEKUExist |
-        Set-EnrollmentAgentEKUExist |
-        Set-RequiresEnrollmentAgentSignature |
-        Set-NoSecurityExtension |
-        Set-DangerousEnrollee |
-        Set-LowPrivilegeEnrollee |
-        Set-DangerousEditor |
-        Set-LowPrivilegeEditor |
-        Set-ManagerApprovalNotRequired |
-        Set-AuthorizedSignatureNotRequired |
-        Set-TemplateEnabled |
-        Set-HasNonStandardOwner
-        
-        $CAs = $AdcsObject | Where-Object { $_.objectClass -contains 'pKIEnrollmentService' }
-        $caCount = @($CAs).Count
-        Write-Verbose "Processing $caCount Certification Authority object(s)..."
-        
-        $CAs = $CAs | Set-CAComputerPrincipal |
-        Set-CAInterfaceFlags |
-        Set-CAEditFlags |
-        Set-CAAuditFilter |
-        Set-CADisableExtensionList |
-        Set-CAAdministrator |
-        Set-CACertificateManager |
-        Set-DangerousCAAdministrator |
-        Set-LowPrivilegeCAAdministrator |
-        Set-DangerousCACertificateManager |
-        Set-LowPrivilegeCACertificateManager |
-        Set-HasNonStandardOwner
-        
-        # Process all other infrastructure objects for non-standard owners
-        $OtherObjects = $AdcsObject | Where-Object {
-            $_.SchemaClassName -ne 'pKICertificateTemplate' -and
-            $_.objectClass -notcontains 'pKIEnrollmentService'
-        }
-        $otherObjectCount = @($OtherObjects).Count
-        Write-Verbose "Processing $otherObjectCount infrastructure object(s)..."
-        
-        $OtherObjects = $OtherObjects | 
-        Set-DangerousEditor |
-        Set-LowPrivilegeEditor |
-        Set-HasNonStandardOwner
-        
-        Write-Verbose "Audit complete. Store statistics:"
-        Write-Verbose "  - Principals stored: $($script:PrincipalStore.Count)"
-        Write-Verbose "  - AD CS objects stored: $($script:AdcsObjectStore.Count)"
-        Write-Verbose "  - Domains stored: $($script:DomainStore.Count)"
+        # Initialize AdcsObjectStore with all AD CS objects
+        Initialize-AdcsObjectStore
         
         # Run vulnerability scans
         Write-Verbose "`nRunning vulnerability scans..."
         
-        Write-Verbose "Checking for ESC1 (Misconfigured Certificate Templates)..."
-        [array]$ESC1Issues = Find-LS2VulnerableTemplate -Technique ESC1
-        Write-Verbose "Found $(Get-IssueCount -Technique 'ESC1') ESC1 issue(s)"
+        Write-Verbose "Scanning all certificate template vulnerabilities..."
+        Find-LS2VulnerableTemplate | Out-Null
         
-        Write-Verbose "Checking for ESC2 (Any Purpose / SubCA Templates)..."
-        [array]$ESC2Issues = Find-LS2VulnerableTemplate -Technique ESC2
-        Write-Verbose "Found $(Get-IssueCount -Technique 'ESC2') ESC2 issue(s)"
+        Write-Verbose "Scanning all CA vulnerabilities..."
+        Find-LS2VulnerableCA | Out-Null
         
-        Write-Verbose "Checking for ESC3 Condition 1 (Enrollment Agent Templates)..."
-        [array]$ESC3c1Issues = Find-LS2VulnerableTemplate -Technique ESC3c1
-        Write-Verbose "Found $(Get-IssueCount -Technique 'ESC3c1') ESC3 Condition 1 issue(s)"
+        Write-Verbose "Scanning all infrastructure object vulnerabilities..."
+        Find-LS2VulnerableObject | Out-Null
         
-        Write-Verbose "Checking for ESC3 Condition 2 (Templates Accepting Agent Certificates)..."
-        [array]$ESC3c2Issues = Find-LS2VulnerableTemplate -Technique ESC3c2
-        Write-Verbose "Found $(Get-IssueCount -Technique 'ESC3c2') ESC3 Condition 2 issue(s)"
+        Write-Verbose "`nScan complete. Issue summary:"
+        Write-Verbose "  ESC1:  $(Get-IssueCount -Technique 'ESC1') issue(s)"
+        Write-Verbose "  ESC2:  $(Get-IssueCount -Technique 'ESC2') issue(s)"
+        Write-Verbose "  ESC3c1: $(Get-IssueCount -Technique 'ESC3c1') issue(s)"
+        Write-Verbose "  ESC3c2: $(Get-IssueCount -Technique 'ESC3c2') issue(s)"
+        Write-Verbose "  ESC4a: $(Get-IssueCount -Technique 'ESC4a') issue(s)"
+        Write-Verbose "  ESC4o: $(Get-IssueCount -Technique 'ESC4o') issue(s)"
+        Write-Verbose "  ESC5a: $(Get-IssueCount -Technique 'ESC5a') issue(s)"
+        Write-Verbose "  ESC5o: $(Get-IssueCount -Technique 'ESC5o') issue(s)"
+        Write-Verbose "  ESC6:  $(Get-IssueCount -Technique 'ESC6') issue(s)"
+        Write-Verbose "  ESC7:  $(Get-IssueCount -Technique 'ESC7') issue(s)"
+        Write-Verbose "  ESC9:  $(Get-IssueCount -Technique 'ESC9') issue(s)"
+        Write-Verbose "  ESC11: $(Get-IssueCount -Technique 'ESC11') issue(s)"
+        Write-Verbose "  ESC16: $(Get-IssueCount -Technique 'ESC16') issue(s)"
+
+        # Get all flattened issues
+        $allIssues = Get-FlattenedIssues
         
-        Write-Verbose "Checking for ESC9 (No Security Extension)..."
-        [array]$ESC9Issues = Find-LS2VulnerableTemplate -Technique ESC9
-        Write-Verbose "Found $(Get-IssueCount -Technique 'ESC9') ESC9 issue(s)"
-        
-        Write-Verbose "Checking for ESC4a (Vulnerable Certificate Template Access Control)..."
-        [array]$ESC4aIssues = Find-LS2VulnerableTemplate -Technique ESC4a
-        Write-Verbose "Found $(Get-IssueCount -Technique 'ESC4a') ESC4a issue(s)"
-        
-        Write-Verbose "Checking for ESC4o (Vulnerable Certificate Template Ownership)..."
-        [array]$ESC4oIssues = Find-LS2VulnerableTemplate -Technique ESC4o
-        Write-Verbose "Found $(Get-IssueCount -Technique 'ESC4o') ESC4o issue(s)"
-        
-        Write-Verbose "Checking for ESC6 (CA EDITF_ATTRIBUTESUBJECTALTNAME2 Enabled)..."
-        [array]$ESC6Issues = Find-LS2VulnerableCA -Technique ESC6
-        Write-Verbose "Found $(Get-IssueCount -Technique 'ESC6') ESC6 issue(s)"
-        
-        Write-Verbose "Checking for ESC11 (CA RPC Encryption Not Required)..."
-        [array]$ESC11Issues = Find-LS2VulnerableCA -Technique ESC11
-        Write-Verbose "Found $(Get-IssueCount -Technique 'ESC11') ESC11 issue(s)"
-        
-        Write-Verbose "Checking for ESC7 (Vulnerable CA Access Control)..."
-        [array]$ESC7Issues = Find-LS2VulnerableCA -Technique ESC7
-        Write-Verbose "Found $(Get-IssueCount -Technique 'ESC7') ESC7 issue(s)"
-        
-        Write-Verbose "Checking for ESC16 (Disabled Security Extension)..."
-        [array]$ESC16Issues = Find-LS2VulnerableCA -Technique ESC16
-        Write-Verbose "Found $(Get-IssueCount -Technique 'ESC16') ESC16 issue(s)"
-        
-        Write-Verbose "Checking for ESC5a (Vulnerable PKI Object Access Control)..."
-        [array]$ESC5aIssues = Find-LS2VulnerableObject -Technique ESC5a
-        Write-Verbose "Found $(Get-IssueCount -Technique 'ESC5a') ESC5a issue(s)"
-        
-        Write-Verbose "Checking for ESC5o (Vulnerable PKI Object Ownership)..."
-        [array]$ESC5oIssues = Find-LS2VulnerableObject -Technique ESC5o
-        Write-Verbose "Found $(Get-IssueCount -Technique 'ESC5o') ESC5o issue(s)"
-        
-        $script:PrincipalStore
-        $script:DomainStore
-        $script:AdcsObjectStore
-        $script:IssueStore
+        # Output based on whether Mode was specified
+        if ($PSBoundParameters.ContainsKey('Mode')) {
+            # Display issues in console using specified mode
+            Show-IssueReport -Issues $allIssues -Mode $Mode
+        } else {
+            # Return LS2Issue objects to pipeline
+            $allIssues
+        }
     }
 }
