@@ -1,0 +1,63 @@
+name: Build and Publish to PSGallery
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'Public/**'
+      - 'Private/**'
+      - 'Classes/**'
+      - 'Build/**'
+      - 'Locksmith2.psm1'
+      - 'Locksmith2.psd1'
+      - 'LICENSE'
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install required PowerShell modules
+      shell: pwsh
+      run: |
+        Write-Host "Installing required modules..." -ForegroundColor Cyan
+        Install-Module -Name Pester -AllowClobber -Scope CurrentUser -SkipPublisherCheck -Force
+        Install-Module -Name PSScriptAnalyzer -AllowClobber -Scope CurrentUser -Force
+        Install-Module -Name PSPublishModule -AllowClobber -Scope CurrentUser -Force
+        Write-Host "Modules installed successfully" -ForegroundColor Green
+
+    - name: Run Pester tests
+      shell: pwsh
+      run: |
+        Write-Host "Running Pester tests..." -ForegroundColor Cyan
+        $testResults = Invoke-Pester -Path ./Tests/ -PassThru -CI -Output Detailed
+        Write-Host "Tests completed: $($testResults.PassedCount) passed, $($testResults.FailedCount) failed" -ForegroundColor Cyan
+
+        if ($testResults.FailedCount -gt 0) {
+            Write-Host "Tests failed! Build aborted." -ForegroundColor Red
+            exit 1
+        }
+
+        Write-Host "All tests passed!" -ForegroundColor Green
+
+    - name: Build and Publish to PowerShell Gallery
+      shell: pwsh
+      env:
+        PSGALLERY_API_KEY: ${{ secrets.PSGALLERY_API_KEY }}
+      run: |
+        Write-Host "Building and publishing Locksmith2 module..." -ForegroundColor Cyan
+        ./Build/Build-Module.ps1 -PublishToPSGallery -PSGalleryAPIKey $env:PSGALLERY_API_KEY
+        Write-Host "Published successfully" -ForegroundColor Green
+
+    - name: Get module version
+      id: version
+      shell: pwsh
+      run: |
+        $manifest = Import-PowerShellDataFile ./Locksmith2.psd1
+        $version = $manifest.ModuleVersion
+        echo "version=$version" >> $env:GITHUB_OUTPUT
+        Write-Host "Module version: $version" -ForegroundColor Green

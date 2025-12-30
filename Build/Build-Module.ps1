@@ -2,7 +2,8 @@
     # A CalVer string if you need to manually override the default yyyy.M.d version string.
     [string]$CalVer,
     [switch]$PublishToPSGallery,
-    [string]$PSGalleryAPIPath
+    [string]$PSGalleryAPIPath,
+    [string]$PSGalleryAPIKey
 )
 
 if (Get-Module -Name 'PSPublishModule' -ListAvailable) {
@@ -113,8 +114,15 @@ Build-Module -ModuleName 'Locksmith2' {
     New-ConfigurationArtefact -Type Packed -Enable -Path "$PSScriptRoot\..\Artefacts\Packed" -IncludeTagName
 
     # global options for publishing to github/psgallery
-    if($PublishToPSGallery) {   
-        New-ConfigurationPublish -Type PowerShellGallery -FilePath $PSGalleryAPIPath -Enabled:$true
+    if ($PublishToPSGallery) {
+        if ($PSGalleryAPIKey) {
+            # Use API key directly (from environment variable in CI)
+            New-ConfigurationPublish -Type PowerShellGallery -ApiKey $PSGalleryAPIKey -Enabled:$true
+        } elseif ($PSGalleryAPIPath) {
+            # Use API key from file (for local development)
+            New-ConfigurationPublish -Type PowerShellGallery -FilePath $PSGalleryAPIPath -Enabled:$true
+        } else {
+            Write-Error "PublishToPSGallery specified but neither PSGalleryAPIKey nor PSGalleryAPIPath provided."
+        }
     }
-    #New-ConfigurationPublish -Type GitHub -FilePath 'C:\Support\Important\GitHubAPI.txt' -UserName 'CompanyName' -Enabled:$false
 }
