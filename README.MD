@@ -210,8 +210,8 @@ Locksmith 2 is provided for legitimate security assessment and defensive purpose
 
 ## License
 
-MIT License - see [LICENSE](LICENSE) file for details.
+MIT License w/Commons Clause - see [LICENSE](LICENSE) file for details.
 
 ---
 
-**Made with 💜 by [Jake Hildreth](https://jakehildreth.com)**
+Made with 💜 by [Jake Hildreth](https://jakehildreth.com)
