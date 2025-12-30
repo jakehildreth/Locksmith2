@@ -171,7 +171,7 @@ Set-LS2Credential -Credential <PSCredential>
 
 Locksmith 2 is "Open Source, acknowledged contribution", this means that any contribution will have to be discussed with the Maintainers before being submitted.
 
-1. Open an issue and discuss your proposed change.
+1. Open an issue and discuss your proposed change
 2. Fork the repository
 4. Write some code following PowerShell best practices and existing code style
 5. Write clear commit messages using conventional commits
@@ -187,13 +187,12 @@ Locksmith 2 is "Open Source, acknowledged contribution", this means that any con
 ### Acknowledgments
 
 - **SpecterOps** for groundbreaking AD CS research ([Certified Pre-Owned](https://posts.specterops.io/certified-pre-owned-d95910965cd2))
-- **Will Schroeder** and **Lee Christensen** for ESC technique taxonomy
 - Original **Locksmith** contributors and community
-- **Sam Erde** for significant code contributions
+- **Sam Erde** (@SamErde) for significant code contributions
 
 ## Related Projects
 
-- [Locksmith](https://github.com/TrimarcJake/Locksmith) - Original AD CS audit tool
+- [Locksmith](https://github.com/jakehildreth/Locksmith) - Original AD CS audit tool
 - [Certify](https://github.com/GhostPack/Certify) - C# offensive AD CS toolkit
 - [PSPKIAudit](https://github.com/GhostPack/PSPKIAudit) - PowerShell PKI auditing
 - [Certipy](https://github.com/ly4k/Certipy) - Python-based AD CS toolkit
@@ -205,14 +204,11 @@ Locksmith 2 is provided for legitimate security assessment and defensive purpose
 ## Support
 
 - **Issues**: [GitHub Issues](https://github.com/jakehildreth/Locksmith2/issues)
-- **Social**: [@horse@infosec.exchange](https://infosec.exchange/@horse) (Mastodon)
-- **Support**: [Ko-fi](https://ko-fi.com/jakehildreth)
 
 ## License
 
-MIT License - see [LICENSE](License) file for details.
+MIT License - see [LICENSE](LICENSE) file for details.
 
 ---
 
-**Made with ❤️ by [Jake Hildreth](https://jakehildreth.com)**  
-*Making identity security suck a little less*
+**Made with 💜 by [Jake Hildreth](https://jakehildreth.com)**
