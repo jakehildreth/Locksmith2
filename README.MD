@@ -47,48 +47,21 @@ Import-Module .\Locksmith2.psd1
 
 ## Quick Start
 
-### Basic Usage
-
 ```powershell
-# Interactive mode (prompts for forest and credentials)
+# Interactive mode - prompts for forest and credentials
 Invoke-Locksmith2
 
-# Specify forest and credentials
+# Specify credentials
 $cred = Get-Credential
-Invoke-Locksmith2 -Forest 'dc01.contoso.com' -Credential $cred
+Invoke-Locksmith2 -Forest 'contoso.com' -Credential $cred
 
-# Skip environment checks
-Invoke-Locksmith2 -Forest 'contoso.com' -Credential $cred -SkipPowerShellCheck
-```
-
-### Targeted Scanning (WIP)
-
-```powershell
-# Scan for specific ESC techniques
+# Targeted scanning for specific techniques
 Find-LS2VulnerableTemplate -Technique ESC1
 Find-LS2VulnerableCA -Technique ESC6
-Find-LS2VulnerableObject -Technique ESC5o
 
-# Scan all templates for multiple techniques
-@('ESC1', 'ESC2', 'ESC3c1', 'ESC4a', 'ESC9') | ForEach-Object {
-    Find-LS2VulnerableTemplate -Technique $_
-}
-```
-
-### Inspect Results
-
-```powershell
-# Get all internal stores
+# Inspect results
 $stores = Get-LS2Stores
-
-# View discovered issues by technique
 $stores.IssueStore['ESC1']
-
-# View all certificate templates
-$stores.AdcsObjectStore.Values | Where-Object { $_.IsCertificateTemplate() }
-
-# View resolved principals
-$stores.PrincipalStore['S-1-5-21-...']
 ```
 
 ## Supported ESC Techniques
@@ -165,49 +138,12 @@ Returns:
 - **DangerousPrincipals**: Risky broad-access SIDs
 - **StandardOwners**: Acceptable owner SIDs for AD CS objects
 
-### Examples
-
-```powershell
-# Find all ESC1 issues with verbose output
-Find-LS2VulnerableTemplate -Technique ESC1 -Verbose
-
-# Check for dangerous CA role assignments
-Find-LS2VulnerableCA -Technique ESC7
-
-# Find non-standard PKI object ownership
-Find-LS2VulnerableObject -Technique ESC5o
-
-# Inspect cached templates
-$stores = Get-LS2Stores
-$stores.AdcsObjectStore.Values | 
-    Where-Object { $_.IsCertificateTemplate() } | 
-    Select-Object Name, Enabled, EnabledOn
-```
-
 ## Requirements
 
 - **PowerShell**: 5.1 or higher (Windows PowerShell)
 - **Permissions**: Read access to Active Directory Configuration partition
 - **Network**: Connectivity to domain controller LDAP/GC ports (389, 3268)
 - **Credentials**: Domain user account (Domain Admin for full remediation)
-
-## Output Format
-
-Locksmith2 returns `LS2Issue` objects containing:
-
-- **Technique**: ESC classification (e.g., ESC1, ESC6)
-- **Forest**: Target forest FQDN
-- **Name**: Affected object name
-- **IdentityReference**: Principal with problematic access
-- **Issue**: Human-readable vulnerability description
-- **Fix**: PowerShell script to remediate
-- **Revert**: PowerShell script to undo remediation
-
-```powershell
-$issues = Find-LS2VulnerableTemplate -Technique ESC1
-$issues | Format-Table Technique, Name, IdentityReference
-$issues[0].Fix  # View remediation script
-```
 
 ## Contributing
 
