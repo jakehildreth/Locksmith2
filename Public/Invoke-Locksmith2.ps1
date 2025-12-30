@@ -37,6 +37,12 @@ function Invoke-Locksmith2 {
         Skips validation and remediation of PowerShell environment settings.
         Use if you've already validated PowerShell profile and encoding settings.
 
+        .PARAMETER Mode
+        Specifies the output mode for displaying scan results.
+        If not specified, returns LS2Issue objects to the pipeline without formatting.
+        - Mode 0: Identify issues, output to console in table format
+        - Mode 1: Identify issues and fixes, output to console in list format
+
         .PARAMETER SkipForestCheck
         Reserved for future use. Currently not implemented.
 
@@ -54,18 +60,28 @@ function Invoke-Locksmith2 {
         .EXAMPLE
         Invoke-Locksmith2
         
-        Runs interactive audit prompting for forest name and credentials.
+        Runs interactive audit and returns LS2Issue objects to the pipeline.
 
         .EXAMPLE
         $cred = Get-Credential CONTOSO\admin
         Invoke-Locksmith2 -Forest 'dc01.contoso.com' -Credential $cred
         
-        Audits contoso.com forest using provided credentials.
+        Audits contoso.com forest and returns LS2Issue objects to the pipeline.
 
         .EXAMPLE
         Invoke-Locksmith2 -Forest 'contoso.com' -Credential $cred -SkipPowerShellCheck
         
         Runs audit skipping PowerShell environment validation.
+
+        .EXAMPLE
+        Invoke-Locksmith2 -Mode 0
+        
+        Runs audit and displays results in table format (default behavior).
+
+        .EXAMPLE
+        Invoke-Locksmith2 -Mode 1
+        
+        Runs audit and displays results in list format with fix scripts.
 
         .LINK
         https://github.com/jakehildreth/Locksmith2
@@ -91,6 +107,8 @@ function Invoke-Locksmith2 {
     param (
         [string]$Forest,
         [System.Management.Automation.PSCredential]$Credential,
+        [ValidateSet(0, 1)]
+        [Nullable[int]]$Mode,
         [switch]$SkipVersionCheck,
         [switch]$SkipPowerShellCheck,
         [switch]$SkipForestCheck
@@ -142,7 +160,7 @@ function Invoke-Locksmith2 {
     end {
         Show-Logo2
         if (-not $SkipPowerShellCheck) {
-            Test-PowerShellEnvironment | Repair-PowerShellEnvironment
+            Test-PowerShellEnvironment | Repair-PowerShellEnvironment | Out-Null
         }
         
         Write-Verbose "Starting Locksmith2 AD CS security audit..."
@@ -201,11 +219,16 @@ function Invoke-Locksmith2 {
         Write-Verbose "  ESC11: $(Get-IssueCount -Technique 'ESC11') issue(s)"
         Write-Verbose "  ESC16: $(Get-IssueCount -Technique 'ESC16') issue(s)"
 
-        Get-FlattenedIssues | Sort-Object ObjectName, Technique # | Out-HtmlView -FilePath .\Ignore\FlattenedIssues.html
+        # Get all flattened issues
+        $allIssues = Get-FlattenedIssues
         
-        # $script:PrincipalStore
-        # $script:DomainStore
-        # $script:AdcsObjectStore
-        # $script:IssueStore
+        # Output based on whether Mode was specified
+        if ($PSBoundParameters.ContainsKey('Mode')) {
+            # Display issues in console using specified mode
+            Show-IssueReport -Issues $allIssues -Mode $Mode
+        } else {
+            # Return LS2Issue objects to pipeline
+            $allIssues
+        }
     }
 }
