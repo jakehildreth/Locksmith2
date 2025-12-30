@@ -21,15 +21,15 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    # - name: Install required PowerShell modules
-    #   shell: pwsh
-    #   run: |
-    #     Write-Host "Installing required modules..." -ForegroundColor Cyan
-    #     Install-Module -Name Pester -AllowClobber -Scope CurrentUser -SkipPublisherCheck -Force
-    #     Install-Module -Name PSScriptAnalyzer -AllowClobber -Scope CurrentUser -Force
-    #     Install-Module -Name PSPublishModule -AllowClobber -Scope CurrentUser -Force
-    #     Install-Module -Name PSCertUtil -AllowClobber -Scope CurrentUser -Force
-    #     Write-Host "Modules installed successfully" -ForegroundColor Green
+    - name: Install required PowerShell modules
+      shell: pwsh
+      run: |
+        Write-Host "Installing required modules..." -ForegroundColor Cyan
+        Install-Module -Name Pester -AllowClobber -Scope CurrentUser -SkipPublisherCheck -Force
+        Install-Module -Name PSScriptAnalyzer -AllowClobber -Scope CurrentUser -Force
+        Install-Module -Name PSPublishModule -AllowClobber -Scope CurrentUser -Force
+        Install-Module -Name PSCertUtil -AllowClobber -Scope CurrentUser -Force
+        Write-Host "Modules installed successfully" -ForegroundColor Green
 
     # - name: Run Pester tests
     #   shell: pwsh
