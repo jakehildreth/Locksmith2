@@ -103,6 +103,8 @@ Find-LS2VulnerableTemplate -Technique <String>
 # Supported: ESC1, ESC2, ESC3c1, ESC3c2, ESC4a, ESC4o, ESC9
 ```
 
+Returns: LS2Issue objects for programmatic use
+
 #### `Find-LS2VulnerableCA`
 
 Scans certification authorities for configuration issues and dangerous role assignments.
@@ -112,6 +114,8 @@ Find-LS2VulnerableCA -Technique <String>
 # Supported: ESC6, ESC7, ESC11, ESC16
 ```
 
+Returns: LS2Issue objects for programmatic use
+
 #### `Find-LS2VulnerableObject`
 
 Scans PKI infrastructure objects (containers, computer accounts) for security issues.
@@ -120,6 +124,8 @@ Scans PKI infrastructure objects (containers, computer accounts) for security is
 Find-LS2VulnerableObject -Technique <String>
 # Supported: ESC5a, ESC5o
 ```
+
+Returns: LS2Issue objects for programmatic use
 
 #### `Get-LS2Stores`
 
@@ -138,46 +144,39 @@ Returns:
 - **DangerousPrincipals**: Risky broad-access SIDs
 - **StandardOwners**: Acceptable owner SIDs for AD CS objects
 
+#### `Set-LS2Forest`
+
+Sets the target forest for scanning. Useful for running multiple scans or using Find-LS2Vulnerable* functions independently.
+
+```powershell
+Set-LS2Forest -Forest <String>
+```
+
+#### `Set-LS2Credential`
+
+Sets credentials for AD queries. Useful for running multiple scans or using Find-LS2Vulnerable* functions independently.
+
+```powershell
+Set-LS2Credential -Credential <PSCredential>
+```
+
 ## Requirements
 
 - **PowerShell**: 5.1 or higher (Windows PowerShell)
 - **Permissions**: Read access to Active Directory Configuration partition
 - **Network**: Connectivity to domain controller LDAP/GC ports (389, 3268)
-- **Credentials**: Domain user account (Domain Admin for full remediation)
+- **Credentials**: Domain user or computer account
 
 ## Contributing
 
-Contributions are welcome! Please:
+Locksmith 2 is "Open Source, acknowledged contribution", this means that any contribution will have to be discussed with the Maintainers before being submitted.
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Follow PowerShell best practices and existing code style
-4. Write clear commit messages using conventional commits
-5. Submit a pull request
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
-
-## Versioning
-
-Locksmith2 uses **Calendar Versioning (CalVer)** in the format `YYYY.MM.DD`:
-
-- **2025.12.17**: Release on December 17, 2025
-- **2025.1.8**: Release on January 8, 2025
-
-## Documentation
-
-- [CHANGELOG.md](CHANGELOG.MD) - Version history and changes
-- [PSWriteHTML-Guide.md](PSWriteHTML-Guide.md) - Dashboard creation guide
-- [DOCUMENTATION_AUDIT.md](DOCUMENTATION_AUDIT.md) - CBH audit results
-- [DOCUMENTATION_FIXES_COMPLETED.md](DOCUMENTATION_FIXES_COMPLETED.md) - Fix summary
-
-For detailed cmdlet help:
-
-```powershell
-Get-Help Invoke-Locksmith2 -Full
-Get-Help Find-LS2VulnerableTemplate -Examples
-Get-Help Get-LS2Stores -Detailed
-```
+1. Open an issue and discuss your proposed change.
+2. Fork the repository
+4. Write some code following PowerShell best practices and existing code style
+5. Write clear commit messages using conventional commits
+6. Submit a pull request
+7. Request a review from @jakehildreth
 
 ## Credits
 
@@ -206,7 +205,6 @@ Locksmith 2 is provided for legitimate security assessment and defensive purpose
 ## Support
 
 - **Issues**: [GitHub Issues](https://github.com/jakehildreth/Locksmith2/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/jakehildreth/Locksmith2/discussions)
 - **Social**: [@horse@infosec.exchange](https://infosec.exchange/@horse) (Mastodon)
 - **Support**: [Ko-fi](https://ko-fi.com/jakehildreth)
 
