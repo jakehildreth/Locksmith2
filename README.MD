@@ -1,4 +1,4 @@
-![Locksmith 2 Logo](images/Locksmith2.png)
+![The Locksmith 2 logo features the word "locksmith" followed by the number "2" in a bold, blocky pixelated font. The design uses a gradient color scheme transitioning from light lavender on the left through pink tones to coral/orange on the right, set against a dark purple background with a rectangular border. The retro-digital aesthetic gives the logo a modern yet approachable feel, suggesting a tool that makes security management accessible and straightforward. The "2" indicates this is the second version of the Locksmith tool.](images/Locksmith2.png)
 # Locksmith 2
 
 > Find and fix Active Directory Certificate Services (AD CS) security misconfigurations
