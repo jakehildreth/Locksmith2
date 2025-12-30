@@ -1,4 +1,5 @@
-# Locksmith2
+![Locksmith 2 Logo](images/Locksmith2.png)
+# Locksmith 2
 
 > Find and fix Active Directory Certificate Services (AD CS) security misconfigurations
 
@@ -8,9 +9,9 @@
 
 ## Overview
 
-Locksmith2 is a comprehensive PowerShell module for auditing Active Directory Certificate Services (AD CS) infrastructure. It identifies security misconfigurations across certificate templates, certification authorities, and PKI infrastructure objects based on established ESC (Escalation) techniques.
+Locksmith 2 is a comprehensive PowerShell module for auditing Active Directory Certificate Services (AD CS) infrastructure. It identifies security misconfigurations across certificate templates, certification authorities, and PKI infrastructure objects based on established ESC (Escalation) techniques.
 
-Built for AD administrators, security professionals, and penetration testers, Locksmith2 provides:
+Built for AD administrators, security professionals, and penetration testers, Locksmith 2 provides:
 
 - **Automated vulnerability scanning** for ESC1-ESC16 techniques
 - **Detailed remediation scripts** for each discovered issue
@@ -18,7 +19,7 @@ Built for AD administrators, security professionals, and penetration testers, Lo
 - **Comprehensive reporting** with human-readable output
 - **Educational resources** explaining each vulnerability
 
-Locksmith2 represents the next generation in the Locksmith line of open-source AD CS security tooling, improving upon the original with better code organization, enhanced reporting, and deeper risk analysis.
+Locksmith 2 represents the next generation in the Locksmith line of open-source AD CS security tooling, improving upon the original with better code organization, enhanced reporting, and deeper risk analysis.
 
 ## Features
 
@@ -264,7 +265,7 @@ Get-Help Get-LS2Stores -Detailed
 
 ## Disclaimer
 
-Locksmith2 is provided for legitimate security assessment and defensive purposes only. Users are responsible for obtaining proper authorization before running security audits. The authors are not responsible for misuse or damage caused by this tool.
+Locksmith 2 is provided for legitimate security assessment and defensive purposes only. Users are responsible for obtaining proper authorization before running security audits. The authors are not responsible for misuse or damage caused by this tool.
 
 ## Support
 
