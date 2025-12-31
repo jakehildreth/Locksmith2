@@ -51,6 +51,10 @@ function Invoke-Locksmith2 {
         for each direct member of the group. This allows attribution of vulnerabilities
         to individual users rather than just showing group permissions.
 
+        .PARAMETER Rescan
+        Forces a fresh vulnerability scan even if IssueStore is already populated.
+        Clears and regenerates the IssueStore with current AD CS configuration.
+
         .INPUTS
         None. This function does not accept pipeline input.
 
@@ -122,21 +126,34 @@ function Invoke-Locksmith2 {
         [switch]$SkipVersionCheck,
         [switch]$SkipPowerShellCheck,
         [switch]$SkipForestCheck,
-        [switch]$ExpandGroups
+        [switch]$ExpandGroups,
+        [switch]$Rescan
     )
 
     #requires -Version 5.1
 
     Show-Logo
-    
+
     if (-not $SkipPowerShellCheck) {
         Test-PowerShellEnvironment | Repair-PowerShellEnvironment | Out-Null
     }
         
     Write-Verbose "Starting Locksmith2 AD CS security audit..."
         
-    # Initialize and force fresh scan
-    $initResult = Initialize-LS2Scan -Forest $Forest -Credential $Credential -Force
+    # Initialize and optionally rescan
+    # Only pass Forest/Credential if explicitly provided by user
+    $initParams = @{}
+    if ($PSBoundParameters.ContainsKey('Forest')) {
+        $initParams['Forest'] = $Forest
+    }
+    if ($PSBoundParameters.ContainsKey('Credential')) {
+        $initParams['Credential'] = $Credential
+    }
+    if ($Rescan) {
+        $initParams['Rescan'] = $true
+    }
+    
+    $initResult = Initialize-LS2Scan @initParams
         
     if (-not $initResult) {
         Write-Error "Failed to initialize scan. Verify credentials and forest connectivity."

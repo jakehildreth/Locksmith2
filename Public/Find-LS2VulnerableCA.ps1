@@ -82,13 +82,21 @@ function Find-LS2VulnerableCA {
         [PSCredential]$Credential,
         
         [Parameter()]
-        [switch]$ExpandGroups
+        [switch]$ExpandGroups,
+        
+        [Parameter()]
+        [switch]$Rescan
     )
 
     #requires -Version 5.1
 
     # Ensure stores are initialized and populated
-    if (-not (Initialize-LS2Scan -Forest $Forest -Credential $Credential)) {
+    $initParams = @{}
+    if ($PSBoundParameters.ContainsKey('Forest')) { $initParams['Forest'] = $Forest }
+    if ($PSBoundParameters.ContainsKey('Credential')) { $initParams['Credential'] = $Credential }
+    if ($Rescan) { $initParams['Rescan'] = $true }
+    
+    if (-not (Initialize-LS2Scan @initParams)) {
         return
     }
 
@@ -104,8 +112,6 @@ function Find-LS2VulnerableCA {
         } else {
             $caIssues
         }
-        return
-    }
         return
     }
 

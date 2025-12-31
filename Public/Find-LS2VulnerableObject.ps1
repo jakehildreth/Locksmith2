@@ -73,13 +73,21 @@ function Find-LS2VulnerableObject {
         [PSCredential]$Credential,
         
         [Parameter()]
-        [switch]$ExpandGroups
+        [switch]$ExpandGroups,
+        
+        [Parameter()]
+        [switch]$Rescan
     )
 
     #requires -Version 5.1
 
     # Ensure stores are initialized and populated
-    if (-not (Initialize-LS2Scan -Forest $Forest -Credential $Credential)) {
+    $initParams = @{}
+    if ($PSBoundParameters.ContainsKey('Forest')) { $initParams['Forest'] = $Forest }
+    if ($PSBoundParameters.ContainsKey('Credential')) { $initParams['Credential'] = $Credential }
+    if ($Rescan) { $initParams['Rescan'] = $true }
+    
+    if (-not (Initialize-LS2Scan @initParams)) {
         return
     }
 
@@ -95,8 +103,6 @@ function Find-LS2VulnerableObject {
         } else {
             $objectIssues
         }
-        return
-    }
         return
     }
 
@@ -188,14 +194,16 @@ function Find-LS2VulnerableObject {
                     
                     # Create issue object
                     $issue = [LS2Issue]::new(@{
-                        Technique          = $Technique
-                        Forest             = $script:ForestContext.RootDomain
-                        Name               = $objectName
-                        DistinguishedName  = $object.distinguishedName
-                        IdentityReference  = $editor
-                        Issue              = $issueText
-                        Fix                = $fixScript
-                        Revert             = $revertScript
+                        Technique             = $Technique
+                        Forest                = $script:ForestContext.RootDomain
+                        Name                  = $objectName
+                        DistinguishedName     = $object.distinguishedName
+                        IdentityReference     = $editorDisplayName
+                        IdentityReferenceSID  = $editor
+                        ActiveDirectoryRights = $activeDirectoryRights
+                        Issue                 = $issueText
+                        Fix                   = $fixScript
+                        Revert                = $revertScript
                     })
                     
                     # Add issue to IssueStore

@@ -28,9 +28,9 @@ function Initialize-LS2Scan {
         PSCredential for authenticating to Active Directory.
         If not specified and not already set, will prompt interactively.
 
-        .PARAMETER Force
+        .PARAMETER Rescan
         Forces a fresh vulnerability scan even if IssueStore is already populated.
-        Use this to re-run scans and refresh vulnerability data.
+        Clears the IssueStore and rescans all AD CS configurations.
 
         .OUTPUTS
         System.Boolean
@@ -53,10 +53,15 @@ function Initialize-LS2Scan {
         [PSCredential]$Credential,
 
         [Parameter()]
-        [switch]$Force
+        [switch]$Rescan
     )
 
     #requires -Version 5.1
+
+    # Prevent recursive calls during initialization
+    if ($script:InitializingStores) {
+        return $true
+    }
 
     # Check if AdcsObjectStore is populated
     if (-not $script:AdcsObjectStore -or $script:AdcsObjectStore.Count -eq 0) {
@@ -91,36 +96,47 @@ function Initialize-LS2Scan {
         }
     }
 
-    # If IssueStore is empty or Force is specified, populate with all vulnerability scans
-    if ($Force -or -not $script:IssueStore -or $script:IssueStore.Count -eq 0) {
-        if ($Force) {
-            Write-Verbose "Force specified. Running fresh vulnerability scan..."
+    # If IssueStore is empty or Rescan is specified, populate with all vulnerability scans
+    if ($Rescan -or -not $script:IssueStore -or $script:IssueStore.Count -eq 0) {
+        if ($Rescan) {
+            Write-Verbose "Rescan specified. Clearing IssueStore and running fresh vulnerability scan..."
+            # Clear IssueStore for fresh scan
+            $script:IssueStore = @{}
         } else {
             Write-Verbose "IssueStore is empty. Running full vulnerability scan..."
         }
         
-        # Scan all template techniques
-        Write-Verbose "Scanning certificate templates..."
-        $templateTechniques = @('ESC1', 'ESC2', 'ESC3c1', 'ESC3c2', 'ESC9', 'ESC4a', 'ESC4o')
-        foreach ($tech in $templateTechniques) {
-            Find-LS2VulnerableTemplate -Technique $tech | Out-Null
-        }
+        # Set flag to prevent recursive initialization
+        $script:InitializingStores = $true
         
-        # Scan all CA techniques
-        Write-Verbose "Scanning certification authorities..."
-        $caTechniques = @('ESC6', 'ESC7a', 'ESC7m', 'ESC11', 'ESC16')
-        foreach ($tech in $caTechniques) {
-            Find-LS2VulnerableCA -Technique $tech | Out-Null
+        try {
+            # Scan all template techniques
+            Write-Verbose "Scanning certificate templates..."
+            $templateTechniques = @('ESC1', 'ESC2', 'ESC3c1', 'ESC3c2', 'ESC9', 'ESC4a', 'ESC4o')
+            foreach ($tech in $templateTechniques) {
+                Find-LS2VulnerableTemplate -Technique $tech | Out-Null
+            }
+            
+            # Scan all CA techniques
+            Write-Verbose "Scanning certification authorities..."
+            $caTechniques = @('ESC6', 'ESC7a', 'ESC7m', 'ESC11', 'ESC16')
+            foreach ($tech in $caTechniques) {
+                Find-LS2VulnerableCA -Technique $tech | Out-Null
+            }
+            
+            # Scan all object techniques
+            Write-Verbose "Scanning infrastructure objects..."
+            $objectTechniques = @('ESC5a', 'ESC5o')
+            foreach ($tech in $objectTechniques) {
+                Find-LS2VulnerableObject -Technique $tech | Out-Null
+            }
+            
+            Write-Verbose "Full vulnerability scan complete."
         }
-        
-        # Scan all object techniques
-        Write-Verbose "Scanning infrastructure objects..."
-        $objectTechniques = @('ESC5a', 'ESC5o')
-        foreach ($tech in $objectTechniques) {
-            Find-LS2VulnerableObject -Technique $tech | Out-Null
+        finally {
+            # Always clear the flag
+            $script:InitializingStores = $false
         }
-        
-        Write-Verbose "Full vulnerability scan complete."
     }
 
     return $true

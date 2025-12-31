@@ -25,6 +25,10 @@ function Find-LS2RiskyPrincipal {
         Return only the top N principals with highest risk exposure.
         If not specified, returns all principals matching criteria.
 
+        .PARAMETER Rescan
+        Forces a fresh vulnerability scan even if IssueStore is already populated.
+        Clears the IssueStore and rescans all AD CS configurations.
+
         .INPUTS
         None. This function does not accept pipeline input.
 
@@ -92,14 +96,20 @@ function Find-LS2RiskyPrincipal {
         [int]$MinimumIssueCount = 1,
         
         [Parameter()]
-        [int]$Top
+        [int]$Top,
+        
+        [Parameter()]
+        [switch]$Rescan
     )
 
     #requires -Version 5.1
 
     begin {
         # Ensure stores are initialized and populated
-        if (-not (Initialize-LS2Scan -Forest:$Forest -Credential:$Credential)) {
+        $initParams = @{}
+        if ($Rescan) { $initParams['Rescan'] = $true }
+        
+        if (-not (Initialize-LS2Scan @initParams)) {
             return
         }
         
