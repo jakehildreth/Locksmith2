@@ -297,19 +297,17 @@
         )
     }
 
-    ESC7 = @{
-        Technique = 'ESC7'
+    ESC7a = @{
+        Technique = 'ESC7a'
         
-        # Properties to check for problematic CA administrators/managers
+        # Properties to check for problematic CA administrators
         AdminProperties = @(
             'DangerousCAAdministrator'
             'LowPrivilegeCAAdministrator'
-            'DangerousCACertificateManager'
-            'LowPrivilegeCACertificateManager'
         )
         
         # Issue description template for CA Administrators
-        IssueTemplateCAAdmin = @(
+        IssueTemplate = @(
             "`$(IdentityReference) has CA Administrator rights on `$(CAName).`n`n"
             "CA Administrators can manage CA configuration, approve certificate requests, and modify "
             "security settings. This principal should not have these rights.`n`n"
@@ -322,8 +320,35 @@
             "  - https://posts.specterops.io/certified-pre-owned-d95910965cd2"
         )
         
+        # Remediation requires manual review
+        FixTemplate = @(
+            "# Remove CA Administrator role"
+            "certutil -config `$(CAFullName) -delreg ca\\Security\\Roles\\Administrators\\`$(IdentityReference)"
+            "# Restart Certificate Services"
+            "Restart-Service -Name CertSvc -Force"
+            "# NOTE: Review whether this principal needs these rights before removing"
+        )
+        
+        # Revert template
+        RevertTemplate = @(
+            "# Re-add CA Administrator role"
+            "certutil -config `$(CAFullName) -setreg ca\\Security\\Roles\\Administrators\\`$(IdentityReference) +ManageCA"
+            "# Restart Certificate Services"
+            "Restart-Service -Name CertSvc -Force"
+        )
+    }
+
+    ESC7m = @{
+        Technique = 'ESC7m'
+        
+        # Properties to check for problematic certificate managers
+        AdminProperties = @(
+            'DangerousCACertificateManager'
+            'LowPrivilegeCACertificateManager'
+        )
+        
         # Issue description template for Certificate Managers
-        IssueTemplateCertManager = @(
+        IssueTemplate = @(
             "`$(IdentityReference) has Certificate Manager rights on `$(CAName).`n`n"
             "Certificate Managers can approve/deny certificate requests and revoke certificates. "
             "This principal should not have these rights.`n`n"
@@ -335,10 +360,7 @@
         
         # Remediation requires manual review
         FixTemplate = @(
-            "# Remove CA Administrator/Certificate Manager role"
-            "# For CA Administrators:"
-            "certutil -config `$(CAFullName) -delreg ca\\Security\\Roles\\Administrators\\`$(IdentityReference)"
-            "# For Certificate Managers:"
+            "# Remove Certificate Manager role"
             "certutil -config `$(CAFullName) -delreg ca\\Security\\Roles\\Officers\\`$(IdentityReference)"
             "# Restart Certificate Services"
             "Restart-Service -Name CertSvc -Force"
@@ -347,10 +369,7 @@
         
         # Revert template
         RevertTemplate = @(
-            "# Re-add CA Administrator/Certificate Manager role"
-            "# For CA Administrators:"
-            "certutil -config `$(CAFullName) -setreg ca\\Security\\Roles\\Administrators\\`$(IdentityReference) +ManageCA"
-            "# For Certificate Managers:"
+            "# Re-add Certificate Manager role"
             "certutil -config `$(CAFullName) -setreg ca\\Security\\Roles\\Officers\\`$(IdentityReference) +ManageCertificates"
             "# Restart Certificate Services"
             "Restart-Service -Name CertSvc -Force"

@@ -243,10 +243,14 @@ function Find-LS2VulnerableTemplate {
                 if (-not $script:IssueStore[$dn].ContainsKey($Technique)) {
                     $script:IssueStore[$dn][$Technique] = @()
                 }
-                $script:IssueStore[$dn][$Technique] += $issue
-                $issueCount++
+                
+                # Only add to store if not a duplicate
+                if (-not (Test-IssueExists -Issue $issue -DistinguishedName $dn -Technique $Technique)) {
+                    $script:IssueStore[$dn][$Technique] += $issue
+                    $issueCount++
+                }
 
-                # Output to pipeline
+                # Always output to pipeline
                 $issue
             }
         }
@@ -300,10 +304,14 @@ function Find-LS2VulnerableTemplate {
             if (-not $script:IssueStore[$dn].ContainsKey($Technique)) {
                 $script:IssueStore[$dn][$Technique] = @()
             }
-            $script:IssueStore[$dn][$Technique] += $issue
-            $issueCount++
+            
+            # Only add to store if not a duplicate
+            if (-not (Test-IssueExists -Issue $issue -DistinguishedName $dn -Technique $Technique)) {
+                $script:IssueStore[$dn][$Technique] += $issue
+                $issueCount++
+            }
 
-            # Output to pipeline
+            # Always output to pipeline
             $issue
         }
         Write-Verbose "$Technique scan complete. Found $issueCount issue(s)."
@@ -414,11 +422,13 @@ function Find-LS2VulnerableTemplate {
                 $script:IssueStore[$dn][$technique] = @()
             }
             
-            # Store in IssueStore
-            $script:IssueStore[$dn][$technique] += $issue
-            $issueCount++
+            # Only add to store if not a duplicate
+            if (-not (Test-IssueExists -Issue $issue -DistinguishedName $dn -Technique $technique)) {
+                $script:IssueStore[$dn][$technique] += $issue
+                $issueCount++
+            }
 
-            # Output to pipeline
+            # Always output to pipeline
             $issue
         }
     }

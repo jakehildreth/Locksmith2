@@ -8,7 +8,7 @@ function Invoke-Locksmith2 {
         for security misconfigurations documented as ESC (Escalation) techniques. It scans:
         
         - Certificate templates (ESC1, ESC2, ESC3, ESC4, ESC9)
-        - Certification Authorities (ESC6, ESC7, ESC11, ESC16)
+        - Certification Authorities (ESC6, ESC7a, ESC7m, ESC11, ESC16)
         - PKI container objects (ESC5)
         
         The function initializes four module-level stores:
@@ -214,7 +214,8 @@ function Invoke-Locksmith2 {
         Write-Verbose "  ESC5a: $(Get-IssueCount -Technique 'ESC5a') issue(s)"
         Write-Verbose "  ESC5o: $(Get-IssueCount -Technique 'ESC5o') issue(s)"
         Write-Verbose "  ESC6:  $(Get-IssueCount -Technique 'ESC6') issue(s)"
-        Write-Verbose "  ESC7:  $(Get-IssueCount -Technique 'ESC7') issue(s)"
+        Write-Verbose "  ESC7a: $(Get-IssueCount -Technique 'ESC7a') issue(s)"
+        Write-Verbose "  ESC7m: $(Get-IssueCount -Technique 'ESC7m') issue(s)"
         Write-Verbose "  ESC9:  $(Get-IssueCount -Technique 'ESC9') issue(s)"
         Write-Verbose "  ESC11: $(Get-IssueCount -Technique 'ESC11') issue(s)"
         Write-Verbose "  ESC16: $(Get-IssueCount -Technique 'ESC16') issue(s)"

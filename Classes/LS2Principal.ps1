@@ -7,6 +7,7 @@ class LS2Principal {
     [string]$NTAccountName
     [string]$userPrincipalName
     [string[]]$memberOf
+    [int]$MemberCount
     [System.DirectoryServices.ActiveDirectorySecurity]$ObjectSecurity
 
     # Constructor from SearchResult

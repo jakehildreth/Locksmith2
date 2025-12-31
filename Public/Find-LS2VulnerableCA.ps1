@@ -8,20 +8,25 @@ function Find-LS2VulnerableCA {
         for matching CAs, and generates issues for configuration problems or dangerous role assignments.
         
         ESC6: Detects CAs with EDITF_ATTRIBUTESUBJECTALTNAME2 enabled
-        ESC7: Detects dangerous CA Administrator and Certificate Manager role assignments
+        ESC7a: Detects dangerous CA Administrator role assignments
+        ESC7m: Detects dangerous Certificate Manager role assignments
         ESC11: Detects CAs that don't require RPC encryption
         ESC16: Detects CAs with disabled CRL/AIA extensions
 
     .PARAMETER Technique
-        ESC technique name to scan for (e.g., 'ESC6', 'ESC7', 'ESC11', 'ESC16')
+        ESC technique name to scan for (e.g., 'ESC6', 'ESC7a', 'ESC7m', 'ESC11', 'ESC16')
 
     .EXAMPLE
         Find-LS2VulnerableCA -Technique ESC6
         Checks for CAs with EDITF_ATTRIBUTESUBJECTALTNAME2 enabled.
 
     .EXAMPLE
-        Find-LS2VulnerableCA -Technique ESC7
-        Checks for dangerous CA Administrator and Certificate Manager role assignments.
+        Find-LS2VulnerableCA -Technique ESC7a
+        Checks for dangerous CA Administrator role assignments.
+
+    .EXAMPLE
+        Find-LS2VulnerableCA -Technique ESC7m
+        Checks for dangerous Certificate Manager role assignments.
 
     .EXAMPLE
         Find-LS2VulnerableCA -Technique ESC11
@@ -46,7 +51,8 @@ function Find-LS2VulnerableCA {
         
         Supported techniques:
         - ESC6: EDITF_ATTRIBUTESUBJECTALTNAME2 flag enabled
-        - ESC7: Dangerous CA Administrator/Certificate Manager role assignments
+        - ESC7a: Dangerous CA Administrator role assignments
+        - ESC7m: Dangerous Certificate Manager role assignments
         - ESC11: Missing RPC encryption requirement
         - ESC16: Disabled CRL/AIA security extensions
 
@@ -62,7 +68,7 @@ function Find-LS2VulnerableCA {
     [CmdletBinding()]
     param(
         [Parameter()]
-        [ValidateSet('ESC6', 'ESC7', 'ESC11', 'ESC16')]
+        [ValidateSet('ESC6', 'ESC7a', 'ESC7m', 'ESC11', 'ESC16')]
         [string]$Technique,
         
         [Parameter()]
@@ -110,7 +116,7 @@ function Find-LS2VulnerableCA {
 
     # If no technique specified, scan all CA techniques
     if (-not $Technique) {
-        $allTechniques = @('ESC6', 'ESC7', 'ESC11', 'ESC16')
+        $allTechniques = @('ESC6', 'ESC7a', 'ESC7m', 'ESC11', 'ESC16')
         Write-Verbose "No technique specified. Scanning all CA techniques: $($allTechniques -join ', ')"
         foreach ($tech in $allTechniques) {
             Find-LS2VulnerableCA -Technique $tech
@@ -132,8 +138,8 @@ function Find-LS2VulnerableCA {
 
     $issueCount = 0
 
-    # ESC7 has a different structure (checks role assignments)
-    if ($Technique -eq 'ESC7') {
+    # ESC7a and ESC7m have a different structure (checks role assignments)
+    if ($Technique -eq 'ESC7a' -or $Technique -eq 'ESC7m') {
         foreach ($ca in $allCAs) {
             $caName = if ($ca.cn) { $ca.cn } elseif ($ca.Properties -and $ca.Properties.Contains('cn')) { $ca.Properties['cn'][0] } else { 'Unknown CA' }
             Write-Verbose "  Checking CA: $caName"
@@ -163,14 +169,12 @@ function Find-LS2VulnerableCA {
 
                 Write-Verbose "    Found $($problematicPrincipals.Count) problematic principal(s) in $adminProperty"
 
-                # Determine role type and issue template
+                # Determine role type
                 $isAdministrator = $adminProperty -like '*CAAdministrator*'
-                $issueTemplate = if ($isAdministrator) {
-                    $config.IssueTemplateCAAdmin
-                } else {
-                    $config.IssueTemplateCertManager
-                }
                 $roleType = if ($isAdministrator) { 'Administrators' } else { 'Officers' }
+                
+                # Use the IssueTemplate from config (no longer separate templates)
+                $issueTemplate = $config.IssueTemplate
 
                 # Create an issue for each problematic principal
                 foreach ($principalSid in $problematicPrincipals) {
@@ -244,11 +248,13 @@ function Find-LS2VulnerableCA {
                         $script:IssueStore[$dn][$Technique] = @()
                     }
                     
-                    # Store in IssueStore
-                    $script:IssueStore[$dn][$Technique] += $issue
-                    $issueCount++
+                    # Only add to store if not a duplicate
+                    if (-not (Test-IssueExists -Issue $issue -DistinguishedName $dn -Technique $Technique)) {
+                        $script:IssueStore[$dn][$Technique] += $issue
+                        $issueCount++
+                    }
 
-                    # Output to pipeline
+                    # Always output to pipeline
                     $issue
                 }
             }
@@ -347,11 +353,13 @@ function Find-LS2VulnerableCA {
                 $script:IssueStore[$dn][$Technique] = @()
             }
             
-            # Store in IssueStore
-            $script:IssueStore[$dn][$Technique] += $issue
-            $issueCount++
+            # Only add to store if not a duplicate
+            if (-not (Test-IssueExists -Issue $issue -DistinguishedName $dn -Technique $Technique)) {
+                $script:IssueStore[$dn][$Technique] += $issue
+                $issueCount++
+            }
 
-            # Output to pipeline
+            # Always output to pipeline
             $issue
         }
     }

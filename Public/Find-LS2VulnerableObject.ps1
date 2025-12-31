@@ -224,11 +224,13 @@ function Find-LS2VulnerableObject {
                         $script:IssueStore[$object.distinguishedName][$Technique] = @()
                     }
                     
-                    $script:IssueStore[$object.distinguishedName][$Technique] += $issue
+                    # Only add to store if not a duplicate
+                    if (-not (Test-IssueExists -Issue $issue -DistinguishedName $object.distinguishedName -Technique $Technique)) {
+                        $script:IssueStore[$object.distinguishedName][$Technique] += $issue
+                        Write-Verbose "      VULNERABLE: $editorDisplayName has write access"
+                    }
                     
-                    Write-Verbose "      VULNERABLE: $editorDisplayName has write access"
-                    
-                    # Return the issue
+                    # Always output to pipeline
                     $issue
                 }
             }
@@ -340,11 +342,13 @@ function Find-LS2VulnerableObject {
             $script:IssueStore[$object.distinguishedName][$Technique] = @()
         }
         
-        $script:IssueStore[$object.distinguishedName][$Technique] += $issue
+        # Only add to store if not a duplicate
+        if (-not (Test-IssueExists -Issue $issue -DistinguishedName $object.distinguishedName -Technique $Technique)) {
+            $script:IssueStore[$object.distinguishedName][$Technique] += $issue
+            Write-Verbose "    VULNERABLE: $objectType '$objectName' owned by $owner"
+        }
 
-        Write-Verbose "    VULNERABLE: $objectType '$objectName' owned by $owner"
-
-        # Return the issue
+        # Always output to pipeline
         $issue
     }
 
