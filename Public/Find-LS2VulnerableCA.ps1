@@ -29,6 +29,10 @@ function Find-LS2VulnerableCA {
         Checks for dangerous Certificate Manager role assignments.
 
     .EXAMPLE
+        Find-LS2VulnerableCA -Technique ESC7a -ExpandGroups
+        Checks for CA Administrator roles and expands group assignments into per-member issues.
+
+    .EXAMPLE
         Find-LS2VulnerableCA -Technique ESC11
         Checks for CAs that don't require RPC encryption.
 
@@ -75,7 +79,10 @@ function Find-LS2VulnerableCA {
         [string]$Forest,
         
         [Parameter()]
-        [PSCredential]$Credential
+        [PSCredential]$Credential,
+        
+        [Parameter()]
+        [switch]$ExpandGroups
     )
 
     #requires -Version 5.1
@@ -255,7 +262,11 @@ function Find-LS2VulnerableCA {
                     }
 
                     # Always output to pipeline
-                    $issue
+                    if ($ExpandGroups) {
+                        Expand-IssueByGroup -Issue $issue
+                    } else {
+                        $issue
+                    }
                 }
             }
         }
@@ -360,7 +371,11 @@ function Find-LS2VulnerableCA {
             }
 
             # Always output to pipeline
-            $issue
+            if ($ExpandGroups) {
+                Expand-IssueByGroup -Issue $issue
+            } else {
+                $issue
+            }
         }
     }
 

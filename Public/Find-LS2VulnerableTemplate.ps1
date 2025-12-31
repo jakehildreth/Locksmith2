@@ -22,6 +22,10 @@ function Find-LS2VulnerableTemplate {
         $esc1Issues = Find-LS2VulnerableTemplate -Technique ESC1 -Verbose
         Scans for ESC1 issues with verbose output, stores issues in $esc1Issues variable.
 
+    .EXAMPLE
+        Find-LS2VulnerableTemplate -Technique ESC1 -ExpandGroups
+        Scans for ESC1 issues and expands group principals into individual per-member issues.
+
     .OUTPUTS
         LS2Issue
         LS2Issue objects for each vulnerability found.
@@ -61,7 +65,10 @@ function Find-LS2VulnerableTemplate {
         [string]$Forest,
         
         [Parameter()]
-        [PSCredential]$Credential
+        [PSCredential]$Credential,
+        
+        [Parameter()]
+        [switch]$ExpandGroups
     )
 
     # Check if AdcsObjectStore is populated
@@ -251,7 +258,11 @@ function Find-LS2VulnerableTemplate {
                 }
 
                 # Always output to pipeline
-                $issue
+                if ($ExpandGroups) {
+                    Expand-IssueByGroup -Issue $issue
+                } else {
+                    $issue
+                }
             }
         }
         Write-Verbose "$Technique scan complete. Found $issueCount issue(s)."
@@ -312,7 +323,11 @@ function Find-LS2VulnerableTemplate {
             }
 
             # Always output to pipeline
-            $issue
+            if ($ExpandGroups) {
+                Expand-IssueByGroup -Issue $issue
+            } else {
+                $issue
+            }
         }
         Write-Verbose "$Technique scan complete. Found $issueCount issue(s)."
         return
@@ -429,7 +444,11 @@ function Find-LS2VulnerableTemplate {
             }
 
             # Always output to pipeline
-            $issue
+            if ($ExpandGroups) {
+                Expand-IssueByGroup -Issue $issue
+            } else {
+                $issue
+            }
         }
     }
 

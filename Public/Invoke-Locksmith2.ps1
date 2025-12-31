@@ -46,6 +46,11 @@ function Invoke-Locksmith2 {
         .PARAMETER SkipForestCheck
         Reserved for future use. Currently not implemented.
 
+        .PARAMETER ExpandGroups
+        Expands issues where the IdentityReference is a group into individual issues
+        for each direct member of the group. This allows attribution of vulnerabilities
+        to individual users rather than just showing group permissions.
+
         .INPUTS
         None. This function does not accept pipeline input.
 
@@ -83,6 +88,11 @@ function Invoke-Locksmith2 {
         
         Runs audit and displays results in list format with fix scripts.
 
+        .EXAMPLE
+        Invoke-Locksmith2 -ExpandGroups
+        
+        Runs audit and expands group issues into individual per-member issues.
+
         .LINK
         https://github.com/jakehildreth/Locksmith2
 
@@ -111,7 +121,8 @@ function Invoke-Locksmith2 {
         [Nullable[int]]$Mode,
         [switch]$SkipVersionCheck,
         [switch]$SkipPowerShellCheck,
-        [switch]$SkipForestCheck
+        [switch]$SkipForestCheck,
+        [switch]$ExpandGroups
     )
 
     #requires -Version 5.1
@@ -222,6 +233,13 @@ function Invoke-Locksmith2 {
 
         # Get all flattened issues
         $allIssues = Get-FlattenedIssues
+        
+        # Expand groups if requested
+        if ($ExpandGroups) {
+            Write-Verbose "Expanding group memberships into individual issues..."
+            $allIssues = $allIssues | ForEach-Object { Expand-IssueByGroup $_ }
+            Write-Verbose "Expansion complete. Total issues: $($allIssues.Count)"
+        }
         
         # Output based on whether Mode was specified
         if ($PSBoundParameters.ContainsKey('Mode')) {

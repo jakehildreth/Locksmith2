@@ -29,6 +29,10 @@ function Find-LS2VulnerableObject {
         $issues = Find-LS2VulnerableObject -Technique ESC5o -Verbose
         Stores ESC5o issues in $issues variable with verbose output.
 
+    .EXAMPLE
+        Find-LS2VulnerableObject -Technique ESC5a -ExpandGroups
+        Checks for dangerous write permissions and expands group principals into per-member issues.
+
     .OUTPUTS
         LS2Issue
         LS2Issue objects for each vulnerability found.
@@ -66,7 +70,10 @@ function Find-LS2VulnerableObject {
         [string]$Forest,
         
         [Parameter()]
-        [PSCredential]$Credential
+        [PSCredential]$Credential,
+        
+        [Parameter()]
+        [switch]$ExpandGroups
     )
 
     #requires -Version 5.1
@@ -231,7 +238,11 @@ function Find-LS2VulnerableObject {
                     }
                     
                     # Always output to pipeline
-                    $issue
+                    if ($ExpandGroups) {
+                        Expand-IssueByGroup -Issue $issue
+                    } else {
+                        $issue
+                    }
                 }
             }
         }
@@ -349,7 +360,11 @@ function Find-LS2VulnerableObject {
         }
 
         # Always output to pipeline
-        $issue
+        if ($ExpandGroups) {
+            Expand-IssueByGroup -Issue $issue
+        } else {
+            $issue
+        }
     }
 
     Write-Verbose "$Technique scan complete. Found $issueCount issue(s)."
