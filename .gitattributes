@@ -1,0 +1,21 @@
+# Enforce LF line endings for all text files
+* text=auto eol=lf
+
+# PowerShell files
+*.ps1 text eol=lf
+*.psm1 text eol=lf
+*.psd1 text eol=lf
+
+# Markdown files
+*.md text eol=lf
+
+# Documentation
+*.txt text eol=lf
+
+# Binary files
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.zip binary
