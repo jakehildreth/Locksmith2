@@ -78,46 +78,25 @@ function Find-LS2VulnerableObject {
 
     #requires -Version 5.1
 
-    # Check if AdcsObjectStore is populated
-    if (-not $script:AdcsObjectStore -or $script:AdcsObjectStore.Count -eq 0) {
-        Write-Verbose "AdcsObjectStore is empty. Setting up prerequisites..."
-        
-        # Set up required context only if not already set or parameter provided
-        if ($PSBoundParameters.ContainsKey('Forest') -or -not $script:Forest) {
-            Set-LS2Forest -Forest $Forest
-        }
-        
-        if ($PSBoundParameters.ContainsKey('Credential') -or -not $script:Credential) {
-            Set-LS2Credential -Credential $Credential
-        }
-        
-        if (-not $script:RootDSE) {
-            $script:RootDSE = Get-RootDSE
-        }
-        
-        if (-not $script:Server) {
-            $script:Server = $script:Forest
-        }
-        
-        # Initialize stores
-        Initialize-DomainStore
-        Initialize-PrincipalDefinitions
-        Initialize-AdcsObjectStore
-        
-        # Check again after initialization attempt
-        if (-not $script:AdcsObjectStore -or $script:AdcsObjectStore.Count -eq 0) {
-            Write-Warning "AdcsObjectStore could not be populated. Verify credentials and forest connectivity."
-            return
-        }
+    # Ensure stores are initialized and populated
+    if (-not (Initialize-LS2Scan -Forest $Forest -Credential $Credential)) {
+        return
     }
 
-    # If no technique specified, scan all infrastructure object techniques
+    # If no technique specified, return all object issues
     if (-not $Technique) {
-        $allTechniques = @('ESC5a', 'ESC5o')
-        Write-Verbose "No technique specified. Scanning all infrastructure object techniques: $($allTechniques -join ', ')"
-        foreach ($tech in $allTechniques) {
-            Find-LS2VulnerableObject -Technique $tech
+        Write-Verbose "No technique specified. Returning all object issues..."
+        $allIssues = Get-FlattenedIssues
+        $objectTechniques = @('ESC5a', 'ESC5o')
+        $objectIssues = $allIssues | Where-Object { $_.Technique -in $objectTechniques }
+        
+        if ($ExpandGroups) {
+            $objectIssues | ForEach-Object { Expand-IssueByGroup $_ }
+        } else {
+            $objectIssues
         }
+        return
+    }
         return
     }
 

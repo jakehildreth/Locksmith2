@@ -21,6 +21,9 @@ class LS2Issue {
     [string]$Owner                  # Owner of the vulnerable object
     [Nullable[bool]]$HasNonStandardOwner  # Whether object has non-standard owner
     
+    # Group expansion properties
+    [Nullable[int]]$MemberCount     # For group issues: number of members expanded
+    
     # Issue details
     [string]$Issue                  # Description of the vulnerability
     [string]$Fix                    # PowerShell script to remediate

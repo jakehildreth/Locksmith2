@@ -1,10 +1,10 @@
-﻿function Show-Logo2 {
+﻿function Show-Logo {
     <#
         .SYNOPSIS
-        Displays the Locksmith 2 ASCII logo with version and copyright information.
+        Displays the Locksmith 2 pixel art logo with version and copyright information.
 
         .DESCRIPTION
-        Renders the Locksmith 2 ASCII art logo with configurable foreground and background colors using ANSI escape codes.
+        Renders the Locksmith 2 pixel art art logo with configurable foreground and background colors using ANSI escape codes.
         Displays a subtitle line containing copyright, URL, and version information, evenly spaced across the logo width.
         
         The function uses true RGB colors via ANSI escape sequences, bypassing terminal color scheme remapping.
