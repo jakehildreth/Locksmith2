@@ -22,6 +22,10 @@ function Find-LS2VulnerableTemplate {
         $esc1Issues = Find-LS2VulnerableTemplate -Technique ESC1 -Verbose
         Scans for ESC1 issues with verbose output, stores issues in $esc1Issues variable.
 
+    .EXAMPLE
+        Find-LS2VulnerableTemplate -Technique ESC1 -ExpandGroups
+        Scans for ESC1 issues and expands group principals into individual per-member issues.
+
     .OUTPUTS
         LS2Issue
         LS2Issue objects for each vulnerability found.
@@ -61,48 +65,36 @@ function Find-LS2VulnerableTemplate {
         [string]$Forest,
         
         [Parameter()]
-        [PSCredential]$Credential
+        [PSCredential]$Credential,
+        
+        [Parameter()]
+        [switch]$ExpandGroups,
+        
+        [Parameter()]
+        [switch]$Rescan
     )
 
-    # Check if AdcsObjectStore is populated
-    if (-not $script:AdcsObjectStore -or $script:AdcsObjectStore.Count -eq 0) {
-        Write-Verbose "AdcsObjectStore is empty. Setting up prerequisites..."
-        
-        # Set up required context only if not already set or parameter provided
-        if ($PSBoundParameters.ContainsKey('Forest') -or -not $script:Forest) {
-            Set-LS2Forest -Forest $Forest
-        }
-        
-        if ($PSBoundParameters.ContainsKey('Credential') -or -not $script:Credential) {
-            Set-LS2Credential -Credential $Credential
-        }
-        
-        if (-not $script:RootDSE) {
-            $script:RootDSE = Get-RootDSE
-        }
-        
-        if (-not $script:Server) {
-            $script:Server = $script:Forest
-        }
-        
-        # Initialize stores
-        Initialize-DomainStore
-        Initialize-PrincipalDefinitions
-        Initialize-AdcsObjectStore
-        
-        # Check again after initialization attempt
-        if (-not $script:AdcsObjectStore -or $script:AdcsObjectStore.Count -eq 0) {
-            Write-Warning "AdcsObjectStore could not be populated. Verify credentials and forest connectivity."
-            return
-        }
+    # Ensure stores are initialized and populated
+    $initParams = @{}
+    if ($PSBoundParameters.ContainsKey('Forest')) { $initParams['Forest'] = $Forest }
+    if ($PSBoundParameters.ContainsKey('Credential')) { $initParams['Credential'] = $Credential }
+    if ($Rescan) { $initParams['Rescan'] = $true }
+    
+    if (-not (Initialize-LS2Scan @initParams)) {
+        return
     }
 
-    # If no technique specified, scan all template techniques
+    # If no technique specified, return all template issues
     if (-not $Technique) {
-        $allTechniques = @('ESC1', 'ESC2', 'ESC3c1', 'ESC3c2', 'ESC9', 'ESC4a', 'ESC4o')
-        Write-Verbose "No technique specified. Scanning all template techniques: $($allTechniques -join ', ')"
-        foreach ($tech in $allTechniques) {
-            Find-LS2VulnerableTemplate -Technique $tech
+        Write-Verbose "No technique specified. Returning all template issues..."
+        $allIssues = Get-FlattenedIssues
+        $templateTechniques = @('ESC1', 'ESC2', 'ESC3c1', 'ESC3c2', 'ESC9', 'ESC4a', 'ESC4o')
+        $templateIssues = $allIssues | Where-Object { $_.Technique -in $templateTechniques }
+        
+        if ($ExpandGroups) {
+            $templateIssues | ForEach-Object { Expand-IssueByGroup $_ }
+        } else {
+            $templateIssues
         }
         return
     }
@@ -243,11 +235,19 @@ function Find-LS2VulnerableTemplate {
                 if (-not $script:IssueStore[$dn].ContainsKey($Technique)) {
                     $script:IssueStore[$dn][$Technique] = @()
                 }
-                $script:IssueStore[$dn][$Technique] += $issue
-                $issueCount++
+                
+                # Only add to store if not a duplicate
+                if (-not (Test-IssueExists -Issue $issue -DistinguishedName $dn -Technique $Technique)) {
+                    $script:IssueStore[$dn][$Technique] += $issue
+                    $issueCount++
+                }
 
-                # Output to pipeline
-                $issue
+                # Always output to pipeline
+                if ($ExpandGroups) {
+                    Expand-IssueByGroup -Issue $issue
+                } else {
+                    $issue
+                }
             }
         }
         Write-Verbose "$Technique scan complete. Found $issueCount issue(s)."
@@ -300,11 +300,19 @@ function Find-LS2VulnerableTemplate {
             if (-not $script:IssueStore[$dn].ContainsKey($Technique)) {
                 $script:IssueStore[$dn][$Technique] = @()
             }
-            $script:IssueStore[$dn][$Technique] += $issue
-            $issueCount++
+            
+            # Only add to store if not a duplicate
+            if (-not (Test-IssueExists -Issue $issue -DistinguishedName $dn -Technique $Technique)) {
+                $script:IssueStore[$dn][$Technique] += $issue
+                $issueCount++
+            }
 
-            # Output to pipeline
-            $issue
+            # Always output to pipeline
+            if ($ExpandGroups) {
+                Expand-IssueByGroup -Issue $issue
+            } else {
+                $issue
+            }
         }
         Write-Verbose "$Technique scan complete. Found $issueCount issue(s)."
         return
@@ -414,12 +422,18 @@ function Find-LS2VulnerableTemplate {
                 $script:IssueStore[$dn][$technique] = @()
             }
             
-            # Store in IssueStore
-            $script:IssueStore[$dn][$technique] += $issue
-            $issueCount++
+            # Only add to store if not a duplicate
+            if (-not (Test-IssueExists -Issue $issue -DistinguishedName $dn -Technique $technique)) {
+                $script:IssueStore[$dn][$technique] += $issue
+                $issueCount++
+            }
 
-            # Output to pipeline
-            $issue
+            # Always output to pipeline
+            if ($ExpandGroups) {
+                Expand-IssueByGroup -Issue $issue
+            } else {
+                $issue
+            }
         }
     }
 

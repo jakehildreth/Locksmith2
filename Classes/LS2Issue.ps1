@@ -21,6 +21,9 @@ class LS2Issue {
     [string]$Owner                  # Owner of the vulnerable object
     [Nullable[bool]]$HasNonStandardOwner  # Whether object has non-standard owner
     
+    # Group expansion properties
+    [Nullable[int]]$MemberCount     # For group issues: number of members expanded
+    
     # Issue details
     [string]$Issue                  # Description of the vulnerability
     [string]$Fix                    # PowerShell script to remediate
@@ -60,6 +63,8 @@ class LS2Issue {
     [string] GetIdentifier() {
         if ($this.IdentityReference) {
             return "$($this.Technique): $($this.Name) - $($this.IdentityReference)"
+        } elseif ($this.Owner) {
+            return "$($this.Technique): $($this.Name) - Owner: $($this.Owner)"
         } else {
             return "$($this.Technique): $($this.Name)"
         }
@@ -78,5 +83,28 @@ class LS2Issue {
     # Method to check if this is a CA issue
     [bool] IsCAIssue() {
         return -not [string]::IsNullOrEmpty($this.CAFullName)
+    }
+    
+    # Method to check if this issue matches another issue (for deduplication)
+    [bool] Matches([LS2Issue]$Other) {
+        if ($null -eq $Other) {
+            return $false
+        }
+        
+        # Core properties must match
+        if ($this.Technique -ne $Other.Technique) { return $false }
+        if ($this.DistinguishedName -ne $Other.DistinguishedName) { return $false }
+        
+        # Principal properties must match (null-safe comparison)
+        if ($this.IdentityReferenceSID -ne $Other.IdentityReferenceSID) { return $false }
+        if ($this.ActiveDirectoryRights -ne $Other.ActiveDirectoryRights) { return $false }
+        
+        # CA property must match
+        if ($this.CAFullName -ne $Other.CAFullName) { return $false }
+        
+        # Owner must match
+        if ($this.Owner -ne $Other.Owner) { return $false }
+        
+        return $true
     }
 }

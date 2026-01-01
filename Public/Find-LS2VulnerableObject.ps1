@@ -29,6 +29,10 @@ function Find-LS2VulnerableObject {
         $issues = Find-LS2VulnerableObject -Technique ESC5o -Verbose
         Stores ESC5o issues in $issues variable with verbose output.
 
+    .EXAMPLE
+        Find-LS2VulnerableObject -Technique ESC5a -ExpandGroups
+        Checks for dangerous write permissions and expands group principals into per-member issues.
+
     .OUTPUTS
         LS2Issue
         LS2Issue objects for each vulnerability found.
@@ -66,50 +70,38 @@ function Find-LS2VulnerableObject {
         [string]$Forest,
         
         [Parameter()]
-        [PSCredential]$Credential
+        [PSCredential]$Credential,
+        
+        [Parameter()]
+        [switch]$ExpandGroups,
+        
+        [Parameter()]
+        [switch]$Rescan
     )
 
     #requires -Version 5.1
 
-    # Check if AdcsObjectStore is populated
-    if (-not $script:AdcsObjectStore -or $script:AdcsObjectStore.Count -eq 0) {
-        Write-Verbose "AdcsObjectStore is empty. Setting up prerequisites..."
-        
-        # Set up required context only if not already set or parameter provided
-        if ($PSBoundParameters.ContainsKey('Forest') -or -not $script:Forest) {
-            Set-LS2Forest -Forest $Forest
-        }
-        
-        if ($PSBoundParameters.ContainsKey('Credential') -or -not $script:Credential) {
-            Set-LS2Credential -Credential $Credential
-        }
-        
-        if (-not $script:RootDSE) {
-            $script:RootDSE = Get-RootDSE
-        }
-        
-        if (-not $script:Server) {
-            $script:Server = $script:Forest
-        }
-        
-        # Initialize stores
-        Initialize-DomainStore
-        Initialize-PrincipalDefinitions
-        Initialize-AdcsObjectStore
-        
-        # Check again after initialization attempt
-        if (-not $script:AdcsObjectStore -or $script:AdcsObjectStore.Count -eq 0) {
-            Write-Warning "AdcsObjectStore could not be populated. Verify credentials and forest connectivity."
-            return
-        }
+    # Ensure stores are initialized and populated
+    $initParams = @{}
+    if ($PSBoundParameters.ContainsKey('Forest')) { $initParams['Forest'] = $Forest }
+    if ($PSBoundParameters.ContainsKey('Credential')) { $initParams['Credential'] = $Credential }
+    if ($Rescan) { $initParams['Rescan'] = $true }
+    
+    if (-not (Initialize-LS2Scan @initParams)) {
+        return
     }
 
-    # If no technique specified, scan all infrastructure object techniques
+    # If no technique specified, return all object issues
     if (-not $Technique) {
-        $allTechniques = @('ESC5a', 'ESC5o')
-        Write-Verbose "No technique specified. Scanning all infrastructure object techniques: $($allTechniques -join ', ')"
-        foreach ($tech in $allTechniques) {
-            Find-LS2VulnerableObject -Technique $tech
+        Write-Verbose "No technique specified. Returning all object issues..."
+        $allIssues = Get-FlattenedIssues
+        $objectTechniques = @('ESC5a', 'ESC5o')
+        $objectIssues = $allIssues | Where-Object { $_.Technique -in $objectTechniques }
+        
+        if ($ExpandGroups) {
+            $objectIssues | ForEach-Object { Expand-IssueByGroup $_ }
+        } else {
+            $objectIssues
         }
         return
     }
@@ -202,14 +194,16 @@ function Find-LS2VulnerableObject {
                     
                     # Create issue object
                     $issue = [LS2Issue]::new(@{
-                        Technique          = $Technique
-                        Forest             = $script:ForestContext.RootDomain
-                        Name               = $objectName
-                        DistinguishedName  = $object.distinguishedName
-                        IdentityReference  = $editor
-                        Issue              = $issueText
-                        Fix                = $fixScript
-                        Revert             = $revertScript
+                        Technique             = $Technique
+                        Forest                = $script:ForestContext.RootDomain
+                        Name                  = $objectName
+                        DistinguishedName     = $object.distinguishedName
+                        IdentityReference     = $editorDisplayName
+                        IdentityReferenceSID  = $editor
+                        ActiveDirectoryRights = $activeDirectoryRights
+                        Issue                 = $issueText
+                        Fix                   = $fixScript
+                        Revert                = $revertScript
                     })
                     
                     # Add issue to IssueStore
@@ -224,12 +218,18 @@ function Find-LS2VulnerableObject {
                         $script:IssueStore[$object.distinguishedName][$Technique] = @()
                     }
                     
-                    $script:IssueStore[$object.distinguishedName][$Technique] += $issue
+                    # Only add to store if not a duplicate
+                    if (-not (Test-IssueExists -Issue $issue -DistinguishedName $object.distinguishedName -Technique $Technique)) {
+                        $script:IssueStore[$object.distinguishedName][$Technique] += $issue
+                        Write-Verbose "      VULNERABLE: $editorDisplayName has write access"
+                    }
                     
-                    Write-Verbose "      VULNERABLE: $editorDisplayName has write access"
-                    
-                    # Return the issue
-                    $issue
+                    # Always output to pipeline
+                    if ($ExpandGroups) {
+                        Expand-IssueByGroup -Issue $issue
+                    } else {
+                        $issue
+                    }
                 }
             }
         }
@@ -340,12 +340,18 @@ function Find-LS2VulnerableObject {
             $script:IssueStore[$object.distinguishedName][$Technique] = @()
         }
         
-        $script:IssueStore[$object.distinguishedName][$Technique] += $issue
+        # Only add to store if not a duplicate
+        if (-not (Test-IssueExists -Issue $issue -DistinguishedName $object.distinguishedName -Technique $Technique)) {
+            $script:IssueStore[$object.distinguishedName][$Technique] += $issue
+            Write-Verbose "    VULNERABLE: $objectType '$objectName' owned by $owner"
+        }
 
-        Write-Verbose "    VULNERABLE: $objectType '$objectName' owned by $owner"
-
-        # Return the issue
-        $issue
+        # Always output to pipeline
+        if ($ExpandGroups) {
+            Expand-IssueByGroup -Issue $issue
+        } else {
+            $issue
+        }
     }
 
     Write-Verbose "$Technique scan complete. Found $issueCount issue(s)."
