@@ -23,14 +23,14 @@ Locksmith 2 represents the next generation in the Locksmith line of open-source 
 
 ## Features
 
-- [x] Scan certificate templates (ESC1, ESC2, ESC3, ESC4, ESC9)
-- [x] Audit certification authorities (ESC6, ESC7, ESC11, ESC16)
-- [x] Check PKI infrastructure objects (ESC5)
+- [x] Scan certificate templates (ESC1, ESC2, ESC3, ESC4a (ACE), ESC4o (Ownership), ESC9)
+- [x] Audit certification authorities (ESC6, ESC7a (CA Administrator), ESC7m (Certificate Manager), ESC11, ESC16)
+- [x] Check PKI infrastructure objects (ESC5a (ACE), ESC5o (Ownership)
 - [x] Generate PowerShell remediation scripts
-- [x] Support for non-domain-joined systems
-- [x] Caching for improved performance
+- [ ] Generate PowerShell scripts to revert remediations
+- [x] Support for non-domain-joined systems - excluding ESC6,7a/m, 11, 16)
 - [x] Object output
-- [ ] HTML/CSV/PDF/Excel output
+- [x] HTML/CSV/PDF/Excel output 
 - [ ] Interactive TUI for guided remediation
 
 ## Installation
@@ -114,7 +114,7 @@ Scans certification authorities for configuration issues and dangerous role assi
 
 ```powershell
 Find-LS2VulnerableCA -Technique <String>
-# Supported: ESC6, ESC7, ESC11, ESC16
+# Supported: ESC6, ESC7a, ESC7m, ESC11, ESC16
 ```
 
 Returns: LS2Issue objects for programmatic use
