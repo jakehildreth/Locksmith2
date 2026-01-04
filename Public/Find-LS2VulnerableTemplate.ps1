@@ -208,20 +208,42 @@ function Find-LS2VulnerableTemplate {
                 $revertScript = $revertTemplate `
                     -replace '\$\(DistinguishedName\)', $template.distinguishedName
 
+                # Get principal objectClass from PrincipalStore
+                $principalObjectClass = if ($script:PrincipalStore -and $script:PrincipalStore.ContainsKey($editorSid)) {
+                    $script:PrincipalStore[$editorSid].objectClass
+                } else {
+                    $null
+                }
+                
+                # Get ACE ObjectType GUID if present
+                $aceObjectType = if ($ace.ObjectType -and $ace.ObjectType -ne [Guid]::Empty) {
+                    $ace.ObjectType.ToString()
+                } else {
+                    $null
+                }
+                
+                # Test if this ACE is dangerous and get ObjectTypeName
+                $aceTestResult = $ace | Test-IsDangerousAce -ObjectClass 'pKICertificateTemplate'
+                $aceObjectTypeName = $aceTestResult.ObjectTypeName
+                
                 # Create LS2Issue object
                 $issue = [LS2Issue]@{
-                    Technique             = $technique
-                    Forest                = $forestName
-                    Name                  = $template.Name
-                    DistinguishedName     = $template.distinguishedName
-                    IdentityReference     = $ace.IdentityReference
-                    IdentityReferenceSID  = $editorSid
-                    ActiveDirectoryRights = $ace.ActiveDirectoryRights
-                    Enabled               = $template.Enabled
-                    EnabledOn             = $template.EnabledOn
-                    Issue                 = $issueText
-                    Fix                   = $fixScript
-                    Revert                = $revertScript
+                    Technique              = $technique
+                    Forest                 = $forestName
+                    Name                   = $template.Name
+                    DistinguishedName      = $template.distinguishedName
+                    ObjectClass            = 'pKICertificateTemplate'
+                    IdentityReference      = $ace.IdentityReference
+                    IdentityReferenceSID   = $editorSid
+                    IdentityReferenceClass = $principalObjectClass
+                    ActiveDirectoryRights  = $ace.ActiveDirectoryRights
+                    AceObjectTypeGUID      = $aceObjectType
+                    AceObjectTypeName      = $aceObjectTypeName
+                    Enabled                = $template.Enabled
+                    EnabledOn              = $template.EnabledOn
+                    Issue                  = $issueText
+                    Fix                    = $fixScript
+                    Revert                 = $revertScript
                 }
 
                 # Store in IssueStore
@@ -283,6 +305,7 @@ function Find-LS2VulnerableTemplate {
                     Forest              = $forestName
                     Name                = $templateName
                     DistinguishedName   = $template.distinguishedName
+                    ObjectClass         = 'pKICertificateTemplate'
                     Owner               = $owner
                     HasNonStandardOwner = $true
                     Enabled             = $template.Enabled
