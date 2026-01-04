@@ -109,10 +109,16 @@ function New-LS2Dashboard {
     $templateTechniques = @('ESC1', 'ESC2', 'ESC3c1', 'ESC3c2', 'ESC4a', 'ESC4o', 'ESC9')
     $caTechniques = @('ESC6', 'ESC7a', 'ESC7m', 'ESC11', 'ESC16')
     $objectTechniques = @('ESC5a', 'ESC5o')
+    $misconfigurationTechniques = @('ESC1','ESC2','ESC3c1','ESC3c1','ESC6','ESC9','ESC11','ESC16')
+    $accessTechniques = @('ESC4a','ESC5a')
+    $ownershipTechniques = @('ESC4o', 'ESC5o')
     
     $templateIssues = $allIssues | Where-Object { $_.Technique -in $templateTechniques }
     $caIssues = $allIssues | Where-Object { $_.Technique -in $caTechniques }
     $objectIssues = $allIssues | Where-Object { $_.Technique -in $objectTechniques }
+    $misconfigurationIssues = $allIssues | Where-Object { $_.Technique -in $misconfigurationTechniques }
+    $accessIssues = $allIssues | Where-Object { $_.Technique -in $accessTechniques }
+    $ownershipIssues = $allIssues | Where-Object { $_.Technique -in $ownershipTechniques }
     
     # Get risky principals
     Write-Verbose "Calculating principal risk scores..."
@@ -263,6 +269,78 @@ represent concentrated risk and should be prioritized for remediation or monitor
                         New-HTMLTableCondition -Name 'IssueCount' -ComparisonType number -Operator gt -Value 10 -BackgroundColor '#ef5350' -Color White
                         New-HTMLTableCondition -Name 'IssueCount' -ComparisonType number -Operator ge -Value 5 -BackgroundColor '#ff9800' -Color White
                         New-HTMLTableCondition -Name 'IssueCount' -ComparisonType number -Operator ge -Value 1 -BackgroundColor '#fdd835' -Color Black
+                    }
+                }
+            }
+        }
+        
+        New-HTMLTab -Name 'Misconfigurations' -IconSolid cog -IconColor Red {
+            New-HTMLSection -Invisible {
+                New-HTMLPanel -Width 10% {
+                    New-HTMLText -Text "Misconfiguration Issues ($($misconfigurationIssues.Count) issues)" -FontSize 20 -FontWeight bold
+                    New-HTMLText -Text @"
+These vulnerabilities result from insecure template or CA configurations that allow certificate abuse.
+Examples include weak enrollment restrictions (ESC1, ESC2), SubCA attacks (ESC6), or weak certificate mappings (ESC9).
+"@ -Color '#888' -FontSize 14
+                }
+                New-HTMLPanel {
+                    New-HTMLTable -DataTable ($misconfigurationIssues | Select-Object Technique, Forest, Name, IdentityReference, ActiveDirectoryRights, Enabled, CAFullName, MemberCount) `
+                        -Filtering `
+                        -PagingLength 25 `
+                        -Buttons @('copyHtml5', 'excelHtml5', 'csvHtml5', 'pdfHtml5') `
+                        -Title 'Configuration-Based Vulnerabilities' {
+                        New-HTMLTableCondition -Name 'Technique' -Value 'ESC1' -BackgroundColor '#ffcdd2' -Color Black
+                        New-HTMLTableCondition -Name 'Technique' -Value 'ESC2' -BackgroundColor '#f8bbd0' -Color Black
+                        New-HTMLTableCondition -Name 'Technique' -Value 'ESC6' -BackgroundColor '#ffccbc' -Color Black
+                        New-HTMLTableCondition -Name 'Technique' -Value 'ESC9' -BackgroundColor '#ffe0b2' -Color Black
+                        New-HTMLTableCondition -Name 'Enabled' -Value $true -BackgroundColor '#fff9c4' -Color Black
+                    }
+                }
+            }
+        }
+        
+        New-HTMLTab -Name 'Access Control' -IconSolid key -IconColor Green {
+            New-HTMLSection -Invisible {
+                New-HTMLPanel -Width 10% {
+                    New-HTMLText -Text "Dangerous Access Control Issues ($($accessIssues.Count) issues)" -FontSize 20 -FontWeight bold
+                    New-HTMLText -Text @"
+These vulnerabilities involve principals with excessive write or modify permissions on templates or PKI objects.
+ESC4a and ESC5a allow principals to modify certificate templates or infrastructure to create exploitable configurations.
+"@ -Color '#888' -FontSize 14
+                }
+                New-HTMLPanel {
+                    New-HTMLTable -DataTable ($accessIssues | Select-Object Technique, Forest, Name, IdentityReference, ActiveDirectoryRights, Enabled, MemberCount) `
+                        -Filtering `
+                        -PagingLength 25 `
+                        -Buttons @('copyHtml5', 'excelHtml5', 'csvHtml5', 'pdfHtml5') `
+                        -Title 'Write/Modify Permission Issues' `
+                        -DefaultSortColumn 'ActiveDirectoryRights' {
+                        New-HTMLTableCondition -Name 'Technique' -Value 'ESC4a' -BackgroundColor '#c5e1a5' -Color Black
+                        New-HTMLTableCondition -Name 'Technique' -Value 'ESC5a' -BackgroundColor '#dcedc8' -Color Black
+                        New-HTMLTableCondition -Name 'ActiveDirectoryRights' -ComparisonType string -Operator like -Value '*WriteDacl*' -BackgroundColor '#ef5350' -Color White
+                        New-HTMLTableCondition -Name 'ActiveDirectoryRights' -ComparisonType string -Operator like -Value '*WriteOwner*' -BackgroundColor '#ff9800' -Color White
+                    }
+                }
+            }
+        }
+        
+        New-HTMLTab -Name 'Ownership' -IconSolid crown -IconColor Gold {
+            New-HTMLSection -Invisible {
+                New-HTMLPanel -Width 10% {
+                    New-HTMLText -Text "Non-Standard Ownership Issues ($($ownershipIssues.Count) issues)" -FontSize 20 -FontWeight bold
+                    New-HTMLText -Text @"
+These vulnerabilities involve templates or PKI objects owned by non-standard principals.
+Owners have full control and can modify or delete objects. ESC4o and ESC5o identify dangerous ownership configurations.
+"@ -Color '#888' -FontSize 14
+                }
+                New-HTMLPanel {
+                    New-HTMLTable -DataTable ($ownershipIssues | Select-Object Technique, Forest, Name, Owner, DistinguishedName, MemberCount) `
+                        -Filtering `
+                        -PagingLength 25 `
+                        -Buttons @('copyHtml5', 'excelHtml5', 'csvHtml5', 'pdfHtml5') `
+                        -Title 'Dangerous Ownership Configurations' {
+                        New-HTMLTableCondition -Name 'Technique' -Value 'ESC4o' -BackgroundColor '#fff59d' -Color Black
+                        New-HTMLTableCondition -Name 'Technique' -Value 'ESC5o' -BackgroundColor '#fff176' -Color Black
                     }
                 }
             }
