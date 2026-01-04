@@ -109,43 +109,99 @@ function New-LS2Dashboard {
     $templateTechniques = @('ESC1', 'ESC2', 'ESC3c1', 'ESC3c2', 'ESC4a', 'ESC4o', 'ESC9')
     $caTechniques = @('ESC6', 'ESC7a', 'ESC7m', 'ESC11', 'ESC16')
     $objectTechniques = @('ESC5a', 'ESC5o')
+    $misconfigurationTechniques = @('ESC1', 'ESC2', 'ESC3c1', 'ESC3c1', 'ESC6', 'ESC9', 'ESC11', 'ESC16')
+    $accessTechniques = @('ESC4a', 'ESC5a')
+    $ownershipTechniques = @('ESC4o', 'ESC5o')
     
     $templateIssues = $allIssues | Where-Object { $_.Technique -in $templateTechniques }
     $caIssues = $allIssues | Where-Object { $_.Technique -in $caTechniques }
     $objectIssues = $allIssues | Where-Object { $_.Technique -in $objectTechniques }
+    $misconfigurationIssues = $allIssues | Where-Object { $_.Technique -in $misconfigurationTechniques }
+    $accessIssues = $allIssues | Where-Object { $_.Technique -in $accessTechniques }
+    $ownershipIssues = $allIssues | Where-Object { $_.Technique -in $ownershipTechniques }
     
     # Get risky principals
     Write-Verbose "Calculating principal risk scores..."
     $riskyPrincipals = Find-LS2RiskyPrincipal
     
-    # Prepare data for tables - select key properties for display
-    $allIssuesTable = $allIssues | Select-Object `
-        Technique, 
-        Forest, 
-        Name, 
-        IdentityReference, 
-        ActiveDirectoryRights, 
-        @{N='Enabled';E={if($null -ne $_.Enabled){$_.Enabled}else{'-'}}},
-        @{N='CAFullName';E={if($_.CAFullName){$_.CAFullName}else{'-'}}},
-        @{N='Owner';E={if($_.Owner){$_.Owner}else{'-'}}},
-        @{N='Members';E={if($_.MemberCount){$_.MemberCount}else{'-'}}}
+    # Prepare data for tables - ALL tabs show same columns, just filtered/sorted differently
+    $standardColumns = @(
+        'Technique'
+        'Forest'
+        'Name'
+        'DistinguishedName'
+        @{N = 'ObjectClass'; E = { if ($_.ObjectClass) { $_.ObjectClass } else { 'N/A' } } }
+        @{N = 'IdentityReference'; E = { if ($_.IdentityReference) { $_.IdentityReference } else { 'N/A' } } }
+        @{N = 'IdentityReferenceSID'; E = { if ($_.IdentityReferenceSID) { $_.IdentityReferenceSID } else { 'N/A' } } }
+        @{N = 'IdentityReferenceClass'; E = { if ($_.IdentityReferenceClass) { $_.IdentityReferenceClass } else { 'N/A' } } }
+        @{N = 'ActiveDirectoryRights'; E = { if ($_.ActiveDirectoryRights) { $_.ActiveDirectoryRights } else { 'N/A' } } }
+        @{N = 'AceObjectTypeGUID'; E = { if ($_.AceObjectTypeGUID) { $_.AceObjectTypeGUID } else { 'N/A' } } }
+        @{N = 'AceObjectTypeName'; E = { if ($_.AceObjectTypeName) { $_.AceObjectTypeName } else { 'N/A' } } }
+        @{N = 'Enabled'; E = { if ($null -ne $_.Enabled) { $_.Enabled } else { 'N/A' } } }
+        @{N = 'EnabledOn'; E = { if ($_.EnabledOn) { $_.EnabledOn -join ', ' } else { 'N/A' } } }
+        @{N = 'CAFullName'; E = { if ($_.CAFullName) { $_.CAFullName } else { 'N/A' } } }
+        @{N = 'Owner'; E = { if ($_.Owner) { $_.Owner } else { 'N/A' } } }
+        @{N = 'HasNonStandardOwner'; E = { if ($null -ne $_.HasNonStandardOwner) { $_.HasNonStandardOwner } else { 'N/A' } } }
+        @{N = 'Members'; E = { if ($_.MemberCount) { $_.MemberCount } else { 'N/A' } } }
+        @{N = 'Issue'; E = { if ($_.Issue) { $_.Issue -replace "`n", "`n`n" } else { 'N/A' } } }
+        @{N = 'Fix'; E = { if ($_.Fix) { $_.Fix -replace "`n", "`n`n" } else { 'N/A' } } }
+        @{N = 'Revert'; E = { if ($_.Revert) { $_.Revert -replace "`n", "`n`n" } else { 'N/A' } } }
+    )
     
-    $templateIssuesTable = $templateIssues | Select-Object `
-        Technique, Name, IdentityReference, ActiveDirectoryRights, Enabled, MemberCount
-    
-    $caIssuesTable = $caIssues | Select-Object `
-        Technique, Name, CAFullName, IdentityReference, ActiveDirectoryRights, MemberCount
-    
-    $objectIssuesTable = $objectIssues | Select-Object `
-        Technique, Name, Owner, IdentityReference, ActiveDirectoryRights, MemberCount
+    $allIssuesTable = $allIssues | Select-Object $standardColumns
+    $templateIssuesTable = $templateIssues | Select-Object $standardColumns
+    $caIssuesTable = $caIssues | Select-Object $standardColumns
+    $objectIssuesTable = $objectIssues | Select-Object $standardColumns
+    $misconfigurationIssuesTable = $misconfigurationIssues | Select-Object $standardColumns
+    $accessIssuesTable = $accessIssues | Select-Object $standardColumns
+    $ownershipIssuesTable = $ownershipIssues | Select-Object $standardColumns
     
     $principalsTable = $riskyPrincipals | Select-Object `
         Principal,
-        IssueCount,
-        @{N='Techniques';E={$_.Techniques -join ', '}},
-        @{N='VulnerableObjects';E={$_.VulnerableObjects.Count}}
+    IssueCount,
+    @{N = 'Techniques'; E = { $_.Techniques -join ', ' } },
+    @{N = 'VulnerableObjects'; E = { $_.VulnerableObjects.Count } }
     
     $forestName = if ($script:Forest) { $script:Forest } else { 'Unknown Forest' }
+    
+    # Define conditional formatting rules - applies consistently to all issue tables
+    $issueFormatting = {
+        # Template issues (red-purple range)
+        New-HTMLTableCondition -Name 'Technique' -Value 'ESC1' -BackgroundColor '#ffcdd2' -Color Black
+        New-HTMLTableCondition -Name 'Technique' -Value 'ESC2' -BackgroundColor '#f8bbd0' -Color Black
+        New-HTMLTableCondition -Name 'Technique' -Value 'ESC4a' -BackgroundColor '#e1bee7' -Color Black
+        New-HTMLTableCondition -Name 'Technique' -Value 'ESC4o' -BackgroundColor '#d1c4e9' -Color Black
+        New-HTMLTableCondition -Name 'Technique' -Value 'ESC9' -BackgroundColor '#ce93d8' -Color Black
+        
+        # CA issues (yellow-orange range)
+        New-HTMLTableCondition -Name 'Technique' -Value 'ESC6' -BackgroundColor '#fff59d' -Color Black
+        New-HTMLTableCondition -Name 'Technique' -Value 'ESC7a' -BackgroundColor '#ffcc80' -Color Black
+        New-HTMLTableCondition -Name 'Technique' -Value 'ESC7m' -BackgroundColor '#ffb74d' -Color Black
+        New-HTMLTableCondition -Name 'Technique' -Value 'ESC11' -BackgroundColor '#ff9800' -Color Black
+        New-HTMLTableCondition -Name 'Technique' -Value 'ESC16' -BackgroundColor '#ffa726' -Color Black
+        
+        # Object issues (green-blue range)
+        New-HTMLTableCondition -Name 'Technique' -Value 'ESC5a' -BackgroundColor '#a5d6a7' -Color Black
+        New-HTMLTableCondition -Name 'Technique' -Value 'ESC5o' -BackgroundColor '#80cbc4' -Color Black
+        
+        # Rights-based formatting (high severity)
+        New-HTMLTableCondition -Name 'ActiveDirectoryRights' -ComparisonType string -Operator like -Value '*GenericAll*' -BackgroundColor '#d32f2f' -Color White
+        New-HTMLTableCondition -Name 'ActiveDirectoryRights' -ComparisonType string -Operator like -Value '*WriteDacl*' -BackgroundColor '#ef5350' -Color White
+        New-HTMLTableCondition -Name 'ActiveDirectoryRights' -ComparisonType string -Operator like -Value '*WriteOwner*' -BackgroundColor '#ff9800' -Color White
+        New-HTMLTableCondition -Name 'ActiveDirectoryRights' -ComparisonType string -Operator like -Value '*WriteProperty*' -BackgroundColor '#ffa726' -Color Black
+        New-HTMLTableCondition -Name 'ActiveDirectoryRights' -ComparisonType string -Operator like -Value '*GenericWrite*' -BackgroundColor '#ffa726' -Color Black
+        
+        # Status-based formatting
+        New-HTMLTableCondition -Name 'Enabled' -Value $true -BackgroundColor '#fff9c4' -Color Black
+    }
+    
+    # Define conditional formatting for principals table (different schema)
+    # Order matters: most severe conditions last so they override less severe ones
+    $principalFormatting = {
+        New-HTMLTableCondition -Name 'IssueCount' -ComparisonType number -Operator ge -Value 1 -BackgroundColor '#fdd835' -Color Black
+        New-HTMLTableCondition -Name 'IssueCount' -ComparisonType number -Operator ge -Value 5 -BackgroundColor '#ff9800' -Color White
+        New-HTMLTableCondition -Name 'IssueCount' -ComparisonType number -Operator gt -Value 10 -BackgroundColor '#ef5350' -Color White
+    }
     
     # Generate HTML Dashboard
     New-HTML -TitleText "Locksmith2 Security Dashboard - $forestName" -Online:$Online -FilePath $FilePath -Show:$Show {
@@ -155,7 +211,7 @@ function New-LS2Dashboard {
         
         New-HTMLTab -Name 'All Issues' -IconSolid exclamation-triangle -IconColor Red {
             New-HTMLSection -Invisible {
-                New-HTMLPanel -Width 10%  {
+                New-HTMLPanel -Width 10% {
                     New-HTMLText -Text "All Issues - Expanded Principals ($($allIssues.Count) total)" -FontSize 20 -FontWeight bold
                     New-HTMLText -Text @"
 This view shows all discovered AD CS vulnerabilities with group memberships expanded to individual principals.
@@ -167,12 +223,7 @@ Issues are marked with the ESC technique and show which principals can exploit e
                         -Filtering `
                         -PagingLength 25 `
                         -Buttons @('copyHtml5', 'excelHtml5', 'csvHtml5', 'pdfHtml5', 'searchBuilder', 'searchPanes') `
-                        -Title 'All AD CS Security Issues' {
-                        New-TableButtonSearchBuilder -ButtonName 'Search Builder'
-                        New-HTMLTableCondition -Name 'Technique' -ComparisonType string -Operator like -Value 'ESC1*' -BackgroundColor '#ffebee' -Color Black
-                        New-HTMLTableCondition -Name 'Technique' -ComparisonType string -Operator like -Value 'ESC7*' -BackgroundColor '#fff3e0' -Color Black
-                        New-HTMLTableCondition -Name 'Members' -ComparisonType string -Operator ne -Value '-' -BackgroundColor '#e8f5e9' -Color Black
-                    }
+                        -Title 'All AD CS Security Issues' {& $issueFormatting}
                 }
             }
         }
@@ -190,11 +241,9 @@ certificates with dangerous permissions, subject alternative names, or enrollmen
                     New-HTMLTable -DataTable $templateIssuesTable `
                         -Filtering `
                         -PagingLength 25 `
-                        -Buttons @('copyHtml5', 'excelHtml5', 'csvHtml5') `
-                        -Title 'Template Vulnerabilities' {
-                        New-HTMLTableCondition -Name 'Technique' -Value 'ESC1' -BackgroundColor '#ffcdd2' -Color Black
-                        New-HTMLTableCondition -Name 'Enabled' -Value $true -BackgroundColor '#fff9c4' -Color Black
-                    }
+                        -Buttons @('copyHtml5', 'excelHtml5', 'csvHtml5', 'pdfHtml5', 'searchBuilder', 'searchPanes') `
+                        -Title 'Template Vulnerabilities' `
+                        -DefaultSortColumn 'Technique' {& $issueFormatting}
                 }
             }
         }
@@ -212,11 +261,9 @@ These vulnerabilities grant principals excessive control over certificate issuan
                     New-HTMLTable -DataTable $caIssuesTable `
                         -Filtering `
                         -PagingLength 25 `
-                        -Buttons @('copyHtml5', 'excelHtml5', 'csvHtml5') `
-                        -Title 'CA Configuration Issues' {
-                        New-HTMLTableCondition -Name 'Technique' -Value 'ESC7a' -BackgroundColor '#ffccbc' -Color Black
-                        New-HTMLTableCondition -Name 'Technique' -Value 'ESC7m' -BackgroundColor '#ffe0b2' -Color Black
-                    }
+                        -Buttons @('copyHtml5', 'excelHtml5', 'csvHtml5', 'pdfHtml5', 'searchBuilder', 'searchPanes') `
+                        -Title 'CA Configuration Issues' `
+                        -DefaultSortColumn 'Name' {& $issueFormatting}
                 }
             }
         }
@@ -234,11 +281,9 @@ These allow principals to modify templates, CAs, or other critical AD CS compone
                     New-HTMLTable -DataTable $objectIssuesTable `
                         -Filtering `
                         -PagingLength 25 `
-                        -Buttons @('copyHtml5', 'excelHtml5', 'csvHtml5') `
-                        -Title 'Infrastructure Object Issues' {
-                        New-HTMLTableCondition -Name 'Technique' -Value 'ESC5a' -BackgroundColor '#c5e1a5' -Color Black
-                        New-HTMLTableCondition -Name 'Technique' -Value 'ESC5o' -BackgroundColor '#fff59d' -Color Black
-                    }
+                        -Buttons @('copyHtml5', 'excelHtml5', 'csvHtml5', 'pdfHtml5', 'searchBuilder', 'searchPanes') `
+                        -Title 'Infrastructure Object Issues' `
+                        -DefaultSortColumn 'Name' {& $issueFormatting}
                 }
             }
         }
@@ -256,14 +301,70 @@ represent concentrated risk and should be prioritized for remediation or monitor
                     New-HTMLTable -DataTable $principalsTable `
                         -Filtering `
                         -PagingLength 25 `
-                        -Buttons @('copyHtml5', 'excelHtml5', 'csvHtml5', 'pdfHtml5') `
+                        -Buttons @('copyHtml5', 'excelHtml5', 'csvHtml5', 'pdfHtml5', 'searchBuilder', 'searchPanes') `
                         -Title 'Principals by Risk Score' `
                         -DefaultSortColumn 'IssueCount' `
-                        -DefaultSortOrder Descending {
-                        New-HTMLTableCondition -Name 'IssueCount' -ComparisonType number -Operator gt -Value 10 -BackgroundColor '#ef5350' -Color White
-                        New-HTMLTableCondition -Name 'IssueCount' -ComparisonType number -Operator ge -Value 5 -BackgroundColor '#ff9800' -Color White
-                        New-HTMLTableCondition -Name 'IssueCount' -ComparisonType number -Operator ge -Value 1 -BackgroundColor '#fdd835' -Color Black
-                    }
+                        -DefaultSortOrder Descending {& $principalFormatting}
+                }
+            }
+        }
+        
+        New-HTMLTab -Name 'Misconfigurations' -IconSolid cog -IconColor Red {
+            New-HTMLSection -Invisible {
+                New-HTMLPanel -Width 10% {
+                    New-HTMLText -Text "Misconfiguration Issues ($($misconfigurationIssues.Count) issues)" -FontSize 20 -FontWeight bold
+                    New-HTMLText -Text @"
+These vulnerabilities result from insecure template or CA configurations that allow certificate abuse.
+Examples include weak enrollment restrictions (ESC1, ESC2), SubCA attacks (ESC6), or weak certificate mappings (ESC9).
+"@ -Color '#888' -FontSize 14
+                }
+                New-HTMLPanel {
+                    New-HTMLTable -DataTable $misconfigurationIssuesTable `
+                        -Filtering `
+                        -PagingLength 25 `
+                        -Buttons @('copyHtml5', 'excelHtml5', 'csvHtml5', 'pdfHtml5', 'searchBuilder', 'searchPanes') `
+                        -Title 'Configuration-Based Vulnerabilities' `
+                        -DefaultSortColumn 'Technique' {& $issueFormatting}
+                }
+            }
+        }
+        
+        New-HTMLTab -Name 'Access Control' -IconSolid key -IconColor Green {
+            New-HTMLSection -Invisible {
+                New-HTMLPanel -Width 10% {
+                    New-HTMLText -Text "Dangerous Access Control Issues ($($accessIssues.Count) issues)" -FontSize 20 -FontWeight bold
+                    New-HTMLText -Text @"
+These vulnerabilities involve principals with excessive write or modify permissions on templates or PKI objects.
+ESC4a and ESC5a allow principals to modify certificate templates or infrastructure to create exploitable configurations.
+"@ -Color '#888' -FontSize 14
+                }
+                New-HTMLPanel {
+                    New-HTMLTable -DataTable $accessIssuesTable `
+                        -Filtering `
+                        -PagingLength 25 `
+                        -Buttons @('copyHtml5', 'excelHtml5', 'csvHtml5', 'pdfHtml5', 'searchBuilder', 'searchPanes') `
+                        -Title 'Write/Modify Permission Issues' `
+                        -DefaultSortColumn 'ActiveDirectoryRights' {& $issueFormatting}
+                }
+            }
+        }
+        
+        New-HTMLTab -Name 'Ownership' -IconSolid crown -IconColor Gold {
+            New-HTMLSection -Invisible {
+                New-HTMLPanel -Width 10% {
+                    New-HTMLText -Text "Non-Standard Ownership Issues ($($ownershipIssues.Count) issues)" -FontSize 20 -FontWeight bold
+                    New-HTMLText -Text @"
+These vulnerabilities involve templates or PKI objects owned by non-standard principals.
+Owners have full control and can modify or delete objects. ESC4o and ESC5o identify dangerous ownership configurations.
+"@ -Color '#888' -FontSize 14
+                }
+                New-HTMLPanel {
+                    New-HTMLTable -DataTable $ownershipIssuesTable `
+                        -Filtering `
+                        -PagingLength 25 `
+                        -Buttons @('copyHtml5', 'excelHtml5', 'csvHtml5', 'pdfHtml5', 'searchBuilder', 'searchPanes') `
+                        -Title 'Dangerous Ownership Configurations' `
+                        -DefaultSortColumn 'Owner' {& $issueFormatting}
                 }
             }
         }

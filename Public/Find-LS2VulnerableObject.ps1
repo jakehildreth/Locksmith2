@@ -147,18 +147,57 @@ function Find-LS2VulnerableObject {
                 
                 Write-Verbose "    Found $($editors.Count) editor(s) in $editorProperty"
                 
+                # Check ObjectSecurity for ACE details
+                if (-not $object.ObjectSecurity) {
+                    Write-Verbose "    No ObjectSecurity available for object: $objectName"
+                    continue
+                }
+                
                 # Create an issue for each problematic editor
-                foreach ($editor in $editors) {
-                    $issueCount++
-                    
-                    # Get corresponding names property
-                    $namesProperty = $editorProperty + 'Names'
-                    $editorNames = $object.$namesProperty
-                    $editorDisplayName = if ($editorNames) {
-                        ($editorNames | Where-Object { $_ -like "*$editor*" })[0]
+                foreach ($editorSid in $editors) {
+                    # Get object class for ACE testing
+                    $objectClass = if ($object.SchemaClassName) {
+                        $object.SchemaClassName
+                    } elseif ($object.objectClass -and $object.objectClass.Count -gt 0) {
+                        $object.objectClass[$object.objectClass.Count - 1]
                     } else {
-                        $editor
+                        $null
                     }
+                    
+                    # Find ALL ACEs for this SID that have dangerous rights
+                    # (there may be multiple ACEs for the same principal with different rights/properties)
+                    $dangerousAceResults = $object.ObjectSecurity.Access | ForEach-Object {
+                        $aceSid = ($_.IdentityReference | Convert-IdentityReferenceToSid).Value
+                        if ($aceSid -ne $editorSid) { return }
+                        
+                        # Check if this ACE grants dangerous permissions
+                        $testResult = if ($objectClass) {
+                            $_ | Test-IsDangerousAce -ObjectClass $objectClass
+                        } else {
+                            $_ | Test-IsDangerousAce
+                        }
+                        
+                        if ($testResult.IsDangerous) {
+                            $testResult
+                        }
+                    }
+                    
+                    if (-not $dangerousAceResults -or $dangerousAceResults.Count -eq 0) {
+                        Write-Verbose "    Could not find dangerous ACE for SID: $editorSid"
+                        continue
+                    }
+                    
+                    Write-Verbose "    VULNERABLE: Found $($dangerousAceResults.Count) dangerous ACE(s) for $editorSid"
+                    
+                    # Create an issue for each dangerous ACE
+                    foreach ($aceResult in $dangerousAceResults) {
+                        $ace = $aceResult.Ace
+                        Write-Verbose "      ACE: $($ace.IdentityReference) has $($ace.ActiveDirectoryRights)"
+                        
+                        $issueCount++
+                    
+                    # Get domain/forest name from DN
+                    $forestName = Get-ForestNameFromDN -DistinguishedName $object.distinguishedName
                     
                     # Get object type for issue description
                     $objectType = if ($object.objectClass -contains 'container') {
@@ -173,38 +212,66 @@ function Find-LS2VulnerableObject {
                         'PKI Object'
                     }
                     
-                    # Determine what rights were granted (simplified for now)
-                    $activeDirectoryRights = 'Write/Modify'
+                    # Get actual rights from ACE
+                    $activeDirectoryRights = $ace.ActiveDirectoryRights
                     
                     # Expand issue template with variables
                     $issueText = ($config.IssueTemplate -join '') `
                         -replace '\$\(ObjectName\)', $objectName `
                         -replace '\$\(ObjectType\)', $objectType `
-                        -replace '\$\(IdentityReference\)', $editorDisplayName `
+                        -replace '\$\(IdentityReference\)', $ace.IdentityReference `
                         -replace '\$\(ActiveDirectoryRights\)', $activeDirectoryRights
                     
                     # Expand fix script template with variables
                     $fixScript = ($config.FixTemplate -join "`n") `
                         -replace '\$\(DistinguishedName\)', $object.distinguishedName `
-                        -replace '\$\(IdentityReference\)', $editor
+                        -replace '\$\(IdentityReference\)', $ace.IdentityReference
                     
                     # Expand revert script template with variables
                     $revertScript = ($config.RevertTemplate -join "`n") `
                         -replace '\$\(DistinguishedName\)', $object.distinguishedName
                     
+                    # Get principal objectClass from PrincipalStore
+                    $principalObjectClass = if ($script:PrincipalStore -and $script:PrincipalStore.ContainsKey($editorSid)) {
+                        $script:PrincipalStore[$editorSid].objectClass
+                    } else {
+                        $null
+                    }
+                    
+                    # Get ACE ObjectType GUID if present
+                    $aceObjectType = if ($ace.ObjectType -and $ace.ObjectType -ne [Guid]::Empty) {
+                        $ace.ObjectType.ToString()
+                    } else {
+                        $null
+                    }
+                    
+                    # Get human-readable ObjectType name from test result
+                    $aceObjectTypeName = $aceResult.ObjectTypeName
+                    
+                    # Get object's objectClass (primary class)
+                    $vulnerableObjectClass = if ($object.objectClass -is [array]) {
+                        $object.objectClass[-1]
+                    } else {
+                        $object.objectClass
+                    }
+                    
                     # Create issue object
                     $issue = [LS2Issue]::new(@{
-                        Technique             = $Technique
-                        Forest                = $script:ForestContext.RootDomain
-                        Name                  = $objectName
-                        DistinguishedName     = $object.distinguishedName
-                        IdentityReference     = $editorDisplayName
-                        IdentityReferenceSID  = $editor
-                        ActiveDirectoryRights = $activeDirectoryRights
-                        Issue                 = $issueText
-                        Fix                   = $fixScript
-                        Revert                = $revertScript
-                    })
+                            Technique                = $Technique
+                            Forest                   = $forestName
+                            Name                     = $objectName
+                            DistinguishedName        = $object.distinguishedName
+                            ObjectClass              = $vulnerableObjectClass
+                            IdentityReference        = $ace.IdentityReference
+                            IdentityReferenceSID     = $editorSid
+                            IdentityReferenceClass   = $principalObjectClass
+                            ActiveDirectoryRights    = $activeDirectoryRights
+                            AceObjectTypeGUID        = $aceObjectType
+                            AceObjectTypeName        = $aceObjectTypeName
+                            Issue                    = $issueText
+                            Fix                      = $fixScript
+                            Revert                   = $revertScript
+                        })
                     
                     # Add issue to IssueStore
                     if (-not $script:IssueStore) {
@@ -221,7 +288,6 @@ function Find-LS2VulnerableObject {
                     # Only add to store if not a duplicate
                     if (-not (Test-IssueExists -Issue $issue -DistinguishedName $object.distinguishedName -Technique $Technique)) {
                         $script:IssueStore[$object.distinguishedName][$Technique] += $issue
-                        Write-Verbose "      VULNERABLE: $editorDisplayName has write access"
                     }
                     
                     # Always output to pipeline
@@ -230,9 +296,10 @@ function Find-LS2VulnerableObject {
                     } else {
                         $issue
                     }
-                }
-            }
-        }
+                    }  # End foreach ($ace in $dangerousAces)
+                }  # End foreach ($editorSid in $editors)
+            }  # End foreach ($object in $vulnerableObjects)
+        }  # End if ($config.EditorScanEnabled)
         
         Write-Verbose "$Technique scan complete. Found $issueCount issue(s)."
         return
@@ -240,30 +307,30 @@ function Find-LS2VulnerableObject {
     
     # Filter objects by conditions (for non-ESC5a techniques like ESC5o)
     $vulnerableObjects = @(foreach ($object in $allObjects) {
-        $matchesAllConditions = $true
+            $matchAllConditions = $true
         
-        foreach ($condition in $config.Conditions) {
-            $propertyValue = $object.($condition.Property)
+            foreach ($condition in $config.Conditions) {
+                $propertyValue = $object.($condition.Property)
             
-            $matches = switch ($condition.Operator) {
-                'eq' { $propertyValue -eq $condition.Value }
-                'ne' { $propertyValue -ne $condition.Value }
-                'gt' { $propertyValue -gt $condition.Value }
-                'lt' { $propertyValue -lt $condition.Value }
-                'contains' { $propertyValue -contains $condition.Value }
-                default { $false }
-            }
+                $match = switch ($condition.Operator) {
+                    'eq' { $propertyValue -eq $condition.Value }
+                    'ne' { $propertyValue -ne $condition.Value }
+                    'gt' { $propertyValue -gt $condition.Value }
+                    'lt' { $propertyValue -lt $condition.Value }
+                    'contains' { $propertyValue -contains $condition.Value }
+                    default { $false }
+                }
             
-            if (-not $matches) {
-                $matchesAllConditions = $false
-                break
+                if (-not $match) {
+                    $matchAllConditions = $false
+                    break
+                }
             }
-        }
         
-        if ($matchesAllConditions) {
-            $object
-        }
-    })
+            if ($matchAllConditions) {
+                $object
+            }
+        })
     
     Write-Verbose "Found $($vulnerableObjects.Count) object(s) to check (CAs and infrastructure)"
 
@@ -286,6 +353,9 @@ function Find-LS2VulnerableObject {
         Write-Verbose "  Checking object: $objectName (owned by $owner)"
         
         $issueCount++
+        
+        # Get domain/forest name from DN
+        $forestName = Get-ForestNameFromDN -DistinguishedName $object.distinguishedName
         
         # Get object type for issue description
         $objectType = if ($object.objectClass -contains 'container') {
@@ -315,18 +385,26 @@ function Find-LS2VulnerableObject {
             -replace '\$\(DistinguishedName\)', $object.distinguishedName `
             -replace '\$\(OriginalOwner\)', $owner
 
+        # Get object's objectClass (primary class)
+        $vulnerableObjectClass = if ($object.objectClass -is [array]) {
+            $object.objectClass[-1]
+        } else {
+            $object.objectClass
+        }
+        
         # Create issue object
         $issue = [LS2Issue]::new(@{
-            Technique          = $Technique
-            Forest             = $script:ForestContext.RootDomain
-            Name               = $objectName
-            DistinguishedName  = $object.distinguishedName
-            Owner              = $owner
-            HasNonStandardOwner = $true
-            Issue              = $issueText
-            Fix                = $fixScript
-            Revert             = $revertScript
-        })
+                Technique           = $Technique
+                Forest              = $forestName
+                Name                = $objectName
+                DistinguishedName   = $object.distinguishedName
+                ObjectClass         = $vulnerableObjectClass
+                Owner               = $owner
+                HasNonStandardOwner = $true
+                Issue               = $issueText
+                Fix                 = $fixScript
+                Revert              = $revertScript
+            })
 
         # Add issue to IssueStore
         if (-not $script:IssueStore) {

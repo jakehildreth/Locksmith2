@@ -70,7 +70,7 @@ function Set-EnrollmentAgentEKUExist {
     }
 
     process {
-        $AdcsObject | Where-Object SchemaClassName -eq pKICertificateTemplate | ForEach-Object {
+        $AdcsObject | Where-Object SchemaClassName -EQ pKICertificateTemplate | ForEach-Object {
             try {
                 $objectName = if ($_.Properties.displayName.Count -gt 0) {
                     $_.Properties.displayName[0] 
@@ -116,8 +116,7 @@ function Set-EnrollmentAgentEKUExist {
                 
                 # Return the modified object
                 $_
-            }
-            catch {
+            } catch {
                 Write-Error "Error processing template $($_.Properties.distinguishedName[0]): $_"
             }
         }

@@ -169,8 +169,8 @@ public class VirtualTerminal {
     }
     
     if ($useAnsi) {
-            Write-Host "$fgColor$logoBottomLeftCorner" -NoNewline
-            Write-Host "$fgColor$bgColor$logoBottomLine"
+        Write-Host "$fgColor$logoBottomLeftCorner" -NoNewline
+        Write-Host "$fgColor$bgColor$logoBottomLine"
     } else {
         Write-Host $logoBottomLeftCorner -ForegroundColor $fgColorEnum -NoNewline
         Write-Host $logoBottomLine -ForegroundColor $fgColorEnum -BackgroundColor $bgColorEnum

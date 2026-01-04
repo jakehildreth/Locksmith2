@@ -106,12 +106,13 @@ function Get-LS2Stores {
     param()
 
     [PSCustomObject]@{
-        PrincipalStore = $script:PrincipalStore
-        AdcsObjectStore = $script:AdcsObjectStore
-        DomainStore = $script:DomainStore
-        IssueStore = $script:IssueStore
-        SafePrincipals = $script:SafePrincipals
+        AdcsObjectStore     = $script:AdcsObjectStore
         DangerousPrincipals = $script:DangerousPrincipals
-        StandardOwners = $script:StandardOwners
+        DomainStore         = $script:DomainStore
+        Forest              = $script:Forest
+        IssueStore          = $script:IssueStore
+        PrincipalStore      = $script:PrincipalStore
+        SafePrincipals      = $script:SafePrincipals
+        StandardOwners      = $script:StandardOwners
     }
 }

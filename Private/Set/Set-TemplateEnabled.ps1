@@ -75,7 +75,7 @@ function Set-TemplateEnabled {
     }
 
     process {
-        $AdcsObject | Where-Object SchemaClassName -eq pKICertificateTemplate | ForEach-Object {
+        $AdcsObject | Where-Object SchemaClassName -EQ pKICertificateTemplate | ForEach-Object {
             try {
                 $templateCN = $_.Properties['cn'][0]
                 Write-Verbose "Processing template: $templateCN"

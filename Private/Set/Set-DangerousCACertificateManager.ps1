@@ -68,16 +68,8 @@ function Set-DangerousCACertificateManager {
     }
 
     process {
-        $AdcsObject | Where-Object SchemaClassName -eq pKIEnrollmentService | ForEach-Object {
+        $AdcsObject | Where-Object SchemaClassName -EQ pKIEnrollmentService | ForEach-Object {
             try {
-                $caName = if ($_.Properties -and $_.Properties.Contains('cn')) {
-                    $_.Properties['cn'][0]
-                } elseif ($_.cn) {
-                    $_.cn
-                } else {
-                    'Unknown CA'
-                }
-                
                 # Get the distinguished name - handle both DirectoryEntry and LS2AdcsObject
                 $dn = if ($_.Properties.distinguishedName) {
                     $_.Properties.distinguishedName[0]

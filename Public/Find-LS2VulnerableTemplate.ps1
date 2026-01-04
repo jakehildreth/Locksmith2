@@ -110,20 +110,20 @@ function Find-LS2VulnerableTemplate {
     $allTemplates = $script:AdcsObjectStore.Values | Where-Object { $_.IsCertificateTemplate() }
     
     $vulnerableTemplates = @(foreach ($template in $allTemplates) {
-        $matchesAllConditions = $true
+            $matchesAllConditions = $true
         
-        foreach ($condition in $config.Conditions) {
-            $propertyValue = $template.($condition.Property)
-            if ($propertyValue -ne $condition.Value) {
-                $matchesAllConditions = $false
-                break
+            foreach ($condition in $config.Conditions) {
+                $propertyValue = $template.($condition.Property)
+                if ($propertyValue -ne $condition.Value) {
+                    $matchesAllConditions = $false
+                    break
+                }
             }
-        }
         
-        if ($matchesAllConditions) {
-            $template
-        }
-    })
+            if ($matchesAllConditions) {
+                $template
+            }
+        })
 
     Write-Verbose "Found $($vulnerableTemplates.Count) template(s) with $technique-vulnerable configuration"
 
@@ -208,20 +208,42 @@ function Find-LS2VulnerableTemplate {
                 $revertScript = $revertTemplate `
                     -replace '\$\(DistinguishedName\)', $template.distinguishedName
 
+                # Get principal objectClass from PrincipalStore
+                $principalObjectClass = if ($script:PrincipalStore -and $script:PrincipalStore.ContainsKey($editorSid)) {
+                    $script:PrincipalStore[$editorSid].objectClass
+                } else {
+                    $null
+                }
+                
+                # Get ACE ObjectType GUID if present
+                $aceObjectType = if ($ace.ObjectType -and $ace.ObjectType -ne [Guid]::Empty) {
+                    $ace.ObjectType.ToString()
+                } else {
+                    $null
+                }
+                
+                # Test if this ACE is dangerous and get ObjectTypeName
+                $aceTestResult = $ace | Test-IsDangerousAce -ObjectClass 'pKICertificateTemplate'
+                $aceObjectTypeName = $aceTestResult.ObjectTypeName
+                
                 # Create LS2Issue object
                 $issue = [LS2Issue]@{
-                    Technique             = $technique
-                    Forest                = $forestName
-                    Name                  = $template.Name
-                    DistinguishedName     = $template.distinguishedName
-                    IdentityReference     = $ace.IdentityReference
-                    IdentityReferenceSID  = $editorSid
-                    ActiveDirectoryRights = $ace.ActiveDirectoryRights
-                    Enabled               = $template.Enabled
-                    EnabledOn             = $template.EnabledOn
-                    Issue                 = $issueText
-                    Fix                   = $fixScript
-                    Revert                = $revertScript
+                    Technique              = $technique
+                    Forest                 = $forestName
+                    Name                   = $template.Name
+                    DistinguishedName      = $template.distinguishedName
+                    ObjectClass            = 'pKICertificateTemplate'
+                    IdentityReference      = $ace.IdentityReference
+                    IdentityReferenceSID   = $editorSid
+                    IdentityReferenceClass = $principalObjectClass
+                    ActiveDirectoryRights  = $ace.ActiveDirectoryRights
+                    AceObjectTypeGUID      = $aceObjectType
+                    AceObjectTypeName      = $aceObjectTypeName
+                    Enabled                = $template.Enabled
+                    EnabledOn              = $template.EnabledOn
+                    Issue                  = $issueText
+                    Fix                    = $fixScript
+                    Revert                 = $revertScript
                 }
 
                 # Store in IssueStore
@@ -262,6 +284,9 @@ function Find-LS2VulnerableTemplate {
 
             Write-Verbose "  Checking template: $templateName"
 
+            # Get domain/forest name from DN
+            $forestName = Get-ForestNameFromDN -DistinguishedName $template.distinguishedName
+
             # Create issue using template expansion
             $issueText = ($config.IssueTemplate -join '') `
                 -replace '\$\(TemplateName\)', $templateName `
@@ -276,18 +301,19 @@ function Find-LS2VulnerableTemplate {
 
             # Create issue object
             $issue = [LS2Issue]::new(@{
-                Technique          = $Technique
-                Forest             = $script:ForestContext.RootDomain
-                Name               = $templateName
-                DistinguishedName  = $template.distinguishedName
-                Owner              = $owner
-                HasNonStandardOwner = $true
-                Enabled            = $template.Enabled
-                EnabledOn          = $template.EnabledOn
-                Issue              = $issueText
-                Fix                = $fixScript
-                Revert             = $revertScript
-            })
+                    Technique           = $Technique
+                    Forest              = $forestName
+                    Name                = $templateName
+                    DistinguishedName   = $template.distinguishedName
+                    ObjectClass         = 'pKICertificateTemplate'
+                    Owner               = $owner
+                    HasNonStandardOwner = $true
+                    Enabled             = $template.Enabled
+                    EnabledOn           = $template.EnabledOn
+                    Issue               = $issueText
+                    Fix                 = $fixScript
+                    Revert              = $revertScript
+                })
 
             # Store in IssueStore
             $dn = $template.distinguishedName

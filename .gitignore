@@ -30,5 +30,8 @@ Sources/packages/*
 .DS_Store
 Thumbs.db
 
+### Generated Reports
+*.html
+
 ### Performance Testing
 performance.log

@@ -68,7 +68,7 @@ function Set-DangerousCAAdministrator {
     }
 
     process {
-        $AdcsObject | Where-Object SchemaClassName -eq pKIEnrollmentService | ForEach-Object {
+        $AdcsObject | Where-Object SchemaClassName -EQ pKIEnrollmentService | ForEach-Object {
             try {
                 $caName = if ($_.Properties -and $_.Properties.Contains('cn')) {
                     $_.Properties['cn'][0]
