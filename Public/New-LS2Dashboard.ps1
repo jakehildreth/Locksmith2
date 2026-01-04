@@ -130,9 +130,13 @@ function New-LS2Dashboard {
         'Forest'
         'Name'
         'DistinguishedName'
+        @{N = 'ObjectClass'; E = { if ($_.ObjectClass) { $_.ObjectClass } else { 'N/A' } } }
         @{N = 'IdentityReference'; E = { if ($_.IdentityReference) { $_.IdentityReference } else { 'N/A' } } }
         @{N = 'IdentityReferenceSID'; E = { if ($_.IdentityReferenceSID) { $_.IdentityReferenceSID } else { 'N/A' } } }
+        @{N = 'IdentityReferenceClass'; E = { if ($_.IdentityReferenceClass) { $_.IdentityReferenceClass } else { 'N/A' } } }
         @{N = 'ActiveDirectoryRights'; E = { if ($_.ActiveDirectoryRights) { $_.ActiveDirectoryRights } else { 'N/A' } } }
+        @{N = 'AceObjectTypeGUID'; E = { if ($_.AceObjectTypeGUID) { $_.AceObjectTypeGUID } else { 'N/A' } } }
+        @{N = 'AceObjectTypeName'; E = { if ($_.AceObjectTypeName) { $_.AceObjectTypeName } else { 'N/A' } } }
         @{N = 'Enabled'; E = { if ($null -ne $_.Enabled) { $_.Enabled } else { 'N/A' } } }
         @{N = 'EnabledOn'; E = { if ($_.EnabledOn) { $_.EnabledOn -join ', ' } else { 'N/A' } } }
         @{N = 'CAFullName'; E = { if ($_.CAFullName) { $_.CAFullName } else { 'N/A' } } }
@@ -160,6 +164,45 @@ function New-LS2Dashboard {
     
     $forestName = if ($script:Forest) { $script:Forest } else { 'Unknown Forest' }
     
+    # Define conditional formatting rules - applies consistently to all issue tables
+    $issueFormatting = {
+        # Template issues (red-purple range)
+        New-HTMLTableCondition -Name 'Technique' -Value 'ESC1' -BackgroundColor '#ffcdd2' -Color Black
+        New-HTMLTableCondition -Name 'Technique' -Value 'ESC2' -BackgroundColor '#f8bbd0' -Color Black
+        New-HTMLTableCondition -Name 'Technique' -Value 'ESC4a' -BackgroundColor '#e1bee7' -Color Black
+        New-HTMLTableCondition -Name 'Technique' -Value 'ESC4o' -BackgroundColor '#d1c4e9' -Color Black
+        New-HTMLTableCondition -Name 'Technique' -Value 'ESC9' -BackgroundColor '#ce93d8' -Color Black
+        
+        # CA issues (yellow-orange range)
+        New-HTMLTableCondition -Name 'Technique' -Value 'ESC6' -BackgroundColor '#fff59d' -Color Black
+        New-HTMLTableCondition -Name 'Technique' -Value 'ESC7a' -BackgroundColor '#ffcc80' -Color Black
+        New-HTMLTableCondition -Name 'Technique' -Value 'ESC7m' -BackgroundColor '#ffb74d' -Color Black
+        New-HTMLTableCondition -Name 'Technique' -Value 'ESC11' -BackgroundColor '#ff9800' -Color Black
+        New-HTMLTableCondition -Name 'Technique' -Value 'ESC16' -BackgroundColor '#ffa726' -Color Black
+        
+        # Object issues (green-blue range)
+        New-HTMLTableCondition -Name 'Technique' -Value 'ESC5a' -BackgroundColor '#a5d6a7' -Color Black
+        New-HTMLTableCondition -Name 'Technique' -Value 'ESC5o' -BackgroundColor '#80cbc4' -Color Black
+        
+        # Rights-based formatting (high severity)
+        New-HTMLTableCondition -Name 'ActiveDirectoryRights' -ComparisonType string -Operator like -Value '*GenericAll*' -BackgroundColor '#d32f2f' -Color White
+        New-HTMLTableCondition -Name 'ActiveDirectoryRights' -ComparisonType string -Operator like -Value '*WriteDacl*' -BackgroundColor '#ef5350' -Color White
+        New-HTMLTableCondition -Name 'ActiveDirectoryRights' -ComparisonType string -Operator like -Value '*WriteOwner*' -BackgroundColor '#ff9800' -Color White
+        New-HTMLTableCondition -Name 'ActiveDirectoryRights' -ComparisonType string -Operator like -Value '*WriteProperty*' -BackgroundColor '#ffa726' -Color Black
+        New-HTMLTableCondition -Name 'ActiveDirectoryRights' -ComparisonType string -Operator like -Value '*GenericWrite*' -BackgroundColor '#ffa726' -Color Black
+        
+        # Status-based formatting
+        New-HTMLTableCondition -Name 'Enabled' -Value $true -BackgroundColor '#fff9c4' -Color Black
+    }
+    
+    # Define conditional formatting for principals table (different schema)
+    # Order matters: most severe conditions last so they override less severe ones
+    $principalFormatting = {
+        New-HTMLTableCondition -Name 'IssueCount' -ComparisonType number -Operator ge -Value 1 -BackgroundColor '#fdd835' -Color Black
+        New-HTMLTableCondition -Name 'IssueCount' -ComparisonType number -Operator ge -Value 5 -BackgroundColor '#ff9800' -Color White
+        New-HTMLTableCondition -Name 'IssueCount' -ComparisonType number -Operator gt -Value 10 -BackgroundColor '#ef5350' -Color White
+    }
+    
     # Generate HTML Dashboard
     New-HTML -TitleText "Locksmith2 Security Dashboard - $forestName" -Online:$Online -FilePath $FilePath -Show:$Show {
         
@@ -180,11 +223,7 @@ Issues are marked with the ESC technique and show which principals can exploit e
                         -Filtering `
                         -PagingLength 25 `
                         -Buttons @('copyHtml5', 'excelHtml5', 'csvHtml5', 'pdfHtml5', 'searchBuilder', 'searchPanes') `
-                        -Title 'All AD CS Security Issues' {
-                        New-HTMLTableCondition -Name 'Technique' -ComparisonType string -Operator like -Value 'ESC1*' -BackgroundColor '#ffebee' -Color Black
-                        New-HTMLTableCondition -Name 'Technique' -ComparisonType string -Operator like -Value 'ESC7*' -BackgroundColor '#fff3e0' -Color Black
-                        New-HTMLTableCondition -Name 'Members' -ComparisonType string -Operator ne -Value '-' -BackgroundColor '#e8f5e9' -Color Black
-                    }
+                        -Title 'All AD CS Security Issues' {& $issueFormatting}
                 }
             }
         }
@@ -204,10 +243,7 @@ certificates with dangerous permissions, subject alternative names, or enrollmen
                         -PagingLength 25 `
                         -Buttons @('copyHtml5', 'excelHtml5', 'csvHtml5', 'pdfHtml5', 'searchBuilder', 'searchPanes') `
                         -Title 'Template Vulnerabilities' `
-                        -DefaultSortColumn 'Technique' {
-                        New-HTMLTableCondition -Name 'Technique' -Value 'ESC1' -BackgroundColor '#ffcdd2' -Color Black
-                        New-HTMLTableCondition -Name 'Enabled' -Value $true -BackgroundColor '#fff9c4' -Color Black
-                    }
+                        -DefaultSortColumn 'Technique' {& $issueFormatting}
                 }
             }
         }
@@ -227,10 +263,7 @@ These vulnerabilities grant principals excessive control over certificate issuan
                         -PagingLength 25 `
                         -Buttons @('copyHtml5', 'excelHtml5', 'csvHtml5', 'pdfHtml5', 'searchBuilder', 'searchPanes') `
                         -Title 'CA Configuration Issues' `
-                        -DefaultSortColumn 'Name' {
-                        New-HTMLTableCondition -Name 'Technique' -Value 'ESC7a' -BackgroundColor '#ffccbc' -Color Black
-                        New-HTMLTableCondition -Name 'Technique' -Value 'ESC7m' -BackgroundColor '#ffe0b2' -Color Black
-                    }
+                        -DefaultSortColumn 'Name' {& $issueFormatting}
                 }
             }
         }
@@ -250,10 +283,7 @@ These allow principals to modify templates, CAs, or other critical AD CS compone
                         -PagingLength 25 `
                         -Buttons @('copyHtml5', 'excelHtml5', 'csvHtml5', 'pdfHtml5', 'searchBuilder', 'searchPanes') `
                         -Title 'Infrastructure Object Issues' `
-                        -DefaultSortColumn 'Name' {
-                        New-HTMLTableCondition -Name 'Technique' -Value 'ESC5a' -BackgroundColor '#c5e1a5' -Color Black
-                        New-HTMLTableCondition -Name 'Technique' -Value 'ESC5o' -BackgroundColor '#fff59d' -Color Black
-                    }
+                        -DefaultSortColumn 'Name' {& $issueFormatting}
                 }
             }
         }
@@ -274,11 +304,7 @@ represent concentrated risk and should be prioritized for remediation or monitor
                         -Buttons @('copyHtml5', 'excelHtml5', 'csvHtml5', 'pdfHtml5', 'searchBuilder', 'searchPanes') `
                         -Title 'Principals by Risk Score' `
                         -DefaultSortColumn 'IssueCount' `
-                        -DefaultSortOrder Descending {
-                        New-HTMLTableCondition -Name 'IssueCount' -ComparisonType number -Operator gt -Value 10 -BackgroundColor '#ef5350' -Color White
-                        New-HTMLTableCondition -Name 'IssueCount' -ComparisonType number -Operator ge -Value 5 -BackgroundColor '#ff9800' -Color White
-                        New-HTMLTableCondition -Name 'IssueCount' -ComparisonType number -Operator ge -Value 1 -BackgroundColor '#fdd835' -Color Black
-                    }
+                        -DefaultSortOrder Descending {& $principalFormatting}
                 }
             }
         }
@@ -298,13 +324,7 @@ Examples include weak enrollment restrictions (ESC1, ESC2), SubCA attacks (ESC6)
                         -PagingLength 25 `
                         -Buttons @('copyHtml5', 'excelHtml5', 'csvHtml5', 'pdfHtml5', 'searchBuilder', 'searchPanes') `
                         -Title 'Configuration-Based Vulnerabilities' `
-                        -DefaultSortColumn 'Technique' {
-                        New-HTMLTableCondition -Name 'Technique' -Value 'ESC1' -BackgroundColor '#ffcdd2' -Color Black
-                        New-HTMLTableCondition -Name 'Technique' -Value 'ESC2' -BackgroundColor '#f8bbd0' -Color Black
-                        New-HTMLTableCondition -Name 'Technique' -Value 'ESC6' -BackgroundColor '#ffccbc' -Color Black
-                        New-HTMLTableCondition -Name 'Technique' -Value 'ESC9' -BackgroundColor '#ffe0b2' -Color Black
-                        New-HTMLTableCondition -Name 'Enabled' -Value $true -BackgroundColor '#fff9c4' -Color Black
-                    }
+                        -DefaultSortColumn 'Technique' {& $issueFormatting}
                 }
             }
         }
@@ -324,12 +344,7 @@ ESC4a and ESC5a allow principals to modify certificate templates or infrastructu
                         -PagingLength 25 `
                         -Buttons @('copyHtml5', 'excelHtml5', 'csvHtml5', 'pdfHtml5', 'searchBuilder', 'searchPanes') `
                         -Title 'Write/Modify Permission Issues' `
-                        -DefaultSortColumn 'ActiveDirectoryRights' {
-                        New-HTMLTableCondition -Name 'Technique' -Value 'ESC4a' -BackgroundColor '#c5e1a5' -Color Black
-                        New-HTMLTableCondition -Name 'Technique' -Value 'ESC5a' -BackgroundColor '#dcedc8' -Color Black
-                        New-HTMLTableCondition -Name 'ActiveDirectoryRights' -ComparisonType string -Operator like -Value '*WriteDacl*' -BackgroundColor '#ef5350' -Color White
-                        New-HTMLTableCondition -Name 'ActiveDirectoryRights' -ComparisonType string -Operator like -Value '*WriteOwner*' -BackgroundColor '#ff9800' -Color White
-                    }
+                        -DefaultSortColumn 'ActiveDirectoryRights' {& $issueFormatting}
                 }
             }
         }
@@ -349,10 +364,7 @@ Owners have full control and can modify or delete objects. ESC4o and ESC5o ident
                         -PagingLength 25 `
                         -Buttons @('copyHtml5', 'excelHtml5', 'csvHtml5', 'pdfHtml5', 'searchBuilder', 'searchPanes') `
                         -Title 'Dangerous Ownership Configurations' `
-                        -DefaultSortColumn 'Owner' {
-                        New-HTMLTableCondition -Name 'Technique' -Value 'ESC4o' -BackgroundColor '#fff59d' -Color Black
-                        New-HTMLTableCondition -Name 'Technique' -Value 'ESC5o' -BackgroundColor '#fff176' -Color Black
-                    }
+                        -DefaultSortColumn 'Owner' {& $issueFormatting}
                 }
             }
         }
