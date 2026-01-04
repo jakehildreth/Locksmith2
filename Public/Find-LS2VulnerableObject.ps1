@@ -166,28 +166,32 @@ function Find-LS2VulnerableObject {
                     
                     # Find ALL ACEs for this SID that have dangerous rights
                     # (there may be multiple ACEs for the same principal with different rights/properties)
-                    $dangerousAces = $object.ObjectSecurity.Access | Where-Object {
+                    $dangerousAceResults = $object.ObjectSecurity.Access | ForEach-Object {
                         $aceSid = ($_.IdentityReference | Convert-IdentityReferenceToSid).Value
-                        if ($aceSid -ne $editorSid) { return $false }
+                        if ($aceSid -ne $editorSid) { return }
                         
                         # Check if this ACE grants dangerous permissions
-                        $isDangerousAce = if ($objectClass) {
+                        $testResult = if ($objectClass) {
                             $_ | Test-IsDangerousAce -ObjectClass $objectClass
                         } else {
                             $_ | Test-IsDangerousAce
                         }
-                        return $isDangerousAce.IsDangerous
+                        
+                        if ($testResult.IsDangerous) {
+                            $testResult
+                        }
                     }
                     
-                    if (-not $dangerousAces -or $dangerousAces.Count -eq 0) {
+                    if (-not $dangerousAceResults -or $dangerousAceResults.Count -eq 0) {
                         Write-Verbose "    Could not find dangerous ACE for SID: $editorSid"
                         continue
                     }
                     
-                    Write-Verbose "    VULNERABLE: Found $($dangerousAces.Count) dangerous ACE(s) for $editorSid"
+                    Write-Verbose "    VULNERABLE: Found $($dangerousAceResults.Count) dangerous ACE(s) for $editorSid"
                     
                     # Create an issue for each dangerous ACE
-                    foreach ($ace in $dangerousAces) {
+                    foreach ($aceResult in $dangerousAceResults) {
+                        $ace = $aceResult.Ace
                         Write-Verbose "      ACE: $($ace.IdentityReference) has $($ace.ActiveDirectoryRights)"
                         
                         $issueCount++
@@ -227,18 +231,46 @@ function Find-LS2VulnerableObject {
                     $revertScript = ($config.RevertTemplate -join "`n") `
                         -replace '\$\(DistinguishedName\)', $object.distinguishedName
                     
+                    # Get principal objectClass from PrincipalStore
+                    $principalObjectClass = if ($script:PrincipalStore -and $script:PrincipalStore.ContainsKey($editorSid)) {
+                        $script:PrincipalStore[$editorSid].objectClass
+                    } else {
+                        $null
+                    }
+                    
+                    # Get ACE ObjectType GUID if present
+                    $aceObjectType = if ($ace.ObjectType -and $ace.ObjectType -ne [Guid]::Empty) {
+                        $ace.ObjectType.ToString()
+                    } else {
+                        $null
+                    }
+                    
+                    # Get human-readable ObjectType name from test result
+                    $aceObjectTypeName = $aceResult.ObjectTypeName
+                    
+                    # Get object's objectClass (primary class)
+                    $vulnerableObjectClass = if ($object.objectClass -is [array]) {
+                        $object.objectClass[-1]
+                    } else {
+                        $object.objectClass
+                    }
+                    
                     # Create issue object
                     $issue = [LS2Issue]::new(@{
-                            Technique             = $Technique
-                            Forest                = $forestName
-                            Name                  = $objectName
-                            DistinguishedName     = $object.distinguishedName
-                            IdentityReference     = $ace.IdentityReference
-                            IdentityReferenceSID  = $editorSid
-                            ActiveDirectoryRights = $activeDirectoryRights
-                            Issue                 = $issueText
-                            Fix                   = $fixScript
-                            Revert                = $revertScript
+                            Technique                = $Technique
+                            Forest                   = $forestName
+                            Name                     = $objectName
+                            DistinguishedName        = $object.distinguishedName
+                            ObjectClass              = $vulnerableObjectClass
+                            IdentityReference        = $ace.IdentityReference
+                            IdentityReferenceSID     = $editorSid
+                            IdentityReferenceClass   = $principalObjectClass
+                            ActiveDirectoryRights    = $activeDirectoryRights
+                            AceObjectTypeGUID        = $aceObjectType
+                            AceObjectTypeName        = $aceObjectTypeName
+                            Issue                    = $issueText
+                            Fix                      = $fixScript
+                            Revert                   = $revertScript
                         })
                     
                     # Add issue to IssueStore
@@ -353,12 +385,20 @@ function Find-LS2VulnerableObject {
             -replace '\$\(DistinguishedName\)', $object.distinguishedName `
             -replace '\$\(OriginalOwner\)', $owner
 
+        # Get object's objectClass (primary class)
+        $vulnerableObjectClass = if ($object.objectClass -is [array]) {
+            $object.objectClass[-1]
+        } else {
+            $object.objectClass
+        }
+        
         # Create issue object
         $issue = [LS2Issue]::new(@{
                 Technique           = $Technique
                 Forest              = $forestName
                 Name                = $objectName
                 DistinguishedName   = $object.distinguishedName
+                ObjectClass         = $vulnerableObjectClass
                 Owner               = $owner
                 HasNonStandardOwner = $true
                 Issue               = $issueText
