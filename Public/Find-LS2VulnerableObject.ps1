@@ -207,17 +207,17 @@ function Find-LS2VulnerableObject {
                     
                     # Create issue object
                     $issue = [LS2Issue]::new(@{
-                        Technique             = $Technique
-                        Forest                = $forestName
-                        Name                  = $objectName
-                        DistinguishedName     = $object.distinguishedName
-                        IdentityReference     = $ace.IdentityReference
-                        IdentityReferenceSID  = $editorSid
-                        ActiveDirectoryRights = $activeDirectoryRights
-                        Issue                 = $issueText
-                        Fix                   = $fixScript
-                        Revert                = $revertScript
-                    })
+                            Technique             = $Technique
+                            Forest                = $forestName
+                            Name                  = $objectName
+                            DistinguishedName     = $object.distinguishedName
+                            IdentityReference     = $ace.IdentityReference
+                            IdentityReferenceSID  = $editorSid
+                            ActiveDirectoryRights = $activeDirectoryRights
+                            Issue                 = $issueText
+                            Fix                   = $fixScript
+                            Revert                = $revertScript
+                        })
                     
                     # Add issue to IssueStore
                     if (-not $script:IssueStore) {
@@ -252,30 +252,30 @@ function Find-LS2VulnerableObject {
     
     # Filter objects by conditions (for non-ESC5a techniques like ESC5o)
     $vulnerableObjects = @(foreach ($object in $allObjects) {
-        $matchesAllConditions = $true
+            $matchAllConditions = $true
         
-        foreach ($condition in $config.Conditions) {
-            $propertyValue = $object.($condition.Property)
+            foreach ($condition in $config.Conditions) {
+                $propertyValue = $object.($condition.Property)
             
-            $matches = switch ($condition.Operator) {
-                'eq' { $propertyValue -eq $condition.Value }
-                'ne' { $propertyValue -ne $condition.Value }
-                'gt' { $propertyValue -gt $condition.Value }
-                'lt' { $propertyValue -lt $condition.Value }
-                'contains' { $propertyValue -contains $condition.Value }
-                default { $false }
-            }
+                $match = switch ($condition.Operator) {
+                    'eq' { $propertyValue -eq $condition.Value }
+                    'ne' { $propertyValue -ne $condition.Value }
+                    'gt' { $propertyValue -gt $condition.Value }
+                    'lt' { $propertyValue -lt $condition.Value }
+                    'contains' { $propertyValue -contains $condition.Value }
+                    default { $false }
+                }
             
-            if (-not $matches) {
-                $matchesAllConditions = $false
-                break
+                if (-not $match) {
+                    $matchAllConditions = $false
+                    break
+                }
             }
-        }
         
-        if ($matchesAllConditions) {
-            $object
-        }
-    })
+            if ($matchAllConditions) {
+                $object
+            }
+        })
     
     Write-Verbose "Found $($vulnerableObjects.Count) object(s) to check (CAs and infrastructure)"
 
@@ -332,16 +332,16 @@ function Find-LS2VulnerableObject {
 
         # Create issue object
         $issue = [LS2Issue]::new(@{
-            Technique          = $Technique
-            Forest             = $forestName
-            Name               = $objectName
-            DistinguishedName  = $object.distinguishedName
-            Owner              = $owner
-            HasNonStandardOwner = $true
-            Issue              = $issueText
-            Fix                = $fixScript
-            Revert             = $revertScript
-        })
+                Technique           = $Technique
+                Forest              = $forestName
+                Name                = $objectName
+                DistinguishedName   = $object.distinguishedName
+                Owner               = $owner
+                HasNonStandardOwner = $true
+                Issue               = $issueText
+                Fix                 = $fixScript
+                Revert              = $revertScript
+            })
 
         # Add issue to IssueStore
         if (-not $script:IssueStore) {

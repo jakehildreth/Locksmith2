@@ -109,8 +109,8 @@ function New-LS2Dashboard {
     $templateTechniques = @('ESC1', 'ESC2', 'ESC3c1', 'ESC3c2', 'ESC4a', 'ESC4o', 'ESC9')
     $caTechniques = @('ESC6', 'ESC7a', 'ESC7m', 'ESC11', 'ESC16')
     $objectTechniques = @('ESC5a', 'ESC5o')
-    $misconfigurationTechniques = @('ESC1','ESC2','ESC3c1','ESC3c1','ESC6','ESC9','ESC11','ESC16')
-    $accessTechniques = @('ESC4a','ESC5a')
+    $misconfigurationTechniques = @('ESC1', 'ESC2', 'ESC3c1', 'ESC3c1', 'ESC6', 'ESC9', 'ESC11', 'ESC16')
+    $accessTechniques = @('ESC4a', 'ESC5a')
     $ownershipTechniques = @('ESC4o', 'ESC5o')
     
     $templateIssues = $allIssues | Where-Object { $_.Technique -in $templateTechniques }
@@ -127,14 +127,14 @@ function New-LS2Dashboard {
     # Prepare data for tables - select key properties for display
     $allIssuesTable = $allIssues | Select-Object `
         Technique, 
-        Forest, 
-        Name, 
-        IdentityReference, 
-        ActiveDirectoryRights, 
-        @{N='Enabled';E={if($null -ne $_.Enabled){$_.Enabled}else{'-'}}},
-        @{N='CAFullName';E={if($_.CAFullName){$_.CAFullName}else{'-'}}},
-        @{N='Owner';E={if($_.Owner){$_.Owner}else{'-'}}},
-        @{N='Members';E={if($_.MemberCount){$_.MemberCount}else{'-'}}}
+    Forest, 
+    Name, 
+    IdentityReference, 
+    ActiveDirectoryRights, 
+    @{N = 'Enabled'; E = { if ($null -ne $_.Enabled) { $_.Enabled }else { '-' } } },
+    @{N = 'CAFullName'; E = { if ($_.CAFullName) { $_.CAFullName }else { '-' } } },
+    @{N = 'Owner'; E = { if ($_.Owner) { $_.Owner }else { '-' } } },
+    @{N = 'Members'; E = { if ($_.MemberCount) { $_.MemberCount }else { '-' } } }
     
     $templateIssuesTable = $templateIssues | Select-Object `
         Technique, Name, IdentityReference, ActiveDirectoryRights, Enabled, MemberCount
@@ -147,9 +147,9 @@ function New-LS2Dashboard {
     
     $principalsTable = $riskyPrincipals | Select-Object `
         Principal,
-        IssueCount,
-        @{N='Techniques';E={$_.Techniques -join ', '}},
-        @{N='VulnerableObjects';E={$_.VulnerableObjects.Count}}
+    IssueCount,
+    @{N = 'Techniques'; E = { $_.Techniques -join ', ' } },
+    @{N = 'VulnerableObjects'; E = { $_.VulnerableObjects.Count } }
     
     $forestName = if ($script:Forest) { $script:Forest } else { 'Unknown Forest' }
     
@@ -161,7 +161,7 @@ function New-LS2Dashboard {
         
         New-HTMLTab -Name 'All Issues' -IconSolid exclamation-triangle -IconColor Red {
             New-HTMLSection -Invisible {
-                New-HTMLPanel -Width 10%  {
+                New-HTMLPanel -Width 10% {
                     New-HTMLText -Text "All Issues - Expanded Principals ($($allIssues.Count) total)" -FontSize 20 -FontWeight bold
                     New-HTMLText -Text @"
 This view shows all discovered AD CS vulnerabilities with group memberships expanded to individual principals.

@@ -134,8 +134,7 @@ function Initialize-LS2Scan {
             }
             
             Write-Verbose "Full vulnerability scan complete."
-        }
-        finally {
+        } finally {
             # Always clear the flag
             $script:InitializingStores = $false
         }

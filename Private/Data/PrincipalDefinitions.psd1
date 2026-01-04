@@ -58,7 +58,7 @@ https://learn.microsoft.com/en-us/windows-server/identity/ad-ds/manage/understan
 
 @{
     # Version of this data file format (for future compatibility)
-    DataVersion = '1.0'
+    DataVersion         = '1.0'
     
     # ============================================================================
     # Safe Principals - High-privilege administrative groups
@@ -66,7 +66,7 @@ https://learn.microsoft.com/en-us/windows-server/identity/ad-ds/manage/understan
     # These principals are considered safe/expected to have broad permissions
     # on AD CS objects. Used to filter out expected administrative access.
     
-    SafePrincipals = @(
+    SafePrincipals      = @(
         # Domain administrative groups
         '-512$'                                        # Domain Admins (all domains)
         '-519$'                                        # Enterprise Admins (forest root)
@@ -140,7 +140,7 @@ https://learn.microsoft.com/en-us/windows-server/identity/ad-ds/manage/understan
     # Note: The forest-specific Enterprise Admins SID will be dynamically added during
     # initialization to ensure only THIS forest's Enterprise Admins are considered standard.
     
-    StandardOwners = @(
+    StandardOwners      = @(
         # Forest-specific Enterprise Admins SID will be added at runtime
         # Do not use regex patterns like -519$ as they would match Enterprise Admins from other forests
     )

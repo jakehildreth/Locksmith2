@@ -1,10 +1,10 @@
 @{
-    ESC1 = @{
+    ESC1   = @{
         # ESC1: Misconfigured Certificate Templates
-        Technique = 'ESC1'
+        Technique          = 'ESC1'
         
         # Conditions that make a template vulnerable
-        Conditions = @(
+        Conditions         = @(
             @{ Property = 'SANAllowed'; Value = $true }
             @{ Property = 'AuthenticationEKUExist'; Value = $true }
             @{ Property = 'ManagerApprovalNotRequired'; Value = $true }
@@ -18,7 +18,7 @@
         )
         
         # Issue description template (supports variables: $(IdentityReference), $(TemplateName))
-        IssueTemplate = @(
+        IssueTemplate      = @(
             "`$(IdentityReference) can provide a Subject Alternative Name (SAN) while enrolling in this Client "
             "Authentication template, and enrollment does not require Manager Approval.`n`n"
             "The resultant certificate can be used by an attacker to authenticate as any principal listed in the SAN "
@@ -28,25 +28,25 @@
         )
         
         # Fix script template (supports variable: $(DistinguishedName))
-        FixTemplate = @(
+        FixTemplate        = @(
             "# Enable Manager Approval"
             "`$Object = '`$(DistinguishedName)'"
             "Get-ADObject `$Object | Set-ADObject -Replace @{'msPKI-Enrollment-Flag' = 2}"
         )
         
         # Revert script template (supports variable: $(DistinguishedName))
-        RevertTemplate = @(
+        RevertTemplate     = @(
             "# Disable Manager Approval"
             "`$Object = '`$(DistinguishedName)'"
             "Get-ADObject `$Object | Set-ADObject -Replace @{'msPKI-Enrollment-Flag' = 0}"
         )
     }
 
-    ESC2 = @{
-        Technique = 'ESC2'
+    ESC2   = @{
+        Technique          = 'ESC2'
         
         # Conditions that templates must match to be vulnerable
-        Conditions = @(
+        Conditions         = @(
             @{ Property = 'AnyPurposeEKUExist'; Value = $true }
             @{ Property = 'ManagerApprovalNotRequired'; Value = $true }
             @{ Property = 'AuthorizedSignatureNotRequired'; Value = $true }
@@ -59,7 +59,7 @@
         )
         
         # Issue description template
-        IssueTemplate = @(
+        IssueTemplate      = @(
             "`$(IdentityReference) can use the `$(TemplateName) template to request any type of certificate - including "
             "Enrollment Agent certificates and Subordinate Certification Authority (SubCA) certificate - without Manager "
             "Approval.`n`n"
@@ -73,14 +73,14 @@
         )
 
         # Remediation script template
-        FixTemplate = @(
+        FixTemplate        = @(
             "# Enable Manager Approval"
             "`$Object = '`$(DistinguishedName)'"
             "Get-ADObject `$Object | Set-ADObject -Replace @{'msPKI-Enrollment-Flag' = 2}"
         )
 
         # Revert script template
-        RevertTemplate = @(
+        RevertTemplate     = @(
             "# Disable Manager Approval"
             "`$Object = '`$(DistinguishedName)'"
             "Get-ADObject `$Object | Set-ADObject -Replace @{'msPKI-Enrollment-Flag' = 0}"
@@ -88,10 +88,10 @@
     }
 
     ESC3c1 = @{
-        Technique = 'ESC3c1'
+        Technique          = 'ESC3c1'
         
         # Conditions that templates must match to be vulnerable
-        Conditions = @(
+        Conditions         = @(
             @{ Property = 'EnrollmentAgentEKUExist'; Value = $true }
             @{ Property = 'ManagerApprovalNotRequired'; Value = $true }
             @{ Property = 'AuthorizedSignatureNotRequired'; Value = $true }
@@ -104,7 +104,7 @@
         )
         
         # Issue description template
-        IssueTemplate = @(
+        IssueTemplate      = @(
             "`$(IdentityReference) can use the `$(TemplateName) template to request an Enrollment Agent certificate without "
             "Manager Approval.`n`n"
             "The resulting certificate can be used to enroll in any template that allows an Enrollment Agent to submit the "
@@ -114,14 +114,14 @@
         )
 
         # Remediation script template
-        FixTemplate = @(
+        FixTemplate        = @(
             "# Enable Manager Approval"
             "`$Object = '`$(DistinguishedName)'"
             "Get-ADObject `$Object | Set-ADObject -Replace @{'msPKI-Enrollment-Flag' = 2}"
         )
 
         # Revert script template
-        RevertTemplate = @(
+        RevertTemplate     = @(
             "# Disable Manager Approval"
             "`$Object = '`$(DistinguishedName)'"
             "Get-ADObject `$Object | Set-ADObject -Replace @{'msPKI-Enrollment-Flag' = 0}"
@@ -129,10 +129,10 @@
     }
 
     ESC3c2 = @{
-        Technique = 'ESC3c2'
+        Technique          = 'ESC3c2'
         
         # Conditions that templates must match to be vulnerable
-        Conditions = @(
+        Conditions         = @(
             @{ Property = 'AuthenticationEKUExist'; Value = $true }
             @{ Property = 'ManagerApprovalNotRequired'; Value = $true }
             @{ Property = 'RequiresEnrollmentAgentSignature'; Value = $true }
@@ -145,7 +145,7 @@
         )
         
         # Issue description template
-        IssueTemplate = @(
+        IssueTemplate      = @(
             "If the holder of a SubCA, Any Purpose, or Enrollment Agent certificate requests a certificate using the "
             "`$(TemplateName) template, they will receive a certificate which allows them to authenticate as "
             "`$(IdentityReference).`n`n"
@@ -154,7 +154,7 @@
         )
 
         # Remediation script template
-        FixTemplate = @(
+        FixTemplate        = @(
             "# First, eliminate unused Enrollment Agent templates."
             "# Then, tightly scope any Enrollment Agent templates that remain and:"
             "# Enable Manager Approval"
@@ -163,18 +163,18 @@
         )
 
         # Revert script template
-        RevertTemplate = @(
+        RevertTemplate     = @(
             "# Disable Manager Approval"
             "`$Object = '`$(DistinguishedName)'"
             "Get-ADObject `$Object | Set-ADObject -Replace @{'msPKI-Enrollment-Flag' = 0}"
         )
     }
 
-    ESC9 = @{
-        Technique = 'ESC9'
+    ESC9   = @{
+        Technique          = 'ESC9'
         
         # Conditions that templates must match to be vulnerable
-        Conditions = @(
+        Conditions         = @(
             @{ Property = 'AuthenticationEKUExist'; Value = $true }
             @{ Property = 'NoSecurityExtension'; Value = $true }
         )
@@ -186,7 +186,7 @@
         )
         
         # Issue description template
-        IssueTemplate = @(
+        IssueTemplate      = @(
             "The `$(TemplateName) template has the szOID_NTDS_CA_SECURITY_EXT security extension disabled. "
             "Certificates issued from this template will not enforce strong certificate binding. Depending on the "
             "current Certificate Binding Enforcement level ESC6 status, it may be possible to request and receive "
@@ -204,30 +204,30 @@
         )
 
         # Remediation script template
-        FixTemplate = @(
+        FixTemplate        = @(
             "# Enable Manager Approval"
             "`$Object = '`$(DistinguishedName)'"
             "Get-ADObject `$Object | Set-ADObject -Replace @{'msPKI-Enrollment-Flag' = 2}"
         )
 
         # Revert script template
-        RevertTemplate = @(
+        RevertTemplate     = @(
             "# Disable Manager Approval"
             "`$Object = '`$(DistinguishedName)'"
             "Get-ADObject `$Object | Set-ADObject -Replace @{'msPKI-Enrollment-Flag' = 0}"
         )
     }
 
-    ESC6 = @{
-        Technique = 'ESC6'
+    ESC6   = @{
+        Technique      = 'ESC6'
         
         # Conditions that CAs must match to be vulnerable
-        Conditions = @(
+        Conditions     = @(
             @{ Property = 'SANFlagEnabled'; Value = $true }
         )
         
         # Issue description template
-        IssueTemplate = @(
+        IssueTemplate  = @(
             "The Certification Authority `$(CAName) has the EDITF_ATTRIBUTESUBJECTALTNAME2 flag enabled. "
             "This allows ANY certificate request to specify Subject Alternative Names (SANs) regardless of "
             "template configuration.`n`n"
@@ -241,7 +241,7 @@
         )
         
         # Remediation script template
-        FixTemplate = @(
+        FixTemplate    = @(
             "# Disable EDITF_ATTRIBUTESUBJECTALTNAME2 on the CA"
             "certutil -config `$(CAFullName) -setreg policy\\EditFlags -EDITF_ATTRIBUTESUBJECTALTNAME2"
             "# Restart Certificate Services for the change to take effect"
@@ -257,16 +257,16 @@
         )
     }
 
-    ESC11 = @{
-        Technique = 'ESC11'
+    ESC11  = @{
+        Technique      = 'ESC11'
         
         # Conditions that CAs must match to be vulnerable
-        Conditions = @(
+        Conditions     = @(
             @{ Property = 'RPCEncryptionNotRequired'; Value = $true }
         )
         
         # Issue description template
-        IssueTemplate = @(
+        IssueTemplate  = @(
             "The Certification Authority `$(CAName) does not require RPC encryption for certificate "
             "requests (IF_ENFORCEENCRYPTICERTREQUEST flag is disabled).`n`n"
             "This allows certificate requests to be submitted over unencrypted RPC/DCOM connections, "
@@ -281,7 +281,7 @@
         )
         
         # Remediation script template
-        FixTemplate = @(
+        FixTemplate    = @(
             "# Enable IF_ENFORCEENCRYPTICERTREQUEST on the CA"
             "certutil -config `$(CAFullName) -setreg CA\\InterfaceFlags +IF_ENFORCEENCRYPTICERTREQUEST"
             "# Restart Certificate Services"
@@ -297,8 +297,8 @@
         )
     }
 
-    ESC7a = @{
-        Technique = 'ESC7a'
+    ESC7a  = @{
+        Technique       = 'ESC7a'
         
         # Properties to check for problematic CA administrators
         AdminProperties = @(
@@ -307,7 +307,7 @@
         )
         
         # Issue description template for CA Administrators
-        IssueTemplate = @(
+        IssueTemplate   = @(
             "`$(IdentityReference) has CA Administrator rights on `$(CAName).`n`n"
             "CA Administrators can manage CA configuration, approve certificate requests, and modify "
             "security settings. This principal should not have these rights.`n`n"
@@ -321,7 +321,7 @@
         )
         
         # Remediation requires manual review
-        FixTemplate = @(
+        FixTemplate     = @(
             "# Remove CA Administrator role"
             "certutil -config `$(CAFullName) -delreg ca\\Security\\Roles\\Administrators\\`$(IdentityReference)"
             "# Restart Certificate Services"
@@ -330,7 +330,7 @@
         )
         
         # Revert template
-        RevertTemplate = @(
+        RevertTemplate  = @(
             "# Re-add CA Administrator role"
             "certutil -config `$(CAFullName) -setreg ca\\Security\\Roles\\Administrators\\`$(IdentityReference) +ManageCA"
             "# Restart Certificate Services"
@@ -338,8 +338,8 @@
         )
     }
 
-    ESC7m = @{
-        Technique = 'ESC7m'
+    ESC7m  = @{
+        Technique       = 'ESC7m'
         
         # Properties to check for problematic certificate managers
         AdminProperties = @(
@@ -348,7 +348,7 @@
         )
         
         # Issue description template for Certificate Managers
-        IssueTemplate = @(
+        IssueTemplate   = @(
             "`$(IdentityReference) has Certificate Manager rights on `$(CAName).`n`n"
             "Certificate Managers can approve/deny certificate requests and revoke certificates. "
             "This principal should not have these rights.`n`n"
@@ -359,7 +359,7 @@
         )
         
         # Remediation requires manual review
-        FixTemplate = @(
+        FixTemplate     = @(
             "# Remove Certificate Manager role"
             "certutil -config `$(CAFullName) -delreg ca\\Security\\Roles\\Officers\\`$(IdentityReference)"
             "# Restart Certificate Services"
@@ -368,7 +368,7 @@
         )
         
         # Revert template
-        RevertTemplate = @(
+        RevertTemplate  = @(
             "# Re-add Certificate Manager role"
             "certutil -config `$(CAFullName) -setreg ca\\Security\\Roles\\Officers\\`$(IdentityReference) +ManageCertificates"
             "# Restart Certificate Services"
@@ -376,16 +376,16 @@
         )
     }
 
-    ESC16 = @{
-        Technique = 'ESC16'
+    ESC16  = @{
+        Technique      = 'ESC16'
         
         # Conditions that CAs must match to be vulnerable
-        Conditions = @(
+        Conditions     = @(
             @{ Property = 'SecurityExtensionDisabled'; Value = $true }
         )
         
         # Issue description template
-        IssueTemplate = @(
+        IssueTemplate  = @(
             "The Certification Authority `$(CAName) has disabled the Certificate Template Information extension (OID: 1.3.6.1.4.1.311.25.2).`n`n"
             "This extension contains critical information about the certificate template used to issue certificates. "
             "Disabling this extension prevents proper certificate template validation and can allow certificate "
@@ -400,7 +400,7 @@
         )
         
         # Remediation script template
-        FixTemplate = @(
+        FixTemplate    = @(
             "# Re-enable disabled extensions on the CA"
             "# Remove the extension OIDs from the DisableExtensionList registry value"
             "certutil -config `$(CAFullName) -delreg policy\\DisableExtensionList"
@@ -421,11 +421,11 @@
     # ============================================================================
     # ESC4a: Vulnerable Certificate Template Access Control (ACE-based)
     # ============================================================================
-    ESC4a = @{
-        Technique = 'ESC4a'
+    ESC4a  = @{
+        Technique        = 'ESC4a'
         
         # No conditions - all templates are checked for dangerous ACEs
-        Conditions = @()
+        Conditions       = @()
         
         # Which editor properties to check (pre-calculated by Set-* functions)
         EditorProperties = @(
@@ -434,7 +434,7 @@
         )
         
         # Issue description template
-        IssueTemplate = @(
+        IssueTemplate    = @(
             "`$(IdentityReference) has `$(ActiveDirectoryRights) rights on the '`$(TemplateName)' certificate template.`n`n"
             "This permission allows the principal to modify template settings without proper authorization. "
             "Per Microsoft security best practices, only highly privileged administrators (Domain Admins, "
@@ -450,7 +450,7 @@
         )
         
         # Remediation script template
-        FixTemplate = @(
+        FixTemplate      = @(
             "# Remove write permissions for `$(IdentityReference)"
             "`$Template = [ADSI]'LDAP://`$(DistinguishedName)'"
             "`$Identity = New-Object System.Security.Principal.NTAccount('`$(IdentityReference)')"
@@ -463,7 +463,7 @@
         )
         
         # Revert script template
-        RevertTemplate = @(
+        RevertTemplate   = @(
             "# Manual restoration required - review original ACL and restore appropriate permissions"
             "# Get-ADObject '`$(DistinguishedName)' -Properties nTSecurityDescriptor"
         )
@@ -472,11 +472,11 @@
     # ============================================================================
     # ESC4o: Vulnerable Certificate Template Ownership
     # ============================================================================
-    ESC4o = @{
-        Technique = 'ESC4o'
+    ESC4o  = @{
+        Technique      = 'ESC4o'
         
         # Conditions to identify vulnerable templates
-        Conditions = @(
+        Conditions     = @(
             @{
                 Property = 'HasNonStandardOwner'
                 Operator = 'eq'
@@ -485,7 +485,7 @@
         )
         
         # Issue description template
-        IssueTemplate = @(
+        IssueTemplate  = @(
             "The certificate template '`$(TemplateName)' is owned by `$(Owner), which is not a standard owner.`n`n"
             "Per Microsoft security best practices, certificate templates should be owned exclusively "
             "by the forest's Enterprise Admins group. Templates with non-standard owners can be exploited "
@@ -501,7 +501,7 @@
         )
         
         # Remediation script template
-        FixTemplate = @(
+        FixTemplate    = @(
             "# Transfer ownership to Enterprise Admins"
             "`$Template = [ADSI]'LDAP://`$(DistinguishedName)'"
             "`$Owner = New-Object System.Security.Principal.NTAccount('Enterprise Admins')"
@@ -524,11 +524,11 @@
     # ============================================================================
     # ESC5a: Vulnerable PKI Object Access Control
     # ============================================================================
-    ESC5a = @{
-        Technique = 'ESC5a'
+    ESC5a  = @{
+        Technique        = 'ESC5a'
         
         # Conditions are empty since we check editor properties directly
-        Conditions = @()
+        Conditions       = @()
         
         # Which editor properties to check (pre-calculated by Set-* functions)
         EditorProperties = @(
@@ -537,7 +537,7 @@
         )
         
         # Issue description template
-        IssueTemplate = @(
+        IssueTemplate    = @(
             "`$(IdentityReference) has `$(ActiveDirectoryRights) rights on the '`$(ObjectName)' PKI object.`n`n"
             "This permission allows the principal to modify PKI infrastructure settings without proper authorization. "
             "Per Microsoft security best practices, only highly privileged administrators (Domain Admins, "
@@ -554,7 +554,7 @@
         )
         
         # Remediation script template
-        FixTemplate = @(
+        FixTemplate      = @(
             "# Remove write permissions for `$(IdentityReference)"
             "`$Object = [ADSI]'LDAP://`$(DistinguishedName)'"
             "`$Identity = New-Object System.Security.Principal.NTAccount('`$(IdentityReference)')"
@@ -567,17 +567,17 @@
         )
         
         # Revert script template
-        RevertTemplate = @(
+        RevertTemplate   = @(
             "# Manual restoration required - review original ACL and restore appropriate permissions"
             "# Get-ADObject '`$(DistinguishedName)' -Properties nTSecurityDescriptor"
         )
     }
 
-    ESC5o = @{
-        Technique = 'ESC5o'
+    ESC5o  = @{
+        Technique      = 'ESC5o'
         
         # Conditions to identify vulnerable objects
-        Conditions = @(
+        Conditions     = @(
             @{
                 Property = 'HasNonStandardOwner'
                 Operator = 'eq'
@@ -586,7 +586,7 @@
         )
         
         # Issue description template
-        IssueTemplate = @(
+        IssueTemplate  = @(
             "The `$(ObjectType) '`$(ObjectName)' is owned by `$(Owner), which is not a standard owner.`n`n"
             "Per Microsoft security best practices, AD CS infrastructure objects should be owned exclusively "
             "by the forest's Enterprise Admins group. Objects with non-standard owners may be vulnerable to "
@@ -603,7 +603,7 @@
         )
         
         # Remediation script template
-        FixTemplate = @(
+        FixTemplate    = @(
             "# Transfer ownership to Enterprise Admins"
             "`$Object = [ADSI]'LDAP://`$(DistinguishedName)'"
             "`$Owner = New-Object System.Security.Principal.NTAccount('Enterprise Admins')"

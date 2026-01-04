@@ -83,7 +83,7 @@ function Set-AuthenticationEKUExist {
     }
 
     process {
-        $AdcsObject | Where-Object SchemaClassName -eq pKICertificateTemplate | ForEach-Object {
+        $AdcsObject | Where-Object SchemaClassName -EQ pKICertificateTemplate | ForEach-Object {
             try {
                 $objectName = if ($_.Properties.displayName.Count -gt 0) {
                     $_.Properties.displayName[0] 

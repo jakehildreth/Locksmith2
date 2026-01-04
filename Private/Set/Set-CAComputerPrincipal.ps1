@@ -46,7 +46,7 @@ function Set-CAComputerPrincipal {
     }
 
     process {
-        $AdcsObject | Where-Object SchemaClassName -eq pKIEnrollmentService | ForEach-Object {
+        $AdcsObject | Where-Object SchemaClassName -EQ pKIEnrollmentService | ForEach-Object {
             try {
                 # Extract CA name - check both DirectoryEntry Properties and direct property
                 $caName = if ($_.Properties -and $_.Properties.Contains('cn')) {
@@ -96,7 +96,7 @@ function Set-CAComputerPrincipal {
                                 
                                 # Resolve and cache the computer principal for later security auditing
                                 # This populates PrincipalStore so subsequent nTSecurityDescriptor audits don't require LDAP queries
-                                $principal = Resolve-Principal -IdentityReference $sid
+                                Resolve-Principal -IdentityReference $sid | Out-Null
                                 Write-Verbose "  Cached computer principal in PrincipalStore: $computerSID"
                                 
                             } else {

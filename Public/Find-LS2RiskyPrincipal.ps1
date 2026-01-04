@@ -135,7 +135,7 @@ function Find-LS2RiskyPrincipal {
         # Filter by technique if specified
         if ($Technique) {
             Write-Verbose "Filtering to technique: $Technique"
-            $expandedIssues = $expandedIssues | Where-Object Technique -eq $Technique
+            $expandedIssues = $expandedIssues | Where-Object Technique -EQ $Technique
             Write-Verbose "Filtered to $($expandedIssues.Count) issue(s) for $Technique"
         }
         
@@ -145,31 +145,31 @@ function Find-LS2RiskyPrincipal {
         
         # Group by principal and create risk report
         $riskReport = $principalIssues |
-            Group-Object IdentityReference |
-            ForEach-Object {
-                $principalName = $_.Name
-                $issues = $_.Group
-                $issueCount = $issues.Count
+        Group-Object IdentityReference |
+        ForEach-Object {
+            $principalName = $_.Name
+            $issues = $_.Group
+            $issueCount = $issues.Count
                 
-                # Create hashtable of issues keyed by GetIdentifier()
-                $issueHashtable = @{}
-                foreach ($issue in $issues) {
-                    $identifier = $issue.GetIdentifier()
-                    if (-not $issueHashtable.ContainsKey($identifier)) {
-                        $issueHashtable[$identifier] = $issue
-                    }
+            # Create hashtable of issues keyed by GetIdentifier()
+            $issueHashtable = @{}
+            foreach ($issue in $issues) {
+                $identifier = $issue.GetIdentifier()
+                if (-not $issueHashtable.ContainsKey($identifier)) {
+                    $issueHashtable[$identifier] = $issue
                 }
+            }
                 
-                [PSCustomObject]@{
-                    Principal         = $principalName
-                    IssueCount        = $issueCount
-                    Techniques        = @($issues.Technique | Select-Object -Unique | Sort-Object)
-                    VulnerableObjects = @($issues.Name | Select-Object -Unique | Sort-Object)
-                    Issues            = $issueHashtable
-                }
-            } |
-            Where-Object IssueCount -ge $MinimumIssueCount |
-            Sort-Object IssueCount -Descending
+            [PSCustomObject]@{
+                Principal         = $principalName
+                IssueCount        = $issueCount
+                Techniques        = @($issues.Technique | Select-Object -Unique | Sort-Object)
+                VulnerableObjects = @($issues.Name | Select-Object -Unique | Sort-Object)
+                Issues            = $issueHashtable
+            }
+        } |
+        Where-Object IssueCount -GE $MinimumIssueCount |
+        Sort-Object IssueCount -Descending
         
         Write-Verbose "Risk report generated for $($riskReport.Count) principal(s)"
         

@@ -126,10 +126,10 @@ function Test-IsDangerousAce {
             if ($currentAce.AccessControlType -ne 'Allow') {
                 Write-Verbose "  Deny ACE - not dangerous (protective)"
                 [PSCustomObject]@{
-                    IsDangerous = $false
+                    IsDangerous       = $false
                     MatchedPermission = $null
-                    Description = $null
-                    Ace = $currentAce
+                    Description       = $null
+                    Ace               = $currentAce
                 }
                 return
             }
@@ -164,18 +164,18 @@ function Test-IsDangerousAce {
             # Return result
             if ($matchedPermission) {
                 [PSCustomObject]@{
-                    IsDangerous = $true
+                    IsDangerous       = $true
                     MatchedPermission = $matchedPermission.Name
-                    Description = $matchedPermission.Description
-                    Ace = $currentAce
+                    Description       = $matchedPermission.Description
+                    Ace               = $currentAce
                 }
             } else {
                 Write-Verbose "  Not dangerous - no matching dangerous permission found for objectClass '$ObjectClass'"
                 [PSCustomObject]@{
-                    IsDangerous = $false
+                    IsDangerous       = $false
                     MatchedPermission = $null
-                    Description = $null
-                    Ace = $currentAce
+                    Description       = $null
+                    Ace               = $currentAce
                 }
             }
         }

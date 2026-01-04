@@ -61,7 +61,7 @@ function Set-CAAuditFilter {
     }
 
     process {
-        $AdcsObject | Where-Object SchemaClassName -eq pKIEnrollmentService | ForEach-Object {
+        $AdcsObject | Where-Object SchemaClassName -EQ pKIEnrollmentService | ForEach-Object {
             try {
                 # Extract CA name for logging
                 $caName = if ($_.Properties -and $_.Properties.Contains('cn')) {
@@ -110,12 +110,10 @@ function Set-CAAuditFilter {
                     } else {
                         Write-Verbose "  No AuditFilter returned from Get-PCAuditFilter"
                     }
-                }
-                catch {
+                } catch {
                     Write-Verbose "  Failed to query AuditFilter for '$caFullName': $($_.Exception.Message)"
                 }
-            }
-            catch {
+            } catch {
                 Write-Warning "Error processing CA: $($_.Exception.Message)"
             }
             

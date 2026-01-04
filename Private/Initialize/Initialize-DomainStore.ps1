@@ -99,9 +99,9 @@ function Initialize-DomainStore {
                             
                             $domainObject = [PSCustomObject]@{
                                 distinguishedName = $domainDN
-                                nETBIOSName = if ($partition.Properties['nETBIOSName'].Count -gt 0) { $partition.Properties['nETBIOSName'][0] } else { $null }
-                                dnsRoot = if ($partition.Properties['dnsRoot'].Count -gt 0) { $partition.Properties['dnsRoot'][0] } else { $null }
-                                objectSid = $domainSid
+                                nETBIOSName       = if ($partition.Properties['nETBIOSName'].Count -gt 0) { $partition.Properties['nETBIOSName'][0] } else { $null }
+                                dnsRoot           = if ($partition.Properties['dnsRoot'].Count -gt 0) { $partition.Properties['dnsRoot'][0] } else { $null }
+                                objectSid         = $domainSid
                             }
                             
                             $script:DomainStore[$domainDN] = $domainObject

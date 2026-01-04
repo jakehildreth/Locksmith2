@@ -90,11 +90,9 @@ function Convert-IdentityReferenceToSid {
             # Parse the NTAccount name
             $ntAccountString = $IdentityReference.Value
             if ($ntAccountString -match '^(.+?)\\(.+)$') {
-                $domain = $Matches[1]
                 $samAccountName = $Matches[2]
             } else {
                 $samAccountName = $ntAccountString
-                $domain = $null
             }
 
             # First try Global Catalog search for forest-wide lookup

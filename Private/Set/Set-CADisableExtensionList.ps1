@@ -42,7 +42,7 @@ function Set-CADisableExtensionList {
     }
 
     process {
-        $AdcsObject | Where-Object SchemaClassName -eq pKIEnrollmentService | ForEach-Object {
+        $AdcsObject | Where-Object SchemaClassName -EQ pKIEnrollmentService | ForEach-Object {
             try {
                 # Extract CA name for logging
                 $caName = if ($_.Properties -and $_.Properties.Contains('cn')) {

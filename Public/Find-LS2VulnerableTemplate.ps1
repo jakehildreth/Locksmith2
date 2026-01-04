@@ -110,20 +110,20 @@ function Find-LS2VulnerableTemplate {
     $allTemplates = $script:AdcsObjectStore.Values | Where-Object { $_.IsCertificateTemplate() }
     
     $vulnerableTemplates = @(foreach ($template in $allTemplates) {
-        $matchesAllConditions = $true
+            $matchesAllConditions = $true
         
-        foreach ($condition in $config.Conditions) {
-            $propertyValue = $template.($condition.Property)
-            if ($propertyValue -ne $condition.Value) {
-                $matchesAllConditions = $false
-                break
+            foreach ($condition in $config.Conditions) {
+                $propertyValue = $template.($condition.Property)
+                if ($propertyValue -ne $condition.Value) {
+                    $matchesAllConditions = $false
+                    break
+                }
             }
-        }
         
-        if ($matchesAllConditions) {
-            $template
-        }
-    })
+            if ($matchesAllConditions) {
+                $template
+            }
+        })
 
     Write-Verbose "Found $($vulnerableTemplates.Count) template(s) with $technique-vulnerable configuration"
 
@@ -279,18 +279,18 @@ function Find-LS2VulnerableTemplate {
 
             # Create issue object
             $issue = [LS2Issue]::new(@{
-                Technique          = $Technique
-                Forest             = $forestName
-                Name               = $templateName
-                DistinguishedName  = $template.distinguishedName
-                Owner              = $owner
-                HasNonStandardOwner = $true
-                Enabled            = $template.Enabled
-                EnabledOn          = $template.EnabledOn
-                Issue              = $issueText
-                Fix                = $fixScript
-                Revert             = $revertScript
-            })
+                    Technique           = $Technique
+                    Forest              = $forestName
+                    Name                = $templateName
+                    DistinguishedName   = $template.distinguishedName
+                    Owner               = $owner
+                    HasNonStandardOwner = $true
+                    Enabled             = $template.Enabled
+                    EnabledOn           = $template.EnabledOn
+                    Issue               = $issueText
+                    Fix                 = $fixScript
+                    Revert              = $revertScript
+                })
 
             # Store in IssueStore
             $dn = $template.distinguishedName

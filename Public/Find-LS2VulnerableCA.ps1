@@ -258,20 +258,20 @@ function Find-LS2VulnerableCA {
     # ESC6, ESC11, and ESC16 are configuration-based (no enrollee/principal iteration)
     else {
         $vulnerableCAs = @(foreach ($ca in $allCAs) {
-            $matchesAllConditions = $true
+                $matchesAllConditions = $true
             
-            foreach ($condition in $config.Conditions) {
-                $propertyValue = $ca.($condition.Property)
-                if ($propertyValue -ne $condition.Value) {
-                    $matchesAllConditions = $false
-                    break
+                foreach ($condition in $config.Conditions) {
+                    $propertyValue = $ca.($condition.Property)
+                    if ($propertyValue -ne $condition.Value) {
+                        $matchesAllConditions = $false
+                        break
+                    }
                 }
-            }
             
-            if ($matchesAllConditions) {
-                $ca
-            }
-        })
+                if ($matchesAllConditions) {
+                    $ca
+                }
+            })
 
         Write-Verbose "Found $($vulnerableCAs.Count) CA(s) with $Technique-vulnerable configuration"
 
