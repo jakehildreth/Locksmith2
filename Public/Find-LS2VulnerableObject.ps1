@@ -264,9 +264,10 @@ function Find-LS2VulnerableObject {
                     } else {
                         $issue
                     }
-                }
-            }
-        }
+                    }  # End foreach ($ace in $dangerousAces)
+                }  # End foreach ($editorSid in $editors)
+            }  # End foreach ($object in $vulnerableObjects)
+        }  # End if ($config.EditorScanEnabled)
         
         Write-Verbose "$Technique scan complete. Found $issueCount issue(s)."
         return
