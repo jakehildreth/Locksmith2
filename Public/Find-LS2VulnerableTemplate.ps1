@@ -262,6 +262,9 @@ function Find-LS2VulnerableTemplate {
 
             Write-Verbose "  Checking template: $templateName"
 
+            # Get domain/forest name from DN
+            $forestName = Get-ForestNameFromDN -DistinguishedName $template.distinguishedName
+
             # Create issue using template expansion
             $issueText = ($config.IssueTemplate -join '') `
                 -replace '\$\(TemplateName\)', $templateName `
@@ -277,7 +280,7 @@ function Find-LS2VulnerableTemplate {
             # Create issue object
             $issue = [LS2Issue]::new(@{
                 Technique          = $Technique
-                Forest             = $script:ForestContext.RootDomain
+                Forest             = $forestName
                 Name               = $templateName
                 DistinguishedName  = $template.distinguishedName
                 Owner              = $owner

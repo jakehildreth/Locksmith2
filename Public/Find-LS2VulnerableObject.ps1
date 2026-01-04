@@ -147,18 +147,31 @@ function Find-LS2VulnerableObject {
                 
                 Write-Verbose "    Found $($editors.Count) editor(s) in $editorProperty"
                 
+                # Check ObjectSecurity for ACE details
+                if (-not $object.ObjectSecurity) {
+                    Write-Verbose "    No ObjectSecurity available for object: $objectName"
+                    continue
+                }
+                
                 # Create an issue for each problematic editor
-                foreach ($editor in $editors) {
+                foreach ($editorSid in $editors) {
+                    # Find the ACE for this SID
+                    $ace = $object.ObjectSecurity.Access | Where-Object {
+                        $aceSid = ($_.IdentityReference | Convert-IdentityReferenceToSid).Value
+                        $aceSid -eq $editorSid
+                    } | Select-Object -First 1
+                    
+                    if (-not $ace) {
+                        Write-Verbose "    Could not find ACE for SID: $editorSid"
+                        continue
+                    }
+                    
+                    Write-Verbose "    VULNERABLE: $($ace.IdentityReference) ($editorSid) has write rights"
+                    
                     $issueCount++
                     
-                    # Get corresponding names property
-                    $namesProperty = $editorProperty + 'Names'
-                    $editorNames = $object.$namesProperty
-                    $editorDisplayName = if ($editorNames) {
-                        ($editorNames | Where-Object { $_ -like "*$editor*" })[0]
-                    } else {
-                        $editor
-                    }
+                    # Get domain/forest name from DN
+                    $forestName = Get-ForestNameFromDN -DistinguishedName $object.distinguishedName
                     
                     # Get object type for issue description
                     $objectType = if ($object.objectClass -contains 'container') {
@@ -173,20 +186,20 @@ function Find-LS2VulnerableObject {
                         'PKI Object'
                     }
                     
-                    # Determine what rights were granted (simplified for now)
-                    $activeDirectoryRights = 'Write/Modify'
+                    # Get actual rights from ACE
+                    $activeDirectoryRights = $ace.ActiveDirectoryRights
                     
                     # Expand issue template with variables
                     $issueText = ($config.IssueTemplate -join '') `
                         -replace '\$\(ObjectName\)', $objectName `
                         -replace '\$\(ObjectType\)', $objectType `
-                        -replace '\$\(IdentityReference\)', $editorDisplayName `
+                        -replace '\$\(IdentityReference\)', $ace.IdentityReference `
                         -replace '\$\(ActiveDirectoryRights\)', $activeDirectoryRights
                     
                     # Expand fix script template with variables
                     $fixScript = ($config.FixTemplate -join "`n") `
                         -replace '\$\(DistinguishedName\)', $object.distinguishedName `
-                        -replace '\$\(IdentityReference\)', $editor
+                        -replace '\$\(IdentityReference\)', $ace.IdentityReference
                     
                     # Expand revert script template with variables
                     $revertScript = ($config.RevertTemplate -join "`n") `
@@ -195,11 +208,11 @@ function Find-LS2VulnerableObject {
                     # Create issue object
                     $issue = [LS2Issue]::new(@{
                         Technique             = $Technique
-                        Forest                = $script:ForestContext.RootDomain
+                        Forest                = $forestName
                         Name                  = $objectName
                         DistinguishedName     = $object.distinguishedName
-                        IdentityReference     = $editorDisplayName
-                        IdentityReferenceSID  = $editor
+                        IdentityReference     = $ace.IdentityReference
+                        IdentityReferenceSID  = $editorSid
                         ActiveDirectoryRights = $activeDirectoryRights
                         Issue                 = $issueText
                         Fix                   = $fixScript
@@ -221,7 +234,6 @@ function Find-LS2VulnerableObject {
                     # Only add to store if not a duplicate
                     if (-not (Test-IssueExists -Issue $issue -DistinguishedName $object.distinguishedName -Technique $Technique)) {
                         $script:IssueStore[$object.distinguishedName][$Technique] += $issue
-                        Write-Verbose "      VULNERABLE: $editorDisplayName has write access"
                     }
                     
                     # Always output to pipeline
@@ -287,6 +299,9 @@ function Find-LS2VulnerableObject {
         
         $issueCount++
         
+        # Get domain/forest name from DN
+        $forestName = Get-ForestNameFromDN -DistinguishedName $object.distinguishedName
+        
         # Get object type for issue description
         $objectType = if ($object.objectClass -contains 'container') {
             'Container'
@@ -318,7 +333,7 @@ function Find-LS2VulnerableObject {
         # Create issue object
         $issue = [LS2Issue]::new(@{
             Technique          = $Technique
-            Forest             = $script:ForestContext.RootDomain
+            Forest             = $forestName
             Name               = $objectName
             DistinguishedName  = $object.distinguishedName
             Owner              = $owner
