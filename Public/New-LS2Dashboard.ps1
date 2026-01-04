@@ -143,9 +143,9 @@ function New-LS2Dashboard {
         @{N = 'Owner'; E = { if ($_.Owner) { $_.Owner } else { 'N/A' } } }
         @{N = 'HasNonStandardOwner'; E = { if ($null -ne $_.HasNonStandardOwner) { $_.HasNonStandardOwner } else { 'N/A' } } }
         @{N = 'Members'; E = { if ($_.MemberCount) { $_.MemberCount } else { 'N/A' } } }
-        'Issue'
-        'Fix'
-        'Revert'
+        @{N = 'Issue'; E = { if ($_.Issue) { $_.Issue -replace "`n", "`n`n" } else { 'N/A' } } }
+        @{N = 'Fix'; E = { if ($_.Fix) { $_.Fix -replace "`n", "`n`n" } else { 'N/A' } } }
+        @{N = 'Revert'; E = { if ($_.Revert) { $_.Revert -replace "`n", "`n`n" } else { 'N/A' } } }
     )
     
     $allIssuesTable = $allIssues | Select-Object $standardColumns
