@@ -63,6 +63,14 @@ function Initialize-LS2Scan {
         return $true
     }
 
+    # If Rescan is specified, clear stores to force repopulation
+    if ($Rescan) {
+        Write-Verbose "Rescan specified. Clearing AdcsObjectStore and IssueStore..."
+        $script:AdcsObjectStore = @{}
+        $script:IssueStore = @{}
+        $script:AdcsObject = $null
+    }
+
     # Check if AdcsObjectStore is populated
     if (-not $script:AdcsObjectStore -or $script:AdcsObjectStore.Count -eq 0) {
         Write-Verbose "AdcsObjectStore is empty. Setting up prerequisites..."
@@ -96,15 +104,9 @@ function Initialize-LS2Scan {
         }
     }
 
-    # If IssueStore is empty or Rescan is specified, populate with all vulnerability scans
-    if ($Rescan -or -not $script:IssueStore -or $script:IssueStore.Count -eq 0) {
-        if ($Rescan) {
-            Write-Verbose "Rescan specified. Clearing IssueStore and running fresh vulnerability scan..."
-            # Clear IssueStore for fresh scan
-            $script:IssueStore = @{}
-        } else {
-            Write-Verbose "IssueStore is empty. Running full vulnerability scan..."
-        }
+    # If IssueStore is empty, populate with all vulnerability scans
+    if (-not $script:IssueStore -or $script:IssueStore.Count -eq 0) {
+        Write-Verbose "IssueStore is empty. Running full vulnerability scan..."
         
         # Set flag to prevent recursive initialization
         $script:InitializingStores = $true
