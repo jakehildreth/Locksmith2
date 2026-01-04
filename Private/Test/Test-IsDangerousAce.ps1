@@ -146,11 +146,11 @@ function Test-IsDangerousAce {
                 }
                 
                 # For WriteProperty, also check ObjectType GUID
-                if ($dangerousAce.Rights -eq 'WriteProperty' -and $dangerousAce.ObjectType) {
-                    $objectTypeMatch = $currentAce.ObjectType.ToString() -eq $dangerousAce.ObjectType
+                if ($dangerousAce.Rights -eq 'WriteProperty' -and $dangerousAce.ObjectTypeGUID) {
+                    $objectTypeMatch = $currentAce.ObjectType.ToString() -eq $dangerousAce.ObjectTypeGUID
                     
                     if (-not $objectTypeMatch) {
-                        Write-Verbose "  Rights match ($($dangerousAce.Rights)) but ObjectType mismatch: ACE=$($currentAce.ObjectType), Expected=$($dangerousAce.ObjectType)"
+                        Write-Verbose "  Rights match ($($dangerousAce.Rights)) but ObjectType mismatch: ACE=$($currentAce.ObjectType), Expected=$($dangerousAce.ObjectTypeGUID)"
                         continue
                     }
                 }
@@ -167,6 +167,7 @@ function Test-IsDangerousAce {
                     IsDangerous       = $true
                     MatchedPermission = $matchedPermission.Name
                     Description       = $matchedPermission.Description
+                    ObjectTypeName    = $matchedPermission.ObjectTypeName
                     Ace               = $currentAce
                 }
             } else {

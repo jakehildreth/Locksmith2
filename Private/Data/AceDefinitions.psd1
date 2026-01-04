@@ -17,12 +17,13 @@ Key attack vectors by object class:
 Each entry includes:
 - Name: Descriptive name for the permission
 - Rights: ActiveDirectoryRights value to match
-- ObjectType: GUID for property-specific permissions ($null for generic rights)
+- ObjectTypeGUID: GUID for property-specific permissions ($null for generic rights)
+- ObjectTypeName: Human-readable property name (e.g., 'msPKI-Certificate-Name-Flag')
 - ApplicableToClasses: Array of objectClass/SchemaClassName values where this is dangerous
 - Description: What the permission allows and why it's dangerous
 
 .NOTES
-ObjectType GUIDs for AD CS properties:
+ObjectTypeGUID values for AD CS properties:
 
 Template properties (pKICertificateTemplate):
 - msPKI-Certificate-Name-Flag: ea1dddc4-60ff-416e-8cc0-17cee534bce7
@@ -80,7 +81,8 @@ ESC10: Weak Certificate Mapping (CertificateMappingMethods allows UPN)
         @{
             Name                = 'GenericAll'
             Rights              = 'GenericAll'
-            ObjectType          = $null
+            ObjectTypeGUID      = $null
+            ObjectTypeName      = $null
             ApplicableToClasses = @('pKICertificateTemplate', 'pKIEnrollmentService', 'certificationAuthority', 'container', 'computer')
             Description         = 'Full control over the object - can modify any setting, permissions, or ownership'
         }
@@ -88,7 +90,8 @@ ESC10: Weak Certificate Mapping (CertificateMappingMethods allows UPN)
         @{
             Name                = 'WriteDacl'
             Rights              = 'WriteDacl'
-            ObjectType          = $null
+            ObjectTypeGUID      = $null
+            ObjectTypeName      = $null
             ApplicableToClasses = @('pKICertificateTemplate', 'pKIEnrollmentService', 'certificationAuthority', 'container', 'computer')
             Description         = 'Can modify the discretionary access control list (DACL) - grants ability to give self additional permissions'
         }
@@ -96,7 +99,8 @@ ESC10: Weak Certificate Mapping (CertificateMappingMethods allows UPN)
         @{
             Name                = 'WriteOwner'
             Rights              = 'WriteOwner'
-            ObjectType          = $null
+            ObjectTypeGUID      = $null
+            ObjectTypeName      = $null
             ApplicableToClasses = @('pKICertificateTemplate', 'pKIEnrollmentService', 'certificationAuthority', 'container', 'computer')
             Description         = 'Can take ownership of the object - enables full control via ownership'
         }
@@ -108,7 +112,8 @@ ESC10: Weak Certificate Mapping (CertificateMappingMethods allows UPN)
         @{
             Name                = 'GenericWrite'
             Rights              = 'GenericWrite'
-            ObjectType          = $null
+            ObjectTypeGUID      = $null
+            ObjectTypeName      = $null
             ApplicableToClasses = @('pKICertificateTemplate', 'pKIEnrollmentService', 'certificationAuthority', 'container', 'computer')
             Description         = 'Can write to most object properties - enables modification of dangerous configuration settings'
         }
@@ -116,19 +121,21 @@ ESC10: Weak Certificate Mapping (CertificateMappingMethods allows UPN)
         @{
             Name                = 'WriteProperty-AllProperties'
             Rights              = 'WriteProperty'
-            ObjectType          = '00000000-0000-0000-0000-000000000000'
+            ObjectTypeGUID      = '00000000-0000-0000-0000-000000000000'
+            ObjectTypeName      = 'All Properties'
             ApplicableToClasses = @('pKICertificateTemplate', 'pKIEnrollmentService', 'certificationAuthority', 'container', 'computer')
             Description         = 'Can write to all properties on the object'
         }
         
         # ============================================================================
-        # Template-Specific Properties (ESC4)
+        # Template-Specific Properties (ESC4a)
         # ============================================================================
         
         @{
             Name                = 'WriteProperty-CertificateNameFlag'
             Rights              = 'WriteProperty'
-            ObjectType          = 'ea1dddc4-60ff-416e-8cc0-17cee534bce7'  # msPKI-Certificate-Name-Flag
+            ObjectTypeGUID      = 'ea1dddc4-60ff-416e-8cc0-17cee534bce7'
+            ObjectTypeName      = 'msPKI-Certificate-Name-Flag'
             ApplicableToClasses = @('pKICertificateTemplate')
             Description         = 'Can modify msPKI-Certificate-Name-Flag - enables SAN specification (ESC1 enabler)'
         }
@@ -136,7 +143,8 @@ ESC10: Weak Certificate Mapping (CertificateMappingMethods allows UPN)
         @{
             Name                = 'WriteProperty-ExtendedKeyUsage'
             Rights              = 'WriteProperty'
-            ObjectType          = 'e0fa1e69-9b45-11d0-afdd-00c04fd930c9'  # pKIExtendedKeyUsage
+            ObjectTypeGUID      = 'e0fa1e69-9b45-11d0-afdd-00c04fd930c9'
+            ObjectTypeName      = 'pKIExtendedKeyUsage'
             ApplicableToClasses = @('pKICertificateTemplate')
             Description         = 'Can modify pKIExtendedKeyUsage - enables adding authentication EKUs'
         }
@@ -144,7 +152,8 @@ ESC10: Weak Certificate Mapping (CertificateMappingMethods allows UPN)
         @{
             Name                = 'WriteProperty-CertificateApplicationPolicy'
             Rights              = 'WriteProperty'
-            ObjectType          = 'c4e311fc-4e4d-11d1-ab54-00a0c91e9b45'  # msPKI-Certificate-Application-Policy
+            ObjectTypeGUID      = 'c4e311fc-4e4d-11d1-ab54-00a0c91e9b45'
+            ObjectTypeName      = 'msPKI-Certificate-Application-Policy'
             ApplicableToClasses = @('pKICertificateTemplate')
             Description         = 'Can modify msPKI-Certificate-Application-Policy - alternative method to add authentication EKUs'
         }
@@ -152,7 +161,8 @@ ESC10: Weak Certificate Mapping (CertificateMappingMethods allows UPN)
         @{
             Name                = 'WriteProperty-EnrollmentFlag'
             Rights              = 'WriteProperty'
-            ObjectType          = '1ede2375-5dd4-4fca-b62f-75ff65cc1c21'  # msPKI-Enrollment-Flag
+            ObjectTypeGUID      = '1ede2375-5dd4-4fca-b62f-75ff65cc1c21'
+            ObjectTypeName      = 'msPKI-Enrollment-Flag'
             ApplicableToClasses = @('pKICertificateTemplate')
             Description         = 'Can modify msPKI-Enrollment-Flag - can disable manager approval requirement'
         }
@@ -160,7 +170,8 @@ ESC10: Weak Certificate Mapping (CertificateMappingMethods allows UPN)
         @{
             Name                = 'WriteProperty-RASignature'
             Rights              = 'WriteProperty'
-            ObjectType          = 'fc0a1e69-9b45-11d0-afdd-00c04fd930c9'  # msPKI-RA-Signature
+            ObjectTypeGUID      = 'fc0a1e69-9b45-11d0-afdd-00c04fd930c9'
+            ObjectTypeName      = 'msPKI-RA-Signature'
             ApplicableToClasses = @('pKICertificateTemplate')
             Description         = 'Can modify msPKI-RA-Signature - can reduce authorized signature requirements'
         }
@@ -168,7 +179,8 @@ ESC10: Weak Certificate Mapping (CertificateMappingMethods allows UPN)
         @{
             Name                = 'WriteProperty-MaxIssuingDepth'
             Rights              = 'WriteProperty'
-            ObjectType          = '281416d9-1968-4c91-b96d-6c6d8b7f3e8c'  # pKIMaxIssuingDepth
+            ObjectTypeGUID      = '281416d9-1968-4c91-b96d-6c6d8b7f3e8c'
+            ObjectTypeName      = 'pKIMaxIssuingDepth'
             ApplicableToClasses = @('pKICertificateTemplate')
             Description         = 'Can modify pKIMaxIssuingDepth - can enable subordinate CA certificate issuance (ESC5 enabler)'
         }
@@ -176,7 +188,8 @@ ESC10: Weak Certificate Mapping (CertificateMappingMethods allows UPN)
         @{
             Name                = 'WriteProperty-TemplateSchemaVersion'
             Rights              = 'WriteProperty'
-            ObjectType          = '0b9e865e-3b3b-11d2-90cc-00c04fd91ab1'  # msPKI-Template-Schema-Version
+            ObjectTypeGUID      = '0b9e865e-3b3b-11d2-90cc-00c04fd91ab1'
+            ObjectTypeName      = 'msPKI-Template-Schema-Version'
             ApplicableToClasses = @('pKICertificateTemplate')
             Description         = 'Can modify msPKI-Template-Schema-Version - can upgrade template to access additional properties'
         }
@@ -184,7 +197,8 @@ ESC10: Weak Certificate Mapping (CertificateMappingMethods allows UPN)
         @{
             Name                = 'WriteProperty-TemplateMinorRevision'
             Rights              = 'WriteProperty'
-            ObjectType          = '0b9e865f-3b3b-11d2-90cc-00c04fd91ab1'  # msPKI-Template-Minor-Revision
+            ObjectTypeGUID      = '0b9e865f-3b3b-11d2-90cc-00c04fd91ab1'
+            ObjectTypeName      = 'msPKI-Template-Minor-Revision'
             ApplicableToClasses = @('pKICertificateTemplate')
             Description         = 'Can modify msPKI-Template-Minor-Revision - can trigger template republication'
         }
@@ -196,7 +210,8 @@ ESC10: Weak Certificate Mapping (CertificateMappingMethods allows UPN)
         @{
             Name                = 'WriteProperty-certificateTemplates'
             Rights              = 'WriteProperty'
-            ObjectType          = 'd15b6a0e-94e5-4a82-8c1a-2765f5cf222f'  # certificateTemplates
+            ObjectTypeGUID      = 'd15b6a0e-94e5-4a82-8c1a-2765f5cf222f'
+            ObjectTypeName      = 'certificateTemplates'
             ApplicableToClasses = @('pKIEnrollmentService')
             Description         = 'Can modify certificateTemplates attribute - can add vulnerable templates to CA publication list or remove security-critical templates'
         }
@@ -208,7 +223,8 @@ ESC10: Weak Certificate Mapping (CertificateMappingMethods allows UPN)
         @{
             Name                = 'WriteProperty-AllowedToActOnBehalfOfOtherIdentity'
             Rights              = 'WriteProperty'
-            ObjectType          = '3f78c3e5-f79a-46bd-a0b8-9d18116ddc79'  # msDS-AllowedToActOnBehalfOfOtherIdentity
+            ObjectTypeGUID      = '3f78c3e5-f79a-46bd-a0b8-9d18116ddc79'
+            ObjectTypeName      = 'msDS-AllowedToActOnBehalfOfOtherIdentity'
             ApplicableToClasses = @('computer')
             Description         = 'Can modify msDS-AllowedToActOnBehalfOfOtherIdentity - enables resource-based constrained delegation attacks on CA host'
         }
@@ -216,7 +232,8 @@ ESC10: Weak Certificate Mapping (CertificateMappingMethods allows UPN)
         @{
             Name                = 'WriteProperty-ServicePrincipalName'
             Rights              = 'WriteProperty'
-            ObjectType          = 'f3a64788-5306-11d1-a9c5-0000f80367c1'  # servicePrincipalName
+            ObjectTypeGUID      = 'f3a64788-5306-11d1-a9c5-0000f80367c1'
+            ObjectTypeName      = 'servicePrincipalName'
             ApplicableToClasses = @('computer')
             Description         = 'Can modify servicePrincipalName - can add SPNs for Kerberoasting or impersonation attacks'
         }
@@ -224,29 +241,41 @@ ESC10: Weak Certificate Mapping (CertificateMappingMethods allows UPN)
         @{
             Name                = 'WriteProperty-UserAccountControl'
             Rights              = 'WriteProperty'
-            ObjectType          = 'bf967a68-0de6-11d0-a285-00aa003049e2'  # userAccountControl
+            ObjectTypeGUID      = 'bf967a68-0de6-11d0-a285-00aa003049e2'
+            ObjectTypeName      = 'userAccountControl'
             ApplicableToClasses = @('computer')
             Description         = 'Can modify userAccountControl - can enable TRUSTED_FOR_DELEGATION or disable account security settings'
         }
         
         # ============================================================================
-        # Container-Specific Properties (ESC5)
+        # Container-Specific Properties (ESC5a)
         # ============================================================================
         
         @{
             Name                = 'CreateChild-All'
             Rights              = 'CreateChild'
-            ObjectType          = $null
+            ObjectTypeGUID      = $null
+            ObjectTypeName      = $null
             ApplicableToClasses = @('container')
-            Description         = 'Can create child objects in the container - enables creation of new vulnerable certificate templates or CAs (ESC5)'
+            Description         = 'Can create child objects in the container - enables creation of new vulnerable certificate templates or CAs (ESC5a)'
         }
         
         @{
-            Name       = 'WriteProperty-cACertificate'
-            Rights     = 'WriteProperty'
-            ObjectType = 'bf967932-0de6-11d0-a285-00aa003049e2'
+            Name                = 'CreateChild-CertificateTemplate'
+            Rights              = 'CreateChild'
+            ObjectTypeGUID      = 'e5209ca2-3bba-11d2-90cc-00c04fd91ab1'
+            ObjectTypeName      = 'pKICertificateTemplate'
+            ApplicableToClasses = @('container', 'certificationAuthority')
+            Description         = 'Can create certificate template objects in the container - enables creation of new vulnerable certificate templates (ESC5a)'
+        }
+        
+        @{
+            Name                = 'WriteProperty-cACertificate'
+            Rights              = 'WriteProperty'
+            ObjectTypeGUID      = 'bf967932-0de6-11d0-a285-00aa003049e2'
+            ObjectTypeName      = 'cACertificate'
             ApplicableToClasses = @('certificationAuthority')
-            Description         = 'Can modify cACertificate attribute - can add rogue CA certificates to NTAuthCertificates store for enterprise trust'
+            Description         = 'Can modify cACertificate attribute - can add rogue CA certificates to NTAuthCertificates store for enterprise trust (ESC5a)'
         }
     )
 }
