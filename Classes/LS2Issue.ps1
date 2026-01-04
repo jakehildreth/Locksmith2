@@ -4,11 +4,15 @@ class LS2Issue {
     [string]$Forest                 # Forest where issue was found
     [string]$Name                   # Friendly name of vulnerable object
     [string]$DistinguishedName      # DN of vulnerable object
+    [string]$ObjectClass            # objectClass of the vulnerable object
     
     # Principal information (for permission-based issues)
     [string]$IdentityReference      # DOMAIN\User or group name
     [string]$IdentityReferenceSID   # SID of the principal
+    [string]$IdentityReferenceClass # objectClass of the principal (user, group, computer, etc.)
     [string]$ActiveDirectoryRights  # GenericAll, ExtendedRight, etc.
+    [string]$AceObjectTypeGUID      # GUID of the property for WriteProperty ACEs
+    [string]$AceObjectTypeName      # Human-readable property name (e.g., 'msPKI-Certificate-Name-Flag')
     
     # Template-specific properties
     [Nullable[bool]]$Enabled        # Whether template is enabled on any CA
@@ -36,11 +40,15 @@ class LS2Issue {
         $this.Forest = $Properties.Forest
         $this.Name = $Properties.Name
         $this.DistinguishedName = $Properties.DistinguishedName
+        $this.ObjectClass = $Properties.ObjectClass
         
         # Principal properties (may be null for non-permission issues)
         $this.IdentityReference = $Properties.IdentityReference
         $this.IdentityReferenceSID = $Properties.IdentityReferenceSID
+        $this.IdentityReferenceClass = $Properties.IdentityReferenceClass
         $this.ActiveDirectoryRights = $Properties.ActiveDirectoryRights
+        $this.AceObjectTypeGUID = $Properties.AceObjectTypeGUID
+        $this.AceObjectTypeName = $Properties.AceObjectTypeName
         
         # Template properties (may be null for CA issues)
         $this.Enabled = $Properties.Enabled
