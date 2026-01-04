@@ -212,19 +212,28 @@ function Find-LS2VulnerableCA {
                         -replace '\$\(IdentityReference\)', $identityReference `
                         -replace '\$\(RoleType\)', $roleType
 
+                    # Get principal objectClass from PrincipalStore
+                    $principalObjectClass = if ($script:PrincipalStore -and $script:PrincipalStore.ContainsKey($principalSid)) {
+                        $script:PrincipalStore[$principalSid].objectClass
+                    } else {
+                        $null
+                    }
+                    
                     # Create LS2Issue object
                     $issue = [LS2Issue]@{
-                        Technique             = $Technique
-                        Forest                = $forestName
-                        Name                  = $caName
-                        DistinguishedName     = $ca.distinguishedName
-                        CAFullName            = $caFullName
-                        IdentityReference     = $identityReference
-                        IdentityReferenceSID  = $principalSid
-                        ActiveDirectoryRights = $roleType
-                        Issue                 = $issueText
-                        Fix                   = $fixScript
-                        Revert                = $revertScript
+                        Technique              = $Technique
+                        Forest                 = $forestName
+                        Name                   = $caName
+                        DistinguishedName      = $ca.distinguishedName
+                        ObjectClass            = 'pKIEnrollmentService'
+                        CAFullName             = $caFullName
+                        IdentityReference      = $identityReference
+                        IdentityReferenceSID   = $principalSid
+                        IdentityReferenceClass = $principalObjectClass
+                        ActiveDirectoryRights  = $roleType
+                        Issue                  = $issueText
+                        Fix                    = $fixScript
+                        Revert                 = $revertScript
                     }
 
                     # Initialize IssueStore structure if needed
@@ -330,6 +339,7 @@ function Find-LS2VulnerableCA {
                 Forest            = $forestName
                 Name              = $caName
                 DistinguishedName = $ca.distinguishedName
+                ObjectClass       = 'pKIEnrollmentService'
                 CAFullName        = $caFullName
                 Issue             = $issueText
                 Fix               = $fixScript
