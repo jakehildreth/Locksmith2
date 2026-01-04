@@ -43,7 +43,7 @@ Computer properties (computer):
 - userAccountControl: bf967a68-0de6-11d0-a285-00aa003049e2
 
 Container properties (container, certificationAuthority):
-- cACertificate: 963d2740-48be-11d1-a9c3-0000f80367c1
+- cACertificate: bf967932-0de6-11d0-a285-00aa003049e2
 
 Universal:
 - All properties: 00000000-0000-0000-0000-000000000000
@@ -122,7 +122,7 @@ ESC10: Weak Certificate Mapping (CertificateMappingMethods allows UPN)
         }
         
         # ============================================================================
-        # Template-Specific Properties (ESC1, ESC4)
+        # Template-Specific Properties (ESC4)
         # ============================================================================
         
         @{
@@ -190,7 +190,7 @@ ESC10: Weak Certificate Mapping (CertificateMappingMethods allows UPN)
         }
         
         # ============================================================================
-        # CA-Specific Properties (ESC7)
+        # CA-Specific Properties (ESC5a)
         # ============================================================================
         
         @{
@@ -202,7 +202,7 @@ ESC10: Weak Certificate Mapping (CertificateMappingMethods allows UPN)
         }
         
         # ============================================================================
-        # Computer-Specific Properties (ESC9, ESC10)
+        # Computer-Specific Properties (ESC5a)
         # ============================================================================
         
         @{
@@ -237,15 +237,15 @@ ESC10: Weak Certificate Mapping (CertificateMappingMethods allows UPN)
             Name                = 'CreateChild-All'
             Rights              = 'CreateChild'
             ObjectType          = $null
-            ApplicableToClasses = @('container', 'certificationAuthority')
+            ApplicableToClasses = @('container')
             Description         = 'Can create child objects in the container - enables creation of new vulnerable certificate templates or CAs (ESC5)'
         }
         
         @{
-            Name                = 'WriteProperty-cACertificate'
-            Rights              = 'WriteProperty'
-            ObjectType          = '963d2740-48be-11d1-a9c3-0000f80367c1'  # cACertificate
-            ApplicableToClasses = @('certificationAuthority', 'container')
+            Name       = 'WriteProperty-cACertificate'
+            Rights     = 'WriteProperty'
+            ObjectType = 'bf967932-0de6-11d0-a285-00aa003049e2'
+            ApplicableToClasses = @('certificationAuthority')
             Description         = 'Can modify cACertificate attribute - can add rogue CA certificates to NTAuthCertificates store for enterprise trust'
         }
     )

@@ -155,20 +155,42 @@ function Find-LS2VulnerableObject {
                 
                 # Create an issue for each problematic editor
                 foreach ($editorSid in $editors) {
-                    # Find the ACE for this SID
-                    $ace = $object.ObjectSecurity.Access | Where-Object {
-                        $aceSid = ($_.IdentityReference | Convert-IdentityReferenceToSid).Value
-                        $aceSid -eq $editorSid
-                    } | Select-Object -First 1
+                    # Get object class for ACE testing
+                    $objectClass = if ($object.SchemaClassName) {
+                        $object.SchemaClassName
+                    } elseif ($object.objectClass -and $object.objectClass.Count -gt 0) {
+                        $object.objectClass[$object.objectClass.Count - 1]
+                    } else {
+                        $null
+                    }
                     
-                    if (-not $ace) {
-                        Write-Verbose "    Could not find ACE for SID: $editorSid"
+                    # Find ALL ACEs for this SID that have dangerous rights
+                    # (there may be multiple ACEs for the same principal with different rights/properties)
+                    $dangerousAces = $object.ObjectSecurity.Access | Where-Object {
+                        $aceSid = ($_.IdentityReference | Convert-IdentityReferenceToSid).Value
+                        if ($aceSid -ne $editorSid) { return $false }
+                        
+                        # Check if this ACE grants dangerous permissions
+                        $isDangerousAce = if ($objectClass) {
+                            $_ | Test-IsDangerousAce -ObjectClass $objectClass
+                        } else {
+                            $_ | Test-IsDangerousAce
+                        }
+                        return $isDangerousAce.IsDangerous
+                    }
+                    
+                    if (-not $dangerousAces -or $dangerousAces.Count -eq 0) {
+                        Write-Verbose "    Could not find dangerous ACE for SID: $editorSid"
                         continue
                     }
                     
-                    Write-Verbose "    VULNERABLE: $($ace.IdentityReference) ($editorSid) has write rights"
+                    Write-Verbose "    VULNERABLE: Found $($dangerousAces.Count) dangerous ACE(s) for $editorSid"
                     
-                    $issueCount++
+                    # Create an issue for each dangerous ACE
+                    foreach ($ace in $dangerousAces) {
+                        Write-Verbose "      ACE: $($ace.IdentityReference) has $($ace.ActiveDirectoryRights)"
+                        
+                        $issueCount++
                     
                     # Get domain/forest name from DN
                     $forestName = Get-ForestNameFromDN -DistinguishedName $object.distinguishedName
