@@ -23,14 +23,16 @@ Locksmith 2 represents the next generation in the Locksmith line of open-source 
 
 ## Features
 
-- [x] Scan certificate templates (ESC1, ESC2, ESC3, ESC4a (ACE), ESC4o (Ownership), ESC9)
-- [x] Audit certification authorities (ESC6, ESC7a (CA Administrator), ESC7m (Certificate Manager), ESC11, ESC16)
-- [x] Check PKI infrastructure objects (ESC5a (ACE), ESC5o (Ownership)
+- [x] Scan certificate templates (ESC1, ESC2, ESC3c1, ESC3c2, ESC4a, ESC4o, ESC9)
+- [x] Audit certification authorities (ESC6, ESC7a, ESC7m, ESC11, ESC16)
+- [x] Check PKI infrastructure objects (ESC5a, ESC5o)
 - [x] Generate PowerShell remediation scripts
-- [ ] Generate PowerShell scripts to revert remediations
-- [x] Support for non-domain-joined systems - excluding ESC6,7a/m, 11, 16)
-- [x] Object output
-- [x] HTML/CSV/PDF/Excel output 
+- [x] Generate PowerShell scripts to revert remediations
+- [x] Support for non-domain-joined systems (excluding ESC6, ESC7a/m, ESC11, ESC16)
+- [x] Object output (LS2Issue objects)
+- [x] Interactive HTML dashboard with PSWriteHTML
+- [x] Principal-centric risk analysis (Find-LS2RiskyPrincipal)
+- [x] Group membership expansion for vulnerability attribution
 - [ ] Interactive TUI for guided remediation
 
 ## Installation
@@ -58,11 +60,24 @@ Invoke-Locksmith2
 $cred = Get-Credential
 Invoke-Locksmith2 -Forest 'contoso.com' -Credential $cred
 
+# Display results in table format (Mode 0) or list format (Mode 1)
+Invoke-Locksmith2 -Mode 0
+Invoke-Locksmith2 -Mode 1
+
+# Expand group memberships into individual per-principal issues
+Invoke-Locksmith2 -ExpandGroups
+
 # Targeted scanning for specific techniques
 Find-LS2VulnerableTemplate -Technique ESC1
 Find-LS2VulnerableCA -Technique ESC6
 
-# Inspect results
+# Analyze principal-centric risk
+Find-LS2RiskyPrincipal -Top 10
+
+# Generate interactive HTML dashboard
+New-LS2Dashboard -Show
+
+# Inspect internal stores
 $stores = Get-LS2Stores
 $stores.IssueStore['ESC1']
 ```
@@ -71,15 +86,19 @@ $stores.IssueStore['ESC1']
 
 | Technique | Description | Target Objects |
 |-----------|-------------|----------------|
-| **ESC1** | Misconfigured Certificate Templates | Templates |
-| **ESC2** | Certificate SubCA Abuse | Templates |
-| **ESC3** | Enrollment Agent Restrictions | Templates |
-| **ESC4** | Vulnerable Access Control | Templates |
-| **ESC5** | Vulnerable PKI Object Access Control | Infrastructure Objects |
+| **ESC1** | Misconfigured Certificate Templates (SAN abuse) | Templates |
+| **ESC2** | Certificate SubCA/Any Purpose EKU Abuse | Templates |
+| **ESC3c1** | Enrollment Agent Certificate Request | Templates |
+| **ESC3c2** | Enrollment Agent Target Template | Templates |
+| **ESC4a** | Vulnerable Template ACEs | Templates |
+| **ESC4o** | Vulnerable Template Ownership | Templates |
+| **ESC5a** | Vulnerable PKI Object ACEs | Infrastructure Objects |
+| **ESC5o** | Vulnerable PKI Object Ownership | Infrastructure Objects |
 | **ESC6** | EDITF_ATTRIBUTESUBJECTALTNAME2 Enabled | CAs |
-| **ESC7** | Vulnerable CA Administrator/Manager Roles | CAs |
-| **ESC9** | Weak Certificate Mappings | Templates |
-| **ESC11** | Missing RPC Encryption | CAs |
+| **ESC7a** | Vulnerable CA Administrator Roles | CAs |
+| **ESC7m** | Vulnerable Certificate Manager Roles | CAs |
+| **ESC9** | Weak Certificate Mappings (CT_FLAG_NO_SECURITY_EXTENSION) | Templates |
+| **ESC11** | Missing RPC Encryption Requirement | CAs |
 | **ESC16** | Disabled CRL/AIA Security Extensions | CAs |
 
 For detailed information on ESC techniques, see [Certified Pre-Owned](https://posts.specterops.io/certified-pre-owned-d95910965cd2) by SpecterOps.
@@ -94,15 +113,26 @@ Performs comprehensive AD CS security audit scanning for all known ESC vulnerabi
 
 ```powershell
 Invoke-Locksmith2 [-Forest <String>] [-Credential <PSCredential>] 
+                  [-Mode <0|1>] [-ExpandGroups] [-Rescan]
                   [-SkipVersionCheck] [-SkipPowerShellCheck] [-SkipForestCheck]
 ```
+
+**Parameters:**
+- `-Forest`: Target forest/domain/domain controller FQDN
+- `-Credential`: PSCredential for authentication (NTAccount format: DOMAIN\user)
+- `-Mode`: Output mode (0 = table format, 1 = list format with fix scripts). Omit to return objects
+- `-ExpandGroups`: Expands group issues into individual per-member issues
+- `-Rescan`: Forces fresh scan even if IssueStore is populated
+
+Returns: LS2Issue objects (when Mode not specified), or displays formatted console output
 
 #### `Find-LS2VulnerableTemplate`
 
 Scans certificate templates for specific ESC vulnerabilities.
 
 ```powershell
-Find-LS2VulnerableTemplate -Technique <String>
+Find-LS2VulnerableTemplate [-Technique <String>] [-Forest <String>] 
+                           [-Credential <PSCredential>] [-ExpandGroups] [-Rescan]
 # Supported: ESC1, ESC2, ESC3c1, ESC3c2, ESC4a, ESC4o, ESC9
 ```
 
@@ -113,7 +143,8 @@ Returns: LS2Issue objects for programmatic use
 Scans certification authorities for configuration issues and dangerous role assignments.
 
 ```powershell
-Find-LS2VulnerableCA -Technique <String>
+Find-LS2VulnerableCA [-Technique <String>] [-Forest <String>] 
+                     [-Credential <PSCredential>] [-ExpandGroups] [-Rescan]
 # Supported: ESC6, ESC7a, ESC7m, ESC11, ESC16
 ```
 
@@ -124,11 +155,44 @@ Returns: LS2Issue objects for programmatic use
 Scans PKI infrastructure objects (containers, computer accounts) for security issues.
 
 ```powershell
-Find-LS2VulnerableObject -Technique <String>
+Find-LS2VulnerableObject [-Technique <String>] [-Forest <String>] 
+                         [-Credential <PSCredential>] [-ExpandGroups] [-Rescan]
 # Supported: ESC5a, ESC5o
 ```
 
 Returns: LS2Issue objects for programmatic use
+
+#### `Find-LS2RiskyPrincipal`
+
+Analyzes principal-centric risk by aggregating vulnerabilities each principal can exploit.
+
+```powershell
+Find-LS2RiskyPrincipal [-Technique <String>] [-MinimumIssueCount <Int>] 
+                       [-Top <Int>] [-Rescan]
+```
+
+**Parameters:**
+- `-Technique`: Filter to specific ESC technique
+- `-MinimumIssueCount`: Only return principals with at least N exploitable issues (default: 1)
+- `-Top`: Return only top N principals with highest risk exposure
+
+Returns: PSCustomObject with Principal, IssueCount, Techniques, VulnerableObjects, and Issues properties
+
+#### `New-LS2Dashboard`
+
+Generates an interactive HTML dashboard for scan results.
+
+```powershell
+New-LS2Dashboard [-FilePath <String>] [-Show] [-ExpandGroups] [-Online]
+```
+
+**Parameters:**
+- `-FilePath`: Output path (default: $env:TEMP\Locksmith2-Dashboard.html)
+- `-Show`: Opens dashboard in default browser after generation
+- `-ExpandGroups`: Expands group principals into individual member issues
+- `-Online`: Uses CDN resources for smaller file size (requires internet to view)
+
+Requires: PSWriteHTML module (`Install-Module PSWriteHTML`)
 
 #### `Get-LS2Stores`
 
@@ -143,6 +207,7 @@ Returns:
 - **AdcsObjectStore**: AD CS objects with security properties
 - **DomainStore**: Domain information
 - **IssueStore**: Discovered vulnerabilities by technique
+- **Forest**: Target forest name
 - **SafePrincipals**: Acceptable high-privilege SIDs
 - **DangerousPrincipals**: Risky broad-access SIDs
 - **StandardOwners**: Acceptable owner SIDs for AD CS objects
@@ -152,7 +217,7 @@ Returns:
 Sets the target forest for scanning. Useful for running multiple scans or using Find-LS2Vulnerable* functions independently.
 
 ```powershell
-Set-LS2Forest -Forest <String>
+Set-LS2Forest [-Forest <String>]
 ```
 
 #### `Set-LS2Credential`
@@ -160,15 +225,17 @@ Set-LS2Forest -Forest <String>
 Sets credentials for AD queries. Useful for running multiple scans or using Find-LS2Vulnerable* functions independently.
 
 ```powershell
-Set-LS2Credential -Credential <PSCredential>
+Set-LS2Credential [-Credential <PSCredential>]
 ```
 
 ## Requirements
 
-- **PowerShell**: 5.1 or higher (Windows PowerShell)
+- **PowerShell**: 5.1 or higher (Windows PowerShell or PowerShell Core)
 - **Permissions**: Read access to Active Directory Configuration partition
 - **Network**: Connectivity to domain controller LDAP/GC ports (389, 3268)
 - **Credentials**: Domain user or computer account
+- **Required Module**: PSCertutil (installed automatically from PSGallery)
+- **Optional Module**: PSWriteHTML (for HTML dashboard generation)
 
 ## Contributing
 
@@ -180,12 +247,6 @@ Locksmith 2 is "Open Source, acknowledged contribution", this means that any con
 5. Write clear commit messages using conventional commits
 6. Submit a pull request
 7. Request a review from @jakehildreth
-
-## Credits
-
-**Author**: Jake Hildreth ([@jakehildreth](https://github.com/jakehildreth))  
-**Website**: [locksmith.ad](https://locksmith.ad) | [jakehildreth.com](https://jakehildreth.com)  
-**License**: MIT
 
 ### Acknowledgments
 
