@@ -4,7 +4,6 @@
 > Find and fix Active Directory Certificate Services (AD CS) security misconfigurations
 
 [![PowerShell Gallery](https://img.shields.io/powershellgallery/v/Locksmith2.svg)](https://www.powershellgallery.com/packages/Locksmith2)
-[![License](https://img.shields.io/github/license/jakehildreth/Locksmith2)](LICENSE)
 [![PowerShell](https://img.shields.io/badge/PowerShell-5.1+-blue.svg)](https://github.com/PowerShell/PowerShell)
 
 ## Overview
