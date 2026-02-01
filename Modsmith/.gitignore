@@ -1,0 +1,24 @@
+# Build artifacts
+Build/Output/*
+*.zip
+
+# Test results
+TestResults/
+*.trx
+
+# PowerShell artifacts
+*.ps1xml
+
+# IDE files
+.vscode/
+.idea/
+*.code-workspace
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+*~
