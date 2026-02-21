@@ -77,10 +77,10 @@ function Set-DangerousEditor {
         https://posts.specterops.io/certified-pre-owned-d95910965cd2
     #>
     [CmdletBinding()]
-    [OutputType([System.DirectoryServices.DirectoryEntry[]])]
+    [OutputType([LS2AdcsObject[]])]
     param (
         [Parameter(Mandatory, ValueFromPipeline)]
-        [System.DirectoryServices.DirectoryEntry[]]$AdcsObject
+        [LS2AdcsObject[]]$AdcsObject
     )
 
     #requires -Version 5.1
@@ -92,23 +92,11 @@ function Set-DangerousEditor {
     process {
         $AdcsObject | ForEach-Object {
             try {
-                $objectName = if ($_.Properties.displayName.Count -gt 0) {
-                    $_.Properties.displayName[0] 
-                } elseif ($_.Properties.name.Count -gt 0) {
-                    $_.Properties.name[0]
-                } else {
-                    $_.Properties.distinguishedName[0]
-                }
+                $objectName = $_.GetFriendlyName()
                 Write-Verbose "Processing template: $objectName"
                 
                 # Determine object class for ACE testing
-                $objectClass = if ($_.SchemaClassName) {
-                    $_.SchemaClassName
-                } elseif ($_.objectClass -and $_.objectClass.Count -gt 0) {
-                    $_.objectClass[$_.objectClass.Count - 1]
-                } else {
-                    $null
-                }
+                $objectClass = $_.SchemaClassName
                 
                 [array]$dangerousIdentityReference = foreach ($ace in $_.ObjectSecurity.Access) {
                     # Test if ACE grants dangerous write permissions first
@@ -153,17 +141,10 @@ function Set-DangerousEditor {
                     }
                 } | Sort-Object -Unique
 
-                # Update the AD CS Object Store with the DangerousEditor property
-                $dn = $_.Properties.distinguishedName[0]
-                if ($script:AdcsObjectStore.ContainsKey($dn)) {
-                    $script:AdcsObjectStore[$dn] | Add-Member -NotePropertyName DangerousEditor -NotePropertyValue $dangerousIdentityReference -Force
-                    $script:AdcsObjectStore[$dn] | Add-Member -NotePropertyName DangerousEditorNames -NotePropertyValue $dangerousEditorNames -Force
-                    Write-Verbose "Updated AD CS Object Store for $dn with DangerousEditor"
-                }
-
-                # Also add to the pipeline object for backward compatibility
-                $_ | Add-Member -NotePropertyName DangerousEditor -NotePropertyValue $dangerousIdentityReference -Force
-                $_ | Add-Member -NotePropertyName DangerousEditorNames -NotePropertyValue $dangerousEditorNames -Force
+                # Set properties directly on the LS2AdcsObject (same reference as store)
+                $_.DangerousEditor = $dangerousIdentityReference
+                $_.DangerousEditorNames = $dangerousEditorNames
+                Write-Verbose "Updated $($_.distinguishedName) with DangerousEditor"
                 
                 # Return the modified object
                 $_

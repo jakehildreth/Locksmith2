@@ -28,7 +28,7 @@ function Set-CADisableExtensionList {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
-        [System.DirectoryServices.DirectoryEntry[]]$AdcsObject
+        [LS2AdcsObject[]]$AdcsObject
     )
 
     begin {
@@ -42,38 +42,14 @@ function Set-CADisableExtensionList {
     }
 
     process {
-        $AdcsObject | Where-Object SchemaClassName -EQ pKIEnrollmentService | ForEach-Object {
+        $AdcsObject | Where-Object { $_.IsCertificationAuthority() } | ForEach-Object {
             try {
-                # Extract CA name for logging
-                $caName = if ($_.Properties -and $_.Properties.Contains('cn')) {
-                    $_.Properties['cn'][0]
-                } elseif ($_.cn) {
-                    $_.cn
-                } else {
-                    'Unknown CA'
-                }
-                
+                $caName = $_.cn
                 Write-Verbose "Processing CA: $caName"
                 
-                # Extract the DN from the DirectoryEntry
-                $dn = if ($_.Properties -and $_.Properties.Contains('distinguishedName')) {
-                    $_.Properties['distinguishedName'][0]
-                } elseif ($_.distinguishedName) {
-                    $_.distinguishedName
-                } else {
-                    Write-Warning "Could not extract DistinguishedName for CA: $caName"
-                    $_
-                    return
-                }
+                $dn = $_.distinguishedName
 
-                # Get the CAFullName from the AdcsObjectStore
-                if (-not $script:AdcsObjectStore.ContainsKey($dn)) {
-                    Write-Warning "CA '$dn' not found in AD CS Object Store"
-                    $_
-                    return
-                }
-
-                $caFullName = $script:AdcsObjectStore[$dn].CAFullName
+                $caFullName = $_.CAFullName
                 if ([string]::IsNullOrEmpty($caFullName)) {
                     Write-Warning "CAFullName is empty for CA: $dn"
                     $_
@@ -103,29 +79,23 @@ function Set-CADisableExtensionList {
                         Write-Verbose "  Security extension (1.3.6.1.4.1.311.25.2) is enabled"
                     }
                     
-                    # Update the AD CS Object Store
-                    if ($script:AdcsObjectStore.ContainsKey($dn)) {
-                        $script:AdcsObjectStore[$dn].DisableExtensionList = $disabledExtensions
-                        $script:AdcsObjectStore[$dn].SecurityExtensionDisabled = $securityExtensionDisabled
-                        Write-Verbose "  Updated AD CS Object Store for $dn with DisableExtensionList and SecurityExtensionDisabled"
-                    }
+                    # Set properties directly on the LS2AdcsObject (same reference as store)
+                    $_.DisableExtensionList = $disabledExtensions
+                    $_.SecurityExtensionDisabled = $securityExtensionDisabled
+                    Write-Verbose "  Updated $($_.distinguishedName) with DisableExtensionList and SecurityExtensionDisabled"
                 } else {
-                    # No extensions disabled - store empty array and false
+                    # No extensions disabled - set directly
                     Write-Verbose "  No extensions disabled on this CA"
-                    if ($script:AdcsObjectStore.ContainsKey($dn)) {
-                        $script:AdcsObjectStore[$dn].DisableExtensionList = @()
-                        $script:AdcsObjectStore[$dn].SecurityExtensionDisabled = $false
-                        Write-Verbose "  Updated AD CS Object Store for $dn with empty DisableExtensionList"
-                    }
+                    $_.DisableExtensionList = @()
+                    $_.SecurityExtensionDisabled = $false
+                    Write-Verbose "  Updated $($_.distinguishedName) with empty DisableExtensionList"
                 }
             } catch {
                 Write-Verbose "  Failed to query DisableExtensionList for '$caFullName': $($_.Exception.Message)"
                 
                 # Set to null on error
-                if ($script:AdcsObjectStore.ContainsKey($dn)) {
-                    $script:AdcsObjectStore[$dn].DisableExtensionList = $null
-                    $script:AdcsObjectStore[$dn].SecurityExtensionDisabled = $null
-                }
+                $_.DisableExtensionList = $null
+                $_.SecurityExtensionDisabled = $null
             }
             
             # Always return the object to continue the pipeline

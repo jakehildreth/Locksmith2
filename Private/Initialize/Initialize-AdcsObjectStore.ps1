@@ -57,12 +57,12 @@ function Initialize-AdcsObjectStore {
             return
         }
 
-        # Get all AD CS objects from Public Key Services container
-        $script:AdcsObject = Get-AdcsObject
-        Write-Verbose "Retrieved $($script:AdcsObject.Count) AD CS objects from Public Key Services container"
+        # Get all AD CS objects from Public Key Services container (populates AdcsObjectStore)
+        Get-AdcsObject | Out-Null
+        Write-Verbose "Retrieved $($script:AdcsObjectStore.Count) AD CS objects from Public Key Services container"
         
         # Process certificate templates
-        $Templates = $script:AdcsObject | Where-Object SchemaClassName -EQ pKICertificateTemplate
+        $Templates = $script:AdcsObjectStore.Values | Where-Object { $_.IsCertificateTemplate() }
         Write-Verbose "Processing $($Templates.Count) certificate templates..."
         
         $Templates = $Templates |
@@ -82,7 +82,7 @@ function Initialize-AdcsObjectStore {
         Set-HasNonStandardOwner
         
         # Process Certification Authorities
-        $CAs = $script:AdcsObject | Where-Object { $_.objectClass -contains 'pKIEnrollmentService' }
+        $CAs = $script:AdcsObjectStore.Values | Where-Object { $_.IsCertificationAuthority() }
         $caCount = @($CAs).Count
         Write-Verbose "Processing $caCount Certification Authority object(s)..."
         
@@ -100,9 +100,9 @@ function Initialize-AdcsObjectStore {
         Set-HasNonStandardOwner
         
         # Process all other infrastructure objects for non-standard owners
-        $OtherObjects = $script:AdcsObject | Where-Object {
-            $_.SchemaClassName -ne 'pKICertificateTemplate' -and
-            $_.objectClass -notcontains 'pKIEnrollmentService'
+        $OtherObjects = $script:AdcsObjectStore.Values | Where-Object {
+            -not $_.IsCertificateTemplate() -and
+            -not $_.IsCertificationAuthority()
         }
         $otherObjectCount = @($OtherObjects).Count
         Write-Verbose "Processing $otherObjectCount infrastructure object(s)..."

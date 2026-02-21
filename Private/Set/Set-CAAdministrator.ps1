@@ -48,10 +48,10 @@ function Set-CAAdministrator {
         https://posts.specterops.io/certified-pre-owned-d95910965cd2
     #>
     [CmdletBinding()]
-    [OutputType([System.DirectoryServices.DirectoryEntry[]])]
+    [OutputType([LS2AdcsObject[]])]
     param (
         [Parameter(Mandatory, ValueFromPipeline)]
-        [System.DirectoryServices.DirectoryEntry[]]$AdcsObject
+        [LS2AdcsObject[]]$AdcsObject
     )
 
     #requires -Version 5.1
@@ -61,26 +61,13 @@ function Set-CAAdministrator {
     }
 
     process {
-        $AdcsObject | Where-Object SchemaClassName -EQ pKIEnrollmentService | ForEach-Object {
+        $AdcsObject | Where-Object { $_.IsCertificationAuthority() } | ForEach-Object {
             try {
-                # Extract CA name for logging
-                $caName = if ($_.Properties -and $_.Properties.Contains('cn')) {
-                    $_.Properties['cn'][0]
-                } elseif ($_.cn) {
-                    $_.cn
-                } else {
-                    'Unknown CA'
-                }
-                
+                $caName = $_.cn
                 Write-Verbose "Processing CA: $caName"
                 
-                # Get CAFullName from the AdcsObjectStore (where LS2AdcsObject has CAFullName ScriptProperty)
-                $dn = $_.Properties.distinguishedName[0]
-                $caFullName = if ($script:AdcsObjectStore.ContainsKey($dn)) {
-                    $script:AdcsObjectStore[$dn].CAFullName
-                } else {
-                    $null
-                }
+                # Get CAFullName directly from the LS2AdcsObject (ScriptProperty)
+                $caFullName = $_.CAFullName
                 
                 if (-not $caFullName) {
                     Write-Verbose "  CA '$caName' has no CAFullName property - skipping CA Administrators query"
@@ -112,15 +99,9 @@ function Set-CAAdministrator {
                             }
                         }
                         
-                        # Update the AD CS Object Store
-                        $dn = $_.Properties.distinguishedName[0]
-                        if ($script:AdcsObjectStore.ContainsKey($dn)) {
-                            $script:AdcsObjectStore[$dn].CAAdministrators = $caAdministrators
-                            Write-Verbose "  Updated AD CS Object Store for $dn with CA Administrator data"
-                        }
-                        
-                        # Also add to the pipeline object for backward compatibility
-                        $_ | Add-Member -NotePropertyName CAAdministrators -NotePropertyValue $caAdministrators -Force
+                        # Set the property directly on the LS2AdcsObject (same reference as store)
+                        $_.CAAdministrators = $caAdministrators
+                        Write-Verbose "  Updated $($_.distinguishedName) with CA Administrator data"
                         
                     } else {
                         Write-Verbose "  No CA Administrators returned from Get-PCCAAdministrator"

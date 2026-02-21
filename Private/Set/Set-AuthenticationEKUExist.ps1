@@ -63,10 +63,10 @@ function Set-AuthenticationEKUExist {
         https://learn.microsoft.com/en-us/windows/win32/seccrypto/extended-key-usage
     #>
     [CmdletBinding()]
-    [OutputType([System.DirectoryServices.DirectoryEntry[]])]
+    [OutputType([LS2AdcsObject[]])]
     param (
         [Parameter(Mandatory, ValueFromPipeline)]
-        [System.DirectoryServices.DirectoryEntry[]]$AdcsObject,
+        [LS2AdcsObject[]]$AdcsObject,
         
         [Parameter()]
         [string[]]$AuthenticationEKU = @(
@@ -85,20 +85,14 @@ function Set-AuthenticationEKUExist {
     process {
         $AdcsObject | Where-Object SchemaClassName -EQ pKICertificateTemplate | ForEach-Object {
             try {
-                $objectName = if ($_.Properties.displayName.Count -gt 0) {
-                    $_.Properties.displayName[0] 
-                } elseif ($_.Properties.name.Count -gt 0) {
-                    $_.Properties.name[0]
-                } else {
-                    $_.Properties.distinguishedName[0]
-                }
+                $objectName = $_.GetFriendlyName()
                 Write-Verbose "Processing template: $objectName"
                 
                 $authenticationEKUExist = $false
                 
                 # Check if pKIExtendedKeyUsage attribute exists and has values
-                if ($_.Properties.pKIExtendedKeyUsage.Count -gt 0) {
-                    $ekuList = $_.Properties.pKIExtendedKeyUsage
+                if ($_.pKIExtendedKeyUsage.Count -gt 0) {
+                    $ekuList = $_.pKIExtendedKeyUsage
                     Write-Verbose "pKIExtendedKeyUsage contains $($ekuList.Count) EKU(s): $($ekuList -join ', ')"
                     
                     # Check if any of the Authentication EKUs are present
@@ -117,15 +111,9 @@ function Set-AuthenticationEKUExist {
                     Write-Verbose "pKIExtendedKeyUsage is empty. Template can be used for Any Purpose."
                 }
                 
-                # Update the AdcsObjectStore with the AuthenticationEKUExist property
-                $dn = $_.Properties.distinguishedName[0]
-                if ($script:AdcsObjectStore.ContainsKey($dn)) {
-                    $script:AdcsObjectStore[$dn] | Add-Member -NotePropertyName AuthenticationEKUExist -NotePropertyValue $authenticationEKUExist -Force
-                    Write-Verbose "Updated AD CS Object Store for $dn with AuthenticationEKUExist = $authenticationEKUExist"
-                }
-                
-                # Also add to the pipeline object for backward compatibility
-                $_ | Add-Member -NotePropertyName AuthenticationEKUExist -NotePropertyValue $authenticationEKUExist -Force
+                # Set the property directly on the LS2AdcsObject
+                $_.AuthenticationEKUExist = $authenticationEKUExist
+                Write-Verbose "Updated $($_.distinguishedName) with AuthenticationEKUExist = $authenticationEKUExist"
                 
                 # Return the modified object
                 $_

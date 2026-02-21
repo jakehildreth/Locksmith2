@@ -30,20 +30,9 @@ function Get-AdcsObjectName {
     )
 
     process {
-        # Handle DirectoryEntry objects with Properties collection
-        if ($AdcsObject.Properties) {
-            if ($AdcsObject.Properties.displayName.Count -gt 0) {
-                return $AdcsObject.Properties.displayName[0]
-            }
-            if ($AdcsObject.Properties.name.Count -gt 0) {
-                return $AdcsObject.Properties.name[0]
-            }
-            if ($AdcsObject.Properties.cn.Count -gt 0) {
-                return $AdcsObject.Properties.cn[0]
-            }
-            if ($AdcsObject.Properties.distinguishedName.Count -gt 0) {
-                return $AdcsObject.Properties.distinguishedName[0]
-            }
+        # Handle LS2AdcsObject with GetFriendlyName() method
+        if ($AdcsObject -is [LS2AdcsObject]) {
+            return $AdcsObject.GetFriendlyName()
         }
 
         # Handle PSCustomObject or plain objects

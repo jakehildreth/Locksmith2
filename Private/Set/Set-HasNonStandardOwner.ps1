@@ -78,7 +78,7 @@ function Set-HasNonStandardOwner {
     [OutputType([LS2AdcsObject[]])]
     param (
         [Parameter(Mandatory, ValueFromPipeline)]
-        [object[]]$AdcsObject
+        [LS2AdcsObject[]]$AdcsObject
     )
 
     #requires -Version 5.1
@@ -98,21 +98,7 @@ function Set-HasNonStandardOwner {
     process {
         foreach ($object in $AdcsObject) {
             try {
-                $objectName = if ($object.displayName) {
-                    $object.displayName
-                } elseif ($object.name) {
-                    $object.name
-                } elseif ($object.Properties -and $object.Properties.Contains('displayName')) {
-                    $object.Properties.displayName[0]
-                } elseif ($object.Properties -and $object.Properties.Contains('name')) {
-                    $object.Properties.name[0]
-                } elseif ($object.distinguishedName) {
-                    $object.distinguishedName
-                } elseif ($object.Properties -and $object.Properties.Contains('distinguishedName')) {
-                    $object.Properties.distinguishedName[0]
-                } else {
-                    'Unknown'
-                }
+                $objectName = $object.GetFriendlyName()
                 
                 Write-Verbose "Processing object: $objectName"
                 
@@ -142,30 +128,9 @@ function Set-HasNonStandardOwner {
                     }
                 }
                 
-                # Set the HasNonStandardOwner property on the pipeline object
-                if ($object.PSObject.Properties['HasNonStandardOwner']) {
-                    $object.HasNonStandardOwner = $hasNonStandardOwner
-                } else {
-                    $object | Add-Member -NotePropertyName HasNonStandardOwner -NotePropertyValue $hasNonStandardOwner -Force
-                }
-                
-                # Update the AdcsObjectStore with the HasNonStandardOwner property
-                $dn = $null
-                if ($object.distinguishedName) {
-                    # Handle PropertyValueCollection from DirectoryEntry
-                    if ($object.distinguishedName -is [System.DirectoryServices.PropertyValueCollection]) {
-                        $dn = $object.distinguishedName.Value
-                    } else {
-                        $dn = $object.distinguishedName
-                    }
-                } elseif ($object.Properties -and $object.Properties.Contains('distinguishedName')) {
-                    $dn = $object.Properties.distinguishedName[0]
-                }
-                
-                if ($dn -and $script:AdcsObjectStore.ContainsKey($dn)) {
-                    $script:AdcsObjectStore[$dn].HasNonStandardOwner = $hasNonStandardOwner
-                    Write-Verbose "Updated AD CS Object Store for $dn with HasNonStandardOwner = $hasNonStandardOwner"
-                }
+                # Set the HasNonStandardOwner property directly on the LS2AdcsObject
+                $object.HasNonStandardOwner = $hasNonStandardOwner
+                Write-Verbose "Updated $($object.distinguishedName) with HasNonStandardOwner = $hasNonStandardOwner"
                 
                 # Return the modified object
                 $object

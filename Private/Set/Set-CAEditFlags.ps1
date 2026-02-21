@@ -49,10 +49,10 @@ function Set-CAEditFlags {
         https://posts.specterops.io/certified-pre-owned-d95910965cd2
     #>
     [CmdletBinding()]
-    [OutputType([System.DirectoryServices.DirectoryEntry[]])]
+    [OutputType([LS2AdcsObject[]])]
     param (
         [Parameter(Mandatory, ValueFromPipeline)]
-        [System.DirectoryServices.DirectoryEntry[]]$AdcsObject
+        [LS2AdcsObject[]]$AdcsObject
     )
 
     #requires -Version 5.1
@@ -62,26 +62,13 @@ function Set-CAEditFlags {
     }
 
     process {
-        $AdcsObject | Where-Object SchemaClassName -EQ pKIEnrollmentService | ForEach-Object {
+        $AdcsObject | Where-Object { $_.IsCertificationAuthority() } | ForEach-Object {
             try {
-                # Extract CA name for logging
-                $caName = if ($_.Properties -and $_.Properties.Contains('cn')) {
-                    $_.Properties['cn'][0]
-                } elseif ($_.cn) {
-                    $_.cn
-                } else {
-                    'Unknown CA'
-                }
-                
+                $caName = $_.cn
                 Write-Verbose "Processing CA: $caName"
                 
-                # Get CAFullName from the AdcsObjectStore (where LS2AdcsObject has CAFullName ScriptProperty)
-                $dn = $_.Properties.distinguishedName[0]
-                $caFullName = if ($script:AdcsObjectStore.ContainsKey($dn)) {
-                    $script:AdcsObjectStore[$dn].CAFullName
-                } else {
-                    $null
-                }
+                # Get CAFullName directly from the LS2AdcsObject (ScriptProperty)
+                $caFullName = $_.CAFullName
                 
                 if (-not $caFullName) {
                     Write-Verbose "  CA '$caName' has no CAFullName property - skipping EditFlags query"
@@ -104,17 +91,10 @@ function Set-CAEditFlags {
                         
                         Write-Verbose "  EDITF_ATTRIBUTESUBJECTALTNAME2 is $(if ($sANFlagEnabled) { 'enabled' } else { 'disabled' })"
                         
-                        # Update the AD CS Object Store
-                        $dn = $_.Properties.distinguishedName[0]
-                        if ($script:AdcsObjectStore.ContainsKey($dn)) {
-                            $script:AdcsObjectStore[$dn].EditFlags = $editFlags
-                            $script:AdcsObjectStore[$dn].SANFlagEnabled = $sANFlagEnabled
-                            Write-Verbose "  Updated AD CS Object Store for $dn with EditFlags data"
-                        }
-                        
-                        # Also add to the pipeline object for backward compatibility
-                        $_ | Add-Member -NotePropertyName EditFlags -NotePropertyValue $editFlags -Force
-                        $_ | Add-Member -NotePropertyName SANFlagEnabled -NotePropertyValue $sANFlagEnabled -Force
+                        # Set properties directly on the LS2AdcsObject (same reference as store)
+                        $_.EditFlags = $editFlags
+                        $_.SANFlagEnabled = $sANFlagEnabled
+                        Write-Verbose "  Updated $($_.distinguishedName) with EditFlags data"
                         
                     } else {
                         Write-Verbose "  No EditFlags returned from Get-PCEditFlag"

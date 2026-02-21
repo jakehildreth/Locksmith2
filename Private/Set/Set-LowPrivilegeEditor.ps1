@@ -82,10 +82,10 @@ function Set-LowPrivilegeEditor {
         https://posts.specterops.io/certified-pre-owned-d95910965cd2
     #>
     [CmdletBinding()]
-    [OutputType([System.DirectoryServices.DirectoryEntry[]])]
+    [OutputType([LS2AdcsObject[]])]
     param (
         [Parameter(Mandatory, ValueFromPipeline)]
-        [System.DirectoryServices.DirectoryEntry[]]$AdcsObject
+        [LS2AdcsObject[]]$AdcsObject
     )
 
     #requires -Version 5.1
@@ -97,23 +97,11 @@ function Set-LowPrivilegeEditor {
     process {
         $AdcsObject | ForEach-Object {
             try {
-                $objectName = if ($_.Properties.displayName.Count -gt 0) {
-                    $_.Properties.displayName[0] 
-                } elseif ($_.Properties.name.Count -gt 0) {
-                    $_.Properties.name[0]
-                } else {
-                    $_.Properties.distinguishedName[0]
-                }
+                $objectName = $_.GetFriendlyName()
                 Write-Verbose "Processing template: $objectName"
                 
                 # Determine object class for ACE testing
-                $objectClass = if ($_.SchemaClassName) {
-                    $_.SchemaClassName
-                } elseif ($_.objectClass -and $_.objectClass.Count -gt 0) {
-                    $_.objectClass[$_.objectClass.Count - 1]
-                } else {
-                    $null
-                }
+                $objectClass = $_.SchemaClassName
                 
                 [array]$lowPrivilegeIdentityReference = foreach ($ace in $_.ObjectSecurity.Access) {
                     # Test if ACE grants dangerous write permissions first
@@ -163,17 +151,10 @@ function Set-LowPrivilegeEditor {
                     }
                 } | Sort-Object -Unique
 
-                # Update the AD CS Object Store with the LowPrivilegeEditor property
-                $dn = $_.Properties.distinguishedName[0]
-                if ($script:AdcsObjectStore.ContainsKey($dn)) {
-                    $script:AdcsObjectStore[$dn] | Add-Member -NotePropertyName LowPrivilegeEditor -NotePropertyValue $lowPrivilegeIdentityReference -Force
-                    $script:AdcsObjectStore[$dn] | Add-Member -NotePropertyName LowPrivilegeEditorNames -NotePropertyValue $lowPrivilegeEditorNames -Force
-                    Write-Verbose "Updated AD CS Object Store for $dn with LowPrivilegeEditor"
-                }
-
-                # Also add to the pipeline object for backward compatibility
-                $_ | Add-Member -NotePropertyName LowPrivilegeEditor -NotePropertyValue $lowPrivilegeIdentityReference -Force
-                $_ | Add-Member -NotePropertyName LowPrivilegeEditorNames -NotePropertyValue $lowPrivilegeEditorNames -Force
+                # Set properties directly on the LS2AdcsObject (same reference as store)
+                $_.LowPrivilegeEditor = $lowPrivilegeIdentityReference
+                $_.LowPrivilegeEditorNames = $lowPrivilegeEditorNames
+                Write-Verbose "Updated $($_.distinguishedName) with LowPrivilegeEditor"
                 
                 # Return the modified object
                 $_
