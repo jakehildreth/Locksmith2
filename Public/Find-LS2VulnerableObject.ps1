@@ -215,17 +215,20 @@ function Find-LS2VulnerableObject {
                     # Get actual rights from ACE
                     $activeDirectoryRights = $ace.ActiveDirectoryRights
                     
+                    # Resolve IdentityReference to NTAccount format (SID → DOMAIN\Name)
+                    $identityReferenceName = ($ace.IdentityReference | Convert-IdentityReferenceToNTAccount).Value
+
                     # Expand issue template with variables
                     $issueText = ($config.IssueTemplate -join '') `
                         -replace '\$\(ObjectName\)', $objectName `
                         -replace '\$\(ObjectType\)', $objectType `
-                        -replace '\$\(IdentityReference\)', $ace.IdentityReference `
+                        -replace '\$\(IdentityReference\)', $identityReferenceName `
                         -replace '\$\(ActiveDirectoryRights\)', $activeDirectoryRights
                     
                     # Expand fix script template with variables
                     $fixScript = ($config.FixTemplate -join "`n") `
                         -replace '\$\(DistinguishedName\)', $object.distinguishedName `
-                        -replace '\$\(IdentityReference\)', $ace.IdentityReference
+                        -replace '\$\(IdentityReference\)', $identityReferenceName
                     
                     # Expand revert script template with variables
                     $revertScript = ($config.RevertTemplate -join "`n") `
@@ -262,7 +265,7 @@ function Find-LS2VulnerableObject {
                             Name                     = $objectName
                             DistinguishedName        = $object.distinguishedName
                             ObjectClass              = $vulnerableObjectClass
-                            IdentityReference        = $ace.IdentityReference
+                            IdentityReference        = $identityReferenceName
                             IdentityReferenceSID     = $editorSid
                             IdentityReferenceClass   = $principalObjectClass
                             ActiveDirectoryRights    = $activeDirectoryRights
@@ -349,8 +352,13 @@ function Find-LS2VulnerableObject {
         }
         
         $owner = if ($object.Owner) { $object.Owner } else { 'Unknown' }
-        
-        Write-Verbose "  Checking object: $objectName (owned by $owner)"
+
+        # Resolve owner SID to NTAccount format if needed (handles bare SID or O:SID SDDL format)
+        $ownerToDisplay = if ($owner -match '^(?:O:)?(S-1-[\d-]+)') {
+            ([System.Security.Principal.SecurityIdentifier]::new($Matches[1]) | Convert-IdentityReferenceToNTAccount).Value
+        } else { $owner }
+
+        Write-Verbose "  Checking object: $objectName (owned by $ownerToDisplay)"
         
         $issueCount++
         
@@ -374,7 +382,7 @@ function Find-LS2VulnerableObject {
         $issueText = ($config.IssueTemplate -join '') `
             -replace '\$\(ObjectName\)', $objectName `
             -replace '\$\(ObjectType\)', $objectType `
-            -replace '\$\(Owner\)', $owner
+            -replace '\$\(Owner\)', $ownerToDisplay
 
         # Expand fix script template with variables
         $fixScript = ($config.FixTemplate -join "`n") `
@@ -383,7 +391,7 @@ function Find-LS2VulnerableObject {
         # Expand revert script template with variables
         $revertScript = ($config.RevertTemplate -join "`n") `
             -replace '\$\(DistinguishedName\)', $object.distinguishedName `
-            -replace '\$\(OriginalOwner\)', $owner
+            -replace '\$\(OriginalOwner\)', $ownerToDisplay
 
         # Get object's objectClass (primary class)
         $vulnerableObjectClass = if ($object.objectClass -is [array]) {
@@ -399,7 +407,7 @@ function Find-LS2VulnerableObject {
                 Name                = $objectName
                 DistinguishedName   = $object.distinguishedName
                 ObjectClass         = $vulnerableObjectClass
-                Owner               = $owner
+                Owner               = $ownerToDisplay
                 HasNonStandardOwner = $true
                 Issue               = $issueText
                 Fix                 = $fixScript

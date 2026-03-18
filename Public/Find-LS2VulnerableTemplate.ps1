@@ -195,15 +195,18 @@ function Find-LS2VulnerableTemplate {
                     $config.RevertTemplate
                 }
 
+                # Resolve IdentityReference to NTAccount format (SID → DOMAIN\Name)
+                $identityReferenceName = ($ace.IdentityReference | Convert-IdentityReferenceToNTAccount).Value
+
                 # Expand template variables in Issue, Fix, and Revert strings
                 $issueText = $issueTemplate `
-                    -replace '\$\(IdentityReference\)', $ace.IdentityReference `
+                    -replace '\$\(IdentityReference\)', $identityReferenceName `
                     -replace '\$\(TemplateName\)', $template.Name `
                     -replace '\$\(ActiveDirectoryRights\)', $ace.ActiveDirectoryRights
                 
                 $fixScript = $fixTemplate `
                     -replace '\$\(DistinguishedName\)', $template.distinguishedName `
-                    -replace '\$\(IdentityReference\)', $ace.IdentityReference
+                    -replace '\$\(IdentityReference\)', $identityReferenceName
                 
                 $revertScript = $revertTemplate `
                     -replace '\$\(DistinguishedName\)', $template.distinguishedName
@@ -233,7 +236,7 @@ function Find-LS2VulnerableTemplate {
                     Name                   = $template.Name
                     DistinguishedName      = $template.distinguishedName
                     ObjectClass            = 'pKICertificateTemplate'
-                    IdentityReference      = $ace.IdentityReference
+                    IdentityReference      = $identityReferenceName
                     IdentityReferenceSID   = $editorSid
                     IdentityReferenceClass = $principalObjectClass
                     ActiveDirectoryRights  = $ace.ActiveDirectoryRights
@@ -282,6 +285,11 @@ function Find-LS2VulnerableTemplate {
             $templateName = if ($template.displayName) { $template.displayName } else { $template.Name }
             $owner = if ($template.Owner) { $template.Owner } else { 'Unknown' }
 
+            # Resolve owner SID to NTAccount format if needed (handles bare SID or O:SID SDDL format)
+            $ownerToDisplay = if ($owner -match '^(?:O:)?(S-1-[\d-]+)') {
+                ([System.Security.Principal.SecurityIdentifier]::new($Matches[1]) | Convert-IdentityReferenceToNTAccount).Value
+            } else { $owner }
+
             Write-Verbose "  Checking template: $templateName"
 
             # Get domain/forest name from DN
@@ -290,14 +298,14 @@ function Find-LS2VulnerableTemplate {
             # Create issue using template expansion
             $issueText = ($config.IssueTemplate -join '') `
                 -replace '\$\(TemplateName\)', $templateName `
-                -replace '\$\(Owner\)', $owner
+                -replace '\$\(Owner\)', $ownerToDisplay
 
             $fixScript = ($config.FixTemplate -join "`n") `
                 -replace '\$\(DistinguishedName\)', $template.distinguishedName
 
             $revertScript = ($config.RevertTemplate -join "`n") `
                 -replace '\$\(DistinguishedName\)', $template.distinguishedName `
-                -replace '\$\(OriginalOwner\)', $owner
+                -replace '\$\(OriginalOwner\)', $ownerToDisplay
 
             # Create issue object
             $issue = [LS2Issue]::new(@{
@@ -306,7 +314,7 @@ function Find-LS2VulnerableTemplate {
                     Name                = $templateName
                     DistinguishedName   = $template.distinguishedName
                     ObjectClass         = 'pKICertificateTemplate'
-                    Owner               = $owner
+                    Owner               = $ownerToDisplay
                     HasNonStandardOwner = $true
                     Enabled             = $template.Enabled
                     EnabledOn           = $template.EnabledOn
@@ -409,9 +417,12 @@ function Find-LS2VulnerableTemplate {
                 $config.RevertTemplate
             }
 
+            # Resolve IdentityReference to NTAccount format (SID → DOMAIN\Name)
+            $identityReferenceName = ($ace.IdentityReference | Convert-IdentityReferenceToNTAccount).Value
+
             # Expand template variables in Issue, Fix, and Revert strings
             $issueText = $issueTemplate `
-                -replace '\$\(IdentityReference\)', $ace.IdentityReference `
+                -replace '\$\(IdentityReference\)', $identityReferenceName `
                 -replace '\$\(TemplateName\)', $template.Name
             
             $fixScript = $fixTemplate `
@@ -426,7 +437,7 @@ function Find-LS2VulnerableTemplate {
                 Forest                = $forestName
                 Name                  = $template.Name
                 DistinguishedName     = $template.distinguishedName
-                IdentityReference     = $ace.IdentityReference
+                IdentityReference     = $identityReferenceName
                 IdentityReferenceSID  = $enrolleeSid
                 ActiveDirectoryRights = $ace.ActiveDirectoryRights
                 Enabled               = $template.Enabled

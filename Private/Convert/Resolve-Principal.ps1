@@ -97,7 +97,13 @@ function Resolve-Principal {
         if ($script:PrincipalStore.ContainsKey($sidString)) {
             $storedPrincipal = $script:PrincipalStore[$sidString]
             Write-Verbose "Store HIT: Found stored principal for SID '$sidString': $($storedPrincipal.distinguishedName)"
-            
+
+            # Well-known principals (e.g., Everyone, Authenticated Users) have no DN
+            if ($null -eq $storedPrincipal.distinguishedName) {
+                Write-Verbose "Well-known principal '$sidString' has no DN. Returning null."
+                return $null
+            }
+
             # Create fresh DirectoryEntry from stored DN
             $objectPath = "LDAP://$script:Server/$($storedPrincipal.distinguishedName)"
             $objectEntry = New-AuthenticatedDirectoryEntry -Path $objectPath
