@@ -13,13 +13,13 @@ if (Get-Module -Name 'PSPublishModule' -ListAvailable) {
     try {
         Install-Module -Name Pester -AllowClobber -Scope CurrentUser -SkipPublisherCheck -Force
         Install-Module -Name PSScriptAnalyzer -AllowClobber -Scope CurrentUser -Force
-        Install-Module -Name PSPublishModule -AllowClobber -Scope CurrentUser -Force
+        Install-Module -Name PSPublishModule -MaximumVersion 2.0.27 -AllowClobber -Scope CurrentUser -Force
     } catch {
         Write-Error "PSPublishModule installation failed. $_"
     }
 }
 
-Update-Module -Name PSPublishModule
+# Update-Module -Name PSPublishModule
 Import-Module -Name PSPublishModule -Force
 
 $CopyrightYear = if ($Calver) { $CalVer.Split('.')[0] } else { (Get-Date -Format yyyy) }
@@ -50,7 +50,8 @@ Build-Module -ModuleName 'Locksmith2' {
         'Microsoft.PowerShell.Management',
         'Microsoft.PowerShell.Security',
         'PowerShellGet',
-        'CimCmdlets'
+        'CimCmdlets',
+        'PSWriteHTML'
     )
     foreach ($Module in $RequiredExternalModules) {
         New-ConfigurationModule -Type ExternalModule -Name $Module
