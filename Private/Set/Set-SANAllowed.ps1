@@ -57,10 +57,10 @@ function Set-SANAllowed {
         https://posts.specterops.io/certified-pre-owned-d95910965cd2
     #>
     [CmdletBinding()]
-    [OutputType([System.DirectoryServices.DirectoryEntry[]])]
+    [OutputType([LS2AdcsObject[]])]
     param (
         [Parameter(Mandatory, ValueFromPipeline)]
-        [System.DirectoryServices.DirectoryEntry[]]$AdcsObject
+        [LS2AdcsObject[]]$AdcsObject
     )
 
     #requires -Version 5.1
@@ -72,20 +72,14 @@ function Set-SANAllowed {
     process {
         $AdcsObject | Where-Object SchemaClassName -EQ pKICertificateTemplate | ForEach-Object {
             try {
-                $objectName = if ($_.Properties.displayName.Count -gt 0) {
-                    $_.Properties.displayName[0] 
-                } elseif ($_.Properties.name.Count -gt 0) {
-                    $_.Properties.name[0]
-                } else {
-                    $_.Properties.distinguishedName[0]
-                }
+                $objectName = $_.GetFriendlyName()
                 Write-Verbose "Processing template: $objectName"
                 
                 $sanAllowed = $false
                 
-                # Check if the msPKI-Certificate-Name-Flag attribute exists
-                if ($_.Properties.'msPKI-Certificate-Name-Flag'.Count -gt 0) {
-                    [int]$certificateNameFlag = $_.'msPKI-Certificate-Name-Flag'[0]
+                # Check if the CertificateNameFlag attribute exists
+                if ($null -ne $_.CertificateNameFlag) {
+                    [int]$certificateNameFlag = $_.CertificateNameFlag
                     Write-Verbose "msPKI-Certificate-Name-Flag value: $certificateNameFlag (0x$($certificateNameFlag.ToString('X8')))"
                     
                     # Bit 1 (0x00000001) = ENROLLEE_SUPPLIES_SUBJECT (SAN allowed)
@@ -99,15 +93,9 @@ function Set-SANAllowed {
                     Write-Verbose "msPKI-Certificate-Name-Flag attribute not found on object"
                 }
                 
-                # Update the AdcsObjectStore with the SANAllowed property
-                $dn = $_.Properties.distinguishedName[0]
-                if ($script:AdcsObjectStore.ContainsKey($dn)) {
-                    $script:AdcsObjectStore[$dn] | Add-Member -NotePropertyName SANAllowed -NotePropertyValue $sanAllowed -Force
-                    Write-Verbose "Updated AD CS Object Store for $dn with SANAllowed = $sanAllowed"
-                }
-                
-                # Also add to the pipeline object for backward compatibility
-                $_ | Add-Member -NotePropertyName SANAllowed -NotePropertyValue $sanAllowed -Force
+                # Set the property directly on the LS2AdcsObject (same reference as store)
+                $_.SANAllowed = $sanAllowed
+                Write-Verbose "Updated $($_.distinguishedName) with SANAllowed = $sanAllowed"
                 
                 # Return the modified object
                 $_

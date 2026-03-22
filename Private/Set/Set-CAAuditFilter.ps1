@@ -5,7 +5,7 @@ function Set-CAAuditFilter {
 
         .DESCRIPTION
         For each pKIEnrollmentService (CA) object, queries the CA's AuditFilter registry
-        configuration using PSCertutil's Get-PCAuditFilter cmdlet and stores the results
+        configuration using PSCertutil's Get-PSCAuditFilter cmdlet and stores the results
         in the AdcsObjectStore.
         
         This function tracks the AuditFilter registry value which controls what events
@@ -42,16 +42,16 @@ function Set-CAAuditFilter {
         The function silently skips CAs that:
         - Don't have a CAFullName property
         - Are unreachable or don't respond to certutil queries
-        - Return errors from Get-PCAuditFilter
+        - Return errors from Get-PSCAuditFilter
 
         .LINK
         https://posts.specterops.io/certified-pre-owned-d95910965cd2
     #>
     [CmdletBinding()]
-    [OutputType([System.DirectoryServices.DirectoryEntry[]])]
+    [OutputType([LS2AdcsObject[]])]
     param (
         [Parameter(Mandatory, ValueFromPipeline)]
-        [System.DirectoryServices.DirectoryEntry[]]$AdcsObject
+        [LS2AdcsObject[]]$AdcsObject
     )
 
     #requires -Version 5.1
@@ -61,26 +61,14 @@ function Set-CAAuditFilter {
     }
 
     process {
-        $AdcsObject | Where-Object SchemaClassName -EQ pKIEnrollmentService | ForEach-Object {
+        $AdcsObject | Where-Object { $_.IsCertificationAuthority() } | ForEach-Object {
             try {
-                # Extract CA name for logging
-                $caName = if ($_.Properties -and $_.Properties.Contains('cn')) {
-                    $_.Properties['cn'][0]
-                } elseif ($_.cn) {
-                    $_.cn
-                } else {
-                    'Unknown CA'
-                }
-                
+                $caName = $_.cn
                 Write-Verbose "Processing CA: $caName"
                 
-                # Get CAFullName from the AdcsObjectStore (where LS2AdcsObject has CAFullName ScriptProperty)
-                $dn = $_.Properties.distinguishedName[0]
-                $caFullName = if ($script:AdcsObjectStore.ContainsKey($dn)) {
-                    $script:AdcsObjectStore[$dn].CAFullName
-                } else {
-                    $null
-                }
+                # Get CAFullName directly from the LS2AdcsObject (ScriptProperty)
+                $dn = $_.distinguishedName
+                $caFullName = $_.CAFullName
                 
                 if (-not $caFullName) {
                     Write-Verbose "  CA '$caName' has no CAFullName property - skipping AuditFilter query"
@@ -92,23 +80,18 @@ function Set-CAAuditFilter {
                 
                 try {
                     # Query AuditFilter using PSCertutil
-                    $auditFilterResult = Get-PCAuditFilter -CAFullName $caFullName -ErrorAction Stop
+                    $auditFilterResult = Get-PSCAuditFilter -CAFullName $caFullName -ErrorAction Stop
                     
                     if ($auditFilterResult -and $null -ne $auditFilterResult.AuditFilter) {
                         $auditFilter = $auditFilterResult.AuditFilter
                         Write-Verbose "  Retrieved AuditFilter: $auditFilter"
                         
-                        # Update the AD CS Object Store
-                        if ($script:AdcsObjectStore.ContainsKey($dn)) {
-                            $script:AdcsObjectStore[$dn].AuditFilter = $auditFilter
-                            Write-Verbose "  Updated AD CS Object Store for $dn with AuditFilter data"
-                        }
-                        
-                        # Also add to the pipeline object for backward compatibility
-                        $_ | Add-Member -NotePropertyName AuditFilter -NotePropertyValue $auditFilter -Force
+                        # Set the property directly on the LS2AdcsObject (same reference as store)
+                        $_.AuditFilter = $auditFilter
+                        Write-Verbose "  Updated $($_.distinguishedName) with AuditFilter data"
                         
                     } else {
-                        Write-Verbose "  No AuditFilter returned from Get-PCAuditFilter"
+                        Write-Verbose "  No AuditFilter returned from Get-PSCAuditFilter"
                     }
                 } catch {
                     Write-Verbose "  Failed to query AuditFilter for '$caFullName': $($_.Exception.Message)"

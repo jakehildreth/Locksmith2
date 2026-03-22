@@ -53,10 +53,10 @@ function Set-RequiresEnrollmentAgentSignature {
         https://posts.specterops.io/certified-pre-owned-d95910965cd2
     #>
     [CmdletBinding()]
-    [OutputType([System.DirectoryServices.DirectoryEntry[]])]
+    [OutputType([LS2AdcsObject[]])]
     param (
         [Parameter(Mandatory, ValueFromPipeline)]
-        [System.DirectoryServices.DirectoryEntry[]]$AdcsObject
+        [LS2AdcsObject[]]$AdcsObject
     )
 
     #requires -Version 5.1
@@ -69,25 +69,19 @@ function Set-RequiresEnrollmentAgentSignature {
     process {
         $AdcsObject | Where-Object SchemaClassName -EQ pKICertificateTemplate | ForEach-Object {
             try {
-                $objectName = if ($_.Properties.displayName.Count -gt 0) {
-                    $_.Properties.displayName[0] 
-                } elseif ($_.Properties.name.Count -gt 0) {
-                    $_.Properties.name[0]
-                } else {
-                    $_.Properties.distinguishedName[0]
-                }
+                $objectName = $_.GetFriendlyName()
                 Write-Verbose "Processing template: $objectName"
                 
                 $requiresEnrollmentAgentSignature = $false
                 
-                # Check if msPKI-RA-Signature = 1 (requires authorized signature)
-                if ($_.Properties.'msPKI-RA-Signature'.Count -gt 0) {
-                    [int]$raSignature = $_.Properties.'msPKI-RA-Signature'[0]
+                # Check if RASignature = 1 (requires authorized signature)
+                if ($null -ne $_.RASignature) {
+                    [int]$raSignature = $_.RASignature
                     Write-Verbose "msPKI-RA-Signature value: $raSignature"
                     
-                    # Check if msPKI-RA-Application-Policies contains enrollment agent EKU
-                    if ($raSignature -eq 1 -and $_.Properties.'msPKI-RA-Application-Policies'.Count -gt 0) {
-                        $raPolicies = $_.Properties.'msPKI-RA-Application-Policies'
+                    # Check if RAApplicationPolicies contains enrollment agent EKU
+                    if ($raSignature -eq 1 -and $_.RAApplicationPolicies.Count -gt 0) {
+                        $raPolicies = $_.RAApplicationPolicies
                         Write-Verbose "msPKI-RA-Application-Policies contains $($raPolicies.Count) policy/ies: $($raPolicies -join ', ')"
                         
                         if ($enrollmentAgentEKU -in $raPolicies) {
@@ -100,23 +94,17 @@ function Set-RequiresEnrollmentAgentSignature {
                         Write-Verbose "Template does not require enrollment agent signature (RA-Signature: $raSignature)"
                     }
                 } else {
-                    Write-Verbose "msPKI-RA-Signature not present or is 0 - no signature required"
+                    Write-Verbose "RASignature not present or is 0 - no signature required"
                 }
                 
-                # Update the AdcsObjectStore with the RequiresEnrollmentAgentSignature property
-                $dn = $_.Properties.distinguishedName[0]
-                if ($script:AdcsObjectStore.ContainsKey($dn)) {
-                    $script:AdcsObjectStore[$dn] | Add-Member -NotePropertyName RequiresEnrollmentAgentSignature -NotePropertyValue $requiresEnrollmentAgentSignature -Force
-                    Write-Verbose "Updated AD CS Object Store for $dn with RequiresEnrollmentAgentSignature = $requiresEnrollmentAgentSignature"
-                }
-                
-                # Also add to the pipeline object for backward compatibility
-                $_ | Add-Member -NotePropertyName RequiresEnrollmentAgentSignature -NotePropertyValue $requiresEnrollmentAgentSignature -Force
+                # Set the property directly on the LS2AdcsObject (same reference as store)
+                $_.RequiresEnrollmentAgentSignature = $requiresEnrollmentAgentSignature
+                Write-Verbose "Updated $($_.distinguishedName) with RequiresEnrollmentAgentSignature = $requiresEnrollmentAgentSignature"
                 
                 # Return the modified object
                 $_
             } catch {
-                Write-Error "Error processing template $($_.Properties.distinguishedName[0]): $_"
+                Write-Error "Error processing template $($_.distinguishedName): $_"
             }
         }
     }

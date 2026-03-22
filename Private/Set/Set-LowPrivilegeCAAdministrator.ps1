@@ -80,10 +80,10 @@ function Set-LowPrivilegeCAAdministrator {
         https://posts.specterops.io/certified-pre-owned-d95910965cd2
     #>
     [CmdletBinding()]
-    [OutputType([PSCustomObject[]])]
+    [OutputType([LS2AdcsObject[]])]
     param (
         [Parameter(Mandatory, ValueFromPipeline)]
-        [PSCustomObject[]]$AdcsObject
+        [LS2AdcsObject[]]$AdcsObject
     )
 
     #requires -Version 5.1
@@ -95,22 +95,13 @@ function Set-LowPrivilegeCAAdministrator {
     process {
         $AdcsObject | ForEach-Object {
             try {
-                $objectName = if ($_.Name) { $_.Name } else { $_.DistinguishedName }
+                $objectName = $_.GetFriendlyName()
                 Write-Verbose "Processing CA: $objectName"
                 
-                # Get the distinguished name - handle both DirectoryEntry and LS2AdcsObject
-                $dn = if ($_.Properties.distinguishedName) {
-                    $_.Properties.distinguishedName[0]
-                } else {
-                    $_.DistinguishedName
-                }
+                $dn = $_.distinguishedName
                 
-                # Get the CAAdministrators property from AdcsObjectStore
-                $caAdministrators = if ($script:AdcsObjectStore.ContainsKey($dn)) {
-                    $script:AdcsObjectStore[$dn].CAAdministrators
-                } else {
-                    $_.CAAdministrators
-                }
+                # Get the CAAdministrators property directly from the LS2AdcsObject
+                $caAdministrators = $_.CAAdministrators
 
                 [array]$lowPrivilegeIdentityReference = if ($caAdministrators) {
                     foreach ($admin in $caAdministrators) {
@@ -166,20 +157,14 @@ function Set-LowPrivilegeCAAdministrator {
                     }
                 } | Sort-Object -Unique
 
-                # Update the AD CS Object Store with the LowPrivilegeCAAdministrator property
-                if ($script:AdcsObjectStore.ContainsKey($dn)) {
-                    Write-Verbose "  Setting LowPrivilegeCAAdministrator to: $($lowPrivilegeIdentityReference -join ', ')"
-                    Write-Verbose "  Setting LowPrivilegeCAAdministratorNames to: $($lowPrivilegeCAAdministratorNames -join ', ')"
-                    $script:AdcsObjectStore[$dn].LowPrivilegeCAAdministrator = $lowPrivilegeIdentityReference
-                    $script:AdcsObjectStore[$dn].LowPrivilegeCAAdministratorNames = $lowPrivilegeCAAdministratorNames
-                    Write-Verbose "  After assignment - LowPrivilegeCAAdministrator count: $($script:AdcsObjectStore[$dn].LowPrivilegeCAAdministrator.Count)"
-                    Write-Verbose "Updated AD CS Object Store for $dn with LowPrivilegeCAAdministrator"
-                }
+                # Set properties directly on the LS2AdcsObject (same reference as store)
+                Write-Verbose "  Setting LowPrivilegeCAAdministrator to: $($lowPrivilegeIdentityReference -join ', ')"
+                Write-Verbose "  Setting LowPrivilegeCAAdministratorNames to: $($lowPrivilegeCAAdministratorNames -join ', ')"
+                $_.LowPrivilegeCAAdministrator = $lowPrivilegeIdentityReference
+                $_.LowPrivilegeCAAdministratorNames = $lowPrivilegeCAAdministratorNames
+                Write-Verbose "  After assignment - LowPrivilegeCAAdministrator count: $($_.LowPrivilegeCAAdministrator.Count)"
+                Write-Verbose "Updated $($_.distinguishedName) with LowPrivilegeCAAdministrator"
 
-                # Also add to the pipeline object for backward compatibility
-                $_ | Add-Member -NotePropertyName LowPrivilegeCAAdministrator -NotePropertyValue $lowPrivilegeIdentityReference -Force
-                $_ | Add-Member -NotePropertyName LowPrivilegeCAAdministratorNames -NotePropertyValue $lowPrivilegeCAAdministratorNames -Force
-                
                 # Return the modified object
                 $_
                 

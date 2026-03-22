@@ -38,7 +38,7 @@ function Set-CAComputerPrincipal {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory, ValueFromPipeline)]
-        [System.DirectoryServices.DirectoryEntry[]]$AdcsObject
+        [LS2AdcsObject[]]$AdcsObject
     )
 
     begin {
@@ -46,25 +46,10 @@ function Set-CAComputerPrincipal {
     }
 
     process {
-        $AdcsObject | Where-Object SchemaClassName -EQ pKIEnrollmentService | ForEach-Object {
+        $AdcsObject | Where-Object { $_.IsCertificationAuthority() } | ForEach-Object {
             try {
-                # Extract CA name - check both DirectoryEntry Properties and direct property
-                $caName = if ($_.Properties -and $_.Properties.Contains('cn')) {
-                    $_.Properties['cn'][0]
-                } elseif ($_.cn) {
-                    $_.cn
-                } else {
-                    $null
-                }
-                
-                # Extract dNSHostName - check both DirectoryEntry Properties and direct property
-                $dnsHostName = if ($_.Properties -and $_.Properties.Contains('dNSHostName')) {
-                    $_.Properties['dNSHostName'][0]
-                } elseif ($_.dNSHostName) {
-                    $_.dNSHostName
-                } else {
-                    $null
-                }
+                $caName = $_.cn
+                $dnsHostName = $_.dNSHostName
                 
                 Write-Verbose "Processing CA: $caName"
                 
@@ -116,16 +101,10 @@ function Set-CAComputerPrincipal {
                     }
                 }
                 
-                # Update the AD CS Object Store with ComputerPrincipal property
-                # Note: CAFullName is now a ScriptProperty on LS2AdcsObject and calculates automatically
-                $dn = $_.Properties.distinguishedName[0]
-                if ($script:AdcsObjectStore.ContainsKey($dn)) {
-                    $script:AdcsObjectStore[$dn].ComputerPrincipal = $computerSID
-                    Write-Verbose "Updated AD CS Object Store for $dn with ComputerPrincipal = $computerSID"
-                }
-                
-                # Also add to the pipeline object for backward compatibility
-                $_ | Add-Member -NotePropertyName ComputerPrincipal -NotePropertyValue $computerSID -Force
+                # Set the property directly on the LS2AdcsObject (same reference as store)
+                # Note: CAFullName is a ScriptProperty on LS2AdcsObject and calculates automatically
+                $_.ComputerPrincipal = $computerSID
+                Write-Verbose "Updated $($_.distinguishedName) with ComputerPrincipal = $computerSID"
                 
                 # Return the modified object
                 $_

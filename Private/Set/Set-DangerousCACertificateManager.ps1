@@ -55,10 +55,10 @@ function Set-DangerousCACertificateManager {
         https://posts.specterops.io/certified-pre-owned-d95910965cd2
     #>
     [CmdletBinding()]
-    [OutputType([System.DirectoryServices.DirectoryEntry[]])]
+    [OutputType([LS2AdcsObject[]])]
     param (
         [Parameter(Mandatory, ValueFromPipeline)]
-        [System.DirectoryServices.DirectoryEntry[]]$AdcsObject
+        [LS2AdcsObject[]]$AdcsObject
     )
 
     #requires -Version 5.1
@@ -68,21 +68,13 @@ function Set-DangerousCACertificateManager {
     }
 
     process {
-        $AdcsObject | Where-Object SchemaClassName -EQ pKIEnrollmentService | ForEach-Object {
+        $AdcsObject | Where-Object { $_.IsCertificationAuthority() } | ForEach-Object {
             try {
-                # Get the distinguished name - handle both DirectoryEntry and LS2AdcsObject
-                $dn = if ($_.Properties.distinguishedName) {
-                    $_.Properties.distinguishedName[0]
-                } else {
-                    $_.DistinguishedName
-                }
+                # Get the distinguished name directly from the LS2AdcsObject
+                $dn = $_.distinguishedName
 
-                # Retrieve CertificateManagers from AdcsObjectStore
-                $certificateManagers = if ($script:AdcsObjectStore.ContainsKey($dn)) {
-                    $script:AdcsObjectStore[$dn].CertificateManagers
-                } else {
-                    $_.CertificateManagers
-                }
+                # Retrieve CertificateManagers directly from the LS2AdcsObject
+                $certificateManagers = $_.CertificateManagers
 
                 [array]$dangerousSids = if ($certificateManagers) {
                     foreach ($manager in $certificateManagers) {
@@ -132,16 +124,10 @@ function Set-DangerousCACertificateManager {
                     }
                 } | Sort-Object -Unique
 
-                # Update the AD CS Object Store with the DangerousCACertificateManager property
-                if ($script:AdcsObjectStore.ContainsKey($dn)) {
-                    $script:AdcsObjectStore[$dn].DangerousCACertificateManager = $dangerousSids
-                    $script:AdcsObjectStore[$dn].DangerousCACertificateManagerNames = $dangerousNames
-                    Write-Verbose "  Updated AD CS Object Store for $dn with DangerousCACertificateManager"
-                }
-
-                # Also add to the pipeline object for backward compatibility
-                $_ | Add-Member -NotePropertyName DangerousCACertificateManager -NotePropertyValue $dangerousSids -Force
-                $_ | Add-Member -NotePropertyName DangerousCACertificateManagerNames -NotePropertyValue $dangerousNames -Force
+                # Set properties directly on the LS2AdcsObject (same reference as store)
+                $_.DangerousCACertificateManager = $dangerousSids
+                $_.DangerousCACertificateManagerNames = $dangerousNames
+                Write-Verbose "  Updated $($_.distinguishedName) with DangerousCACertificateManager"
                 
                 # Return the modified object
                 $_

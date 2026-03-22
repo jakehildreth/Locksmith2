@@ -55,10 +55,10 @@ function Set-DangerousCAAdministrator {
         https://posts.specterops.io/certified-pre-owned-d95910965cd2
     #>
     [CmdletBinding()]
-    [OutputType([System.DirectoryServices.DirectoryEntry[]])]
+    [OutputType([LS2AdcsObject[]])]
     param (
         [Parameter(Mandatory, ValueFromPipeline)]
-        [System.DirectoryServices.DirectoryEntry[]]$AdcsObject
+        [LS2AdcsObject[]]$AdcsObject
     )
 
     #requires -Version 5.1
@@ -68,25 +68,13 @@ function Set-DangerousCAAdministrator {
     }
 
     process {
-        $AdcsObject | Where-Object SchemaClassName -EQ pKIEnrollmentService | ForEach-Object {
+        $AdcsObject | Where-Object { $_.IsCertificationAuthority() } | ForEach-Object {
             try {
-                $caName = if ($_.Properties -and $_.Properties.Contains('cn')) {
-                    $_.Properties['cn'][0]
-                } elseif ($_.cn) {
-                    $_.cn
-                } else {
-                    'Unknown CA'
-                }
-                
+                $caName = $_.cn
                 Write-Verbose "Processing CA: $caName"
                 
-                # Get CAAdministrators from the AdcsObjectStore
-                $dn = $_.Properties.distinguishedName[0]
-                $caAdministrators = if ($script:AdcsObjectStore.ContainsKey($dn)) {
-                    $script:AdcsObjectStore[$dn].CAAdministrators
-                } else {
-                    $null
-                }
+                # Get CAAdministrators directly from the LS2AdcsObject
+                $caAdministrators = $_.CAAdministrators
                 
                 if (-not $caAdministrators) {
                     Write-Verbose "  CA '$caName' has no CAAdministrators property - skipping dangerous check"
@@ -134,17 +122,10 @@ function Set-DangerousCAAdministrator {
                     }
                 } | Sort-Object -Unique
                 
-                # Update the AD CS Object Store with the DangerousCAAdministrator property
-                $dn = $_.Properties.distinguishedName[0]
-                if ($script:AdcsObjectStore.ContainsKey($dn)) {
-                    $script:AdcsObjectStore[$dn].DangerousCAAdministrator = $dangerousSids
-                    $script:AdcsObjectStore[$dn].DangerousCAAdministratorNames = $dangerousNames
-                    Write-Verbose "  Updated AD CS Object Store for $dn with DangerousCAAdministrator"
-                }
-                
-                # Also add to the pipeline object for backward compatibility
-                $_ | Add-Member -NotePropertyName DangerousCAAdministrator -NotePropertyValue $dangerousSids -Force
-                $_ | Add-Member -NotePropertyName DangerousCAAdministratorNames -NotePropertyValue $dangerousNames -Force
+                # Set properties directly on the LS2AdcsObject (same reference as store)
+                $_.DangerousCAAdministrator = $dangerousSids
+                $_.DangerousCAAdministratorNames = $dangerousNames
+                Write-Verbose "  Updated $($_.distinguishedName) with DangerousCAAdministrator"
                 
                 # Return the modified object
                 $_

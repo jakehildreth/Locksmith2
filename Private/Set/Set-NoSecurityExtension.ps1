@@ -59,10 +59,10 @@ function Set-NoSecurityExtension {
         https://support.microsoft.com/en-us/topic/kb5014754-certificate-based-authentication-changes-on-windows-domain-controllers-ad2c23b0-15d8-4340-a468-4d4f3b188f16
     #>
     [CmdletBinding()]
-    [OutputType([System.DirectoryServices.DirectoryEntry[]])]
+    [OutputType([LS2AdcsObject[]])]
     param (
         [Parameter(Mandatory, ValueFromPipeline)]
-        [System.DirectoryServices.DirectoryEntry[]]$AdcsObject
+        [LS2AdcsObject[]]$AdcsObject
     )
 
     #requires -Version 5.1
@@ -75,20 +75,14 @@ function Set-NoSecurityExtension {
     process {
         $AdcsObject | Where-Object SchemaClassName -EQ pKICertificateTemplate | ForEach-Object {
             try {
-                $objectName = if ($_.Properties.displayName.Count -gt 0) {
-                    $_.Properties.displayName[0] 
-                } elseif ($_.Properties.name.Count -gt 0) {
-                    $_.Properties.name[0]
-                } else {
-                    $_.Properties.distinguishedName[0]
-                }
+                $objectName = $_.GetFriendlyName()
                 Write-Verbose "Processing template: $objectName"
                 
                 $noSecurityExtension = $false
                 
-                # Check if msPKI-Enrollment-Flag has CT_FLAG_NO_SECURITY_EXTENSION set
-                if ($_.Properties.'msPKI-Enrollment-Flag'.Count -gt 0) {
-                    [int]$enrollmentFlag = $_.Properties.'msPKI-Enrollment-Flag'[0]
+                # Check if EnrollmentFlag has CT_FLAG_NO_SECURITY_EXTENSION set
+                if ($null -ne $_.EnrollmentFlag) {
+                    [int]$enrollmentFlag = $_.EnrollmentFlag
                     Write-Verbose "msPKI-Enrollment-Flag value: $enrollmentFlag"
                     
                     if ($enrollmentFlag -band $CT_FLAG_NO_SECURITY_EXTENSION) {
@@ -101,20 +95,14 @@ function Set-NoSecurityExtension {
                     Write-Verbose "msPKI-Enrollment-Flag not present - security extension enabled by default"
                 }
                 
-                # Update the AdcsObjectStore with the NoSecurityExtension property
-                $dn = $_.Properties.distinguishedName[0]
-                if ($script:AdcsObjectStore.ContainsKey($dn)) {
-                    $script:AdcsObjectStore[$dn] | Add-Member -NotePropertyName NoSecurityExtension -NotePropertyValue $noSecurityExtension -Force
-                    Write-Verbose "Updated AD CS Object Store for $dn with NoSecurityExtension = $noSecurityExtension"
-                }
-                
-                # Also add to the pipeline object for backward compatibility
-                $_ | Add-Member -NotePropertyName NoSecurityExtension -NotePropertyValue $noSecurityExtension -Force
+                # Set the property directly on the LS2AdcsObject
+                $_.NoSecurityExtension = $noSecurityExtension
+                Write-Verbose "Updated $($_.distinguishedName) with NoSecurityExtension = $noSecurityExtension"
                 
                 # Return the modified object
                 $_
             } catch {
-                Write-Error "Error processing template $($_.Properties.distinguishedName[0]): $_"
+                Write-Error "Error processing template $($_.distinguishedName): $_"
             }
         }
     }

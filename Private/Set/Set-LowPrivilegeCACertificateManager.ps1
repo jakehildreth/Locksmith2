@@ -80,10 +80,10 @@ function Set-LowPrivilegeCACertificateManager {
         https://posts.specterops.io/certified-pre-owned-d95910965cd2
     #>
     [CmdletBinding()]
-    [OutputType([PSCustomObject[]])]
+    [OutputType([LS2AdcsObject[]])]
     param (
         [Parameter(Mandatory, ValueFromPipeline)]
-        [PSCustomObject[]]$AdcsObject
+        [LS2AdcsObject[]]$AdcsObject
     )
 
     #requires -Version 5.1
@@ -95,22 +95,13 @@ function Set-LowPrivilegeCACertificateManager {
     process {
         $AdcsObject | ForEach-Object {
             try {
-                $objectName = if ($_.Name) { $_.Name } else { $_.DistinguishedName }
+                $objectName = $_.GetFriendlyName()
                 Write-Verbose "Processing CA: $objectName"
                 
-                # Get the distinguished name - handle both DirectoryEntry and LS2AdcsObject
-                $dn = if ($_.Properties.distinguishedName) {
-                    $_.Properties.distinguishedName[0]
-                } else {
-                    $_.DistinguishedName
-                }
+                $dn = $_.distinguishedName
                 
-                # Get the CertificateManagers property from AdcsObjectStore
-                $certificateManagers = if ($script:AdcsObjectStore.ContainsKey($dn)) {
-                    $script:AdcsObjectStore[$dn].CertificateManagers
-                } else {
-                    $_.CertificateManagers
-                }
+                # Get the CertificateManagers property directly from the LS2AdcsObject
+                $certificateManagers = $_.CertificateManagers
 
                 [array]$lowPrivilegeIdentityReference = if ($certificateManagers) {
                     foreach ($manager in $certificateManagers) {
@@ -166,19 +157,13 @@ function Set-LowPrivilegeCACertificateManager {
                     }
                 } | Sort-Object -Unique
 
-                # Update the AD CS Object Store with the LowPrivilegeCACertificateManager property
-                if ($script:AdcsObjectStore.ContainsKey($dn)) {
-                    Write-Verbose "  Setting LowPrivilegeCACertificateManager to: $($lowPrivilegeIdentityReference -join ', ')"
-                    Write-Verbose "  Setting LowPrivilegeCACertificateManagerNames to: $($lowPrivilegeCACertificateManagerNames -join ', ')"
-                    $script:AdcsObjectStore[$dn].LowPrivilegeCACertificateManager = $lowPrivilegeIdentityReference
-                    $script:AdcsObjectStore[$dn].LowPrivilegeCACertificateManagerNames = $lowPrivilegeCACertificateManagerNames
-                    Write-Verbose "  After assignment - LowPrivilegeCACertificateManager count: $($script:AdcsObjectStore[$dn].LowPrivilegeCACertificateManager.Count)"
-                    Write-Verbose "Updated AD CS Object Store for $dn with LowPrivilegeCACertificateManager"
-                }
-
-                # Also add to the pipeline object for backward compatibility
-                $_ | Add-Member -NotePropertyName LowPrivilegeCACertificateManager -NotePropertyValue $lowPrivilegeIdentityReference -Force
-                $_ | Add-Member -NotePropertyName LowPrivilegeCACertificateManagerNames -NotePropertyValue $lowPrivilegeCACertificateManagerNames -Force
+                # Set properties directly on the LS2AdcsObject (same reference as store)
+                Write-Verbose "  Setting LowPrivilegeCACertificateManager to: $($lowPrivilegeIdentityReference -join ', ')"
+                Write-Verbose "  Setting LowPrivilegeCACertificateManagerNames to: $($lowPrivilegeCACertificateManagerNames -join ', ')"
+                $_.LowPrivilegeCACertificateManager = $lowPrivilegeIdentityReference
+                $_.LowPrivilegeCACertificateManagerNames = $lowPrivilegeCACertificateManagerNames
+                Write-Verbose "  After assignment - LowPrivilegeCACertificateManager count: $($_.LowPrivilegeCACertificateManager.Count)"
+                Write-Verbose "Updated $($_.distinguishedName) with LowPrivilegeCACertificateManager"
                 
                 # Return the modified object
                 $_

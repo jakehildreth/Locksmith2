@@ -68,7 +68,6 @@ function Initialize-LS2Scan {
         Write-Verbose "Rescan specified. Clearing AdcsObjectStore and IssueStore..."
         $script:AdcsObjectStore = @{}
         $script:IssueStore = @{}
-        $script:AdcsObject = $null
     }
 
     # Check if AdcsObjectStore is populated

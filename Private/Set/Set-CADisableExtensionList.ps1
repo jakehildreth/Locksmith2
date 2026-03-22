@@ -5,7 +5,7 @@ function Set-CADisableExtensionList {
 
     .DESCRIPTION
         This function queries the DisableExtensionList registry value for each CA using PSCertutil's
-        Get-PCDisableExtensionList cmdlet. The DisableExtensionList indicates which certificate extensions
+        Get-PSCDisableExtensionList cmdlet. The DisableExtensionList indicates which certificate extensions
         are disabled on the CA, which is relevant for ESC16 detection (disabled CRL/AIA extensions).
 
         The function updates the AdcsObjectStore with:
@@ -22,58 +22,34 @@ function Set-CADisableExtensionList {
         Set-CAComputerPrincipal | Set-CAInterfaceFlags | Set-CAEditFlags | Set-CAAuditFilter | Set-CADisableExtensionList
 
     .NOTES
-        Requires PSCertutil module with Get-PCDisableExtensionList cmdlet.
+        Requires PSCertutil module with Get-PSCDisableExtensionList cmdlet.
         Part of the CA configuration pipeline in Invoke-Locksmith2.
     #>
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
-        [System.DirectoryServices.DirectoryEntry[]]$AdcsObject
+        [LS2AdcsObject[]]$AdcsObject
     )
 
     begin {
         Write-Verbose "Querying DisableExtensionList for Certification Authorities..."
         
         # Verify PSCertutil is available
-        if (-not (Get-Command -Name Get-PCDisableExtensionList -ErrorAction SilentlyContinue)) {
-            Write-Error "Get-PCDisableExtensionList cmdlet not found. Please ensure PSCertutil module is loaded."
+        if (-not (Get-Command -Name Get-PSCDisableExtensionList -ErrorAction SilentlyContinue)) {
+            Write-Error "Get-PSCDisableExtensionList cmdlet not found. Please ensure PSCertutil module is loaded."
             return
         }
     }
 
     process {
-        $AdcsObject | Where-Object SchemaClassName -EQ pKIEnrollmentService | ForEach-Object {
+        $AdcsObject | Where-Object { $_.IsCertificationAuthority() } | ForEach-Object {
             try {
-                # Extract CA name for logging
-                $caName = if ($_.Properties -and $_.Properties.Contains('cn')) {
-                    $_.Properties['cn'][0]
-                } elseif ($_.cn) {
-                    $_.cn
-                } else {
-                    'Unknown CA'
-                }
-                
+                $caName = $_.cn
                 Write-Verbose "Processing CA: $caName"
                 
-                # Extract the DN from the DirectoryEntry
-                $dn = if ($_.Properties -and $_.Properties.Contains('distinguishedName')) {
-                    $_.Properties['distinguishedName'][0]
-                } elseif ($_.distinguishedName) {
-                    $_.distinguishedName
-                } else {
-                    Write-Warning "Could not extract DistinguishedName for CA: $caName"
-                    $_
-                    return
-                }
+                $dn = $_.distinguishedName
 
-                # Get the CAFullName from the AdcsObjectStore
-                if (-not $script:AdcsObjectStore.ContainsKey($dn)) {
-                    Write-Warning "CA '$dn' not found in AD CS Object Store"
-                    $_
-                    return
-                }
-
-                $caFullName = $script:AdcsObjectStore[$dn].CAFullName
+                $caFullName = $_.CAFullName
                 if ([string]::IsNullOrEmpty($caFullName)) {
                     Write-Warning "CAFullName is empty for CA: $dn"
                     $_
@@ -83,9 +59,9 @@ function Set-CADisableExtensionList {
                 Write-Verbose "  Querying DisableExtensionList for: $caFullName"
 
                 # Query DisableExtensionList using PSCertutil
-                $disableExtensionListResult = Get-PCDisableExtensionList -CAFullName $caFullName -ErrorAction Stop
+                $disableExtensionListResult = Get-PSCDisableExtensionList -CAFullName $caFullName -ErrorAction Stop
                 
-                # Get-PCDisableExtensionList returns an array of objects with DisabledExtension property
+                # Get-PSCDisableExtensionList returns an array of objects with DisabledExtension property
                 # or $null if no extensions are disabled
                 # Force array wrapping with @() for PS 5.1 compatibility (.Count on single objects)
                 if ($disableExtensionListResult -and @($disableExtensionListResult).Count -gt 0) {
@@ -103,29 +79,23 @@ function Set-CADisableExtensionList {
                         Write-Verbose "  Security extension (1.3.6.1.4.1.311.25.2) is enabled"
                     }
                     
-                    # Update the AD CS Object Store
-                    if ($script:AdcsObjectStore.ContainsKey($dn)) {
-                        $script:AdcsObjectStore[$dn].DisableExtensionList = $disabledExtensions
-                        $script:AdcsObjectStore[$dn].SecurityExtensionDisabled = $securityExtensionDisabled
-                        Write-Verbose "  Updated AD CS Object Store for $dn with DisableExtensionList and SecurityExtensionDisabled"
-                    }
+                    # Set properties directly on the LS2AdcsObject (same reference as store)
+                    $_.DisableExtensionList = $disabledExtensions
+                    $_.SecurityExtensionDisabled = $securityExtensionDisabled
+                    Write-Verbose "  Updated $($_.distinguishedName) with DisableExtensionList and SecurityExtensionDisabled"
                 } else {
-                    # No extensions disabled - store empty array and false
+                    # No extensions disabled - set directly
                     Write-Verbose "  No extensions disabled on this CA"
-                    if ($script:AdcsObjectStore.ContainsKey($dn)) {
-                        $script:AdcsObjectStore[$dn].DisableExtensionList = @()
-                        $script:AdcsObjectStore[$dn].SecurityExtensionDisabled = $false
-                        Write-Verbose "  Updated AD CS Object Store for $dn with empty DisableExtensionList"
-                    }
+                    $_.DisableExtensionList = @()
+                    $_.SecurityExtensionDisabled = $false
+                    Write-Verbose "  Updated $($_.distinguishedName) with empty DisableExtensionList"
                 }
             } catch {
                 Write-Verbose "  Failed to query DisableExtensionList for '$caFullName': $($_.Exception.Message)"
                 
                 # Set to null on error
-                if ($script:AdcsObjectStore.ContainsKey($dn)) {
-                    $script:AdcsObjectStore[$dn].DisableExtensionList = $null
-                    $script:AdcsObjectStore[$dn].SecurityExtensionDisabled = $null
-                }
+                $_.DisableExtensionList = $null
+                $_.SecurityExtensionDisabled = $null
             }
             
             # Always return the object to continue the pipeline

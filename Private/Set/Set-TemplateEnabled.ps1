@@ -39,14 +39,14 @@ function Set-TemplateEnabled {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory, ValueFromPipeline)]
-        [System.DirectoryServices.DirectoryEntry[]]$AdcsObject
+        [LS2AdcsObject[]]$AdcsObject
     )
 
     begin {
         Write-Verbose "Identifying which templates are enabled on which CAs..."
 
         # Get all CA objects from the store
-        $caObjects = $script:AdcsObjectStore.Values | Where-Object { $_.objectClass -contains 'pKIEnrollmentService' }
+        $caObjects = $script:AdcsObjectStore.Values | Where-Object { $_.IsCertificationAuthority() }
         Write-Verbose "Found $($caObjects.Count) CA object(s) in AD CS Object Store"
 
         # Build a mapping of template CN -> list of CA names
@@ -77,7 +77,7 @@ function Set-TemplateEnabled {
     process {
         $AdcsObject | Where-Object SchemaClassName -EQ pKICertificateTemplate | ForEach-Object {
             try {
-                $templateCN = $_.Properties['cn'][0]
+                $templateCN = $_.cn
                 Write-Verbose "Processing template: $templateCN"
 
                 if ($templateToCAs.ContainsKey($templateCN)) {
@@ -92,13 +92,10 @@ function Set-TemplateEnabled {
                     Write-Verbose "  Template '$templateCN' is NOT enabled on any CA"
                 }
 
-                # Update the AD CS Object Store with the properties
-                $dn = $_.Properties.distinguishedName[0]
-                if ($script:AdcsObjectStore.ContainsKey($dn)) {
-                    $script:AdcsObjectStore[$dn].Enabled = $enabled
-                    $script:AdcsObjectStore[$dn].EnabledOn = $enabledOnCAs
-                    Write-Verbose "Updated AD CS Object Store for $dn with Enabled = $enabled and EnabledOn"
-                }
+                # Set properties directly on the LS2AdcsObject (same reference as store)
+                $_.Enabled = $enabled
+                $_.EnabledOn = $enabledOnCAs
+                Write-Verbose "Updated $($_.distinguishedName) with Enabled = $enabled and EnabledOn"
 
                 # Return the modified object
                 $_

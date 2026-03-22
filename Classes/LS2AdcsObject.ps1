@@ -20,6 +20,7 @@ class LS2AdcsObject {
     [Nullable[int]]$EnrollmentFlag            # msPKI-Enrollment-Flag
     [Nullable[int]]$PrivateKeyFlag            # msPKI-Private-Key-Flag
     [Nullable[int]]$RASignature               # msPKI-RA-Signature
+    [string[]]$RAApplicationPolicies            # msPKI-RA-Application-Policies
     [Nullable[int]]$TemplateSchemaVersion     # msPKI-Template-Schema-Version
     [Nullable[int]]$TemplateMinorRevision     # msPKI-Template-Minor-Revision
     
@@ -41,8 +42,15 @@ class LS2AdcsObject {
     [Nullable[bool]]$SANAllowed
     [Nullable[bool]]$AuthenticationEKUExist
     [Nullable[bool]]$AnyPurposeEKUExist
-    [Nullable[bool]]$DangerousEnrollee
-    [Nullable[bool]]$LowPrivilegeEnrollee
+    [Nullable[bool]]$EnrollmentAgentEKUExist
+    [Nullable[bool]]$NoSecurityExtension
+    [Nullable[bool]]$RequiresEnrollmentAgentSignature
+    [Nullable[bool]]$AuthorizedSignatureRequired
+    [Nullable[bool]]$ManagerApprovalRequired
+    [string[]]$DangerousEnrollee
+    [string[]]$DangerousEnrolleeNames
+    [string[]]$LowPrivilegeEnrollee
+    [string[]]$LowPrivilegeEnrolleeNames
     [string[]]$DangerousEditor
     [string[]]$DangerousEditorNames
     [string[]]$LowPrivilegeEditor
@@ -94,6 +102,7 @@ class LS2AdcsObject {
         $this.EnrollmentFlag = if ($DirectoryEntry.Properties.Contains('msPKI-Enrollment-Flag')) { [int]$DirectoryEntry.Properties['msPKI-Enrollment-Flag'][0] } else { $null }
         $this.PrivateKeyFlag = if ($DirectoryEntry.Properties.Contains('msPKI-Private-Key-Flag')) { [int]$DirectoryEntry.Properties['msPKI-Private-Key-Flag'][0] } else { $null }
         $this.RASignature = if ($DirectoryEntry.Properties.Contains('msPKI-RA-Signature')) { [int]$DirectoryEntry.Properties['msPKI-RA-Signature'][0] } else { $null }
+        $this.RAApplicationPolicies = if ($DirectoryEntry.Properties.Contains('msPKI-RA-Application-Policies')) { @($DirectoryEntry.Properties['msPKI-RA-Application-Policies']) } else { @() }
         $this.TemplateSchemaVersion = if ($DirectoryEntry.Properties.Contains('msPKI-Template-Schema-Version')) { [int]$DirectoryEntry.Properties['msPKI-Template-Schema-Version'][0] } else { $null }
         $this.TemplateMinorRevision = if ($DirectoryEntry.Properties.Contains('msPKI-Template-Minor-Revision')) { [int]$DirectoryEntry.Properties['msPKI-Template-Minor-Revision'][0] } else { $null }
         
@@ -118,8 +127,15 @@ class LS2AdcsObject {
         $this.SANAllowed = $null
         $this.AuthenticationEKUExist = $null
         $this.AnyPurposeEKUExist = $null
-        $this.DangerousEnrollee = $null
-        $this.LowPrivilegeEnrollee = $null
+        $this.EnrollmentAgentEKUExist = $null
+        $this.NoSecurityExtension = $null
+        $this.RequiresEnrollmentAgentSignature = $null
+        $this.AuthorizedSignatureRequired = $null
+        $this.ManagerApprovalRequired = $null
+        $this.DangerousEnrollee = @()
+        $this.DangerousEnrolleeNames = @()
+        $this.LowPrivilegeEnrollee = @()
+        $this.LowPrivilegeEnrolleeNames = @()
         $this.DangerousEditor = @()
         $this.DangerousEditorNames = @()
         $this.LowPrivilegeEditor = @()

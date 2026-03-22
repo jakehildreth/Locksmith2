@@ -88,7 +88,7 @@ function Get-AdcsObject {
                     Write-Verbose "Stored AD CS object: $distinguishedName"
                 }
                 
-                $objectDirectoryEntry
+                $script:AdcsObjectStore[$distinguishedName]
                 $objectCount++
             }
             Write-Verbose "Found $objectCount total objects in the Public Key Services container and its subtree"

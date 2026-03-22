@@ -52,10 +52,10 @@ function Set-EnrollmentAgentEKUExist {
         https://posts.specterops.io/certified-pre-owned-d95910965cd2
     #>
     [CmdletBinding()]
-    [OutputType([System.DirectoryServices.DirectoryEntry[]])]
+    [OutputType([LS2AdcsObject[]])]
     param (
         [Parameter(Mandatory, ValueFromPipeline)]
-        [System.DirectoryServices.DirectoryEntry[]]$AdcsObject,
+        [LS2AdcsObject[]]$AdcsObject,
         
         [Parameter()]
         [string[]]$EnrollmentAgentEKU = @(
@@ -72,20 +72,14 @@ function Set-EnrollmentAgentEKUExist {
     process {
         $AdcsObject | Where-Object SchemaClassName -EQ pKICertificateTemplate | ForEach-Object {
             try {
-                $objectName = if ($_.Properties.displayName.Count -gt 0) {
-                    $_.Properties.displayName[0] 
-                } elseif ($_.Properties.name.Count -gt 0) {
-                    $_.Properties.name[0]
-                } else {
-                    $_.Properties.distinguishedName[0]
-                }
+                $objectName = $_.GetFriendlyName()
                 Write-Verbose "Processing template: $objectName"
                 
                 $enrollmentAgentEKUExist = $false
                 
                 # Check if pKIExtendedKeyUsage attribute exists and has values
-                if ($_.Properties.pKIExtendedKeyUsage.Count -gt 0) {
-                    $ekuList = $_.Properties.pKIExtendedKeyUsage
+                if ($_.pKIExtendedKeyUsage.Count -gt 0) {
+                    $ekuList = $_.pKIExtendedKeyUsage
                     Write-Verbose "pKIExtendedKeyUsage contains $($ekuList.Count) EKU(s): $($ekuList -join ', ')"
                     
                     # Check if any of the Enrollment Agent EKUs are present
@@ -104,20 +98,14 @@ function Set-EnrollmentAgentEKUExist {
                     Write-Verbose "pKIExtendedKeyUsage is empty or not present"
                 }
                 
-                # Update the AdcsObjectStore with the EnrollmentAgentEKUExist property
-                $dn = $_.Properties.distinguishedName[0]
-                if ($script:AdcsObjectStore.ContainsKey($dn)) {
-                    $script:AdcsObjectStore[$dn] | Add-Member -NotePropertyName EnrollmentAgentEKUExist -NotePropertyValue $enrollmentAgentEKUExist -Force
-                    Write-Verbose "Updated AD CS Object Store for $dn with EnrollmentAgentEKUExist = $enrollmentAgentEKUExist"
-                }
-                
-                # Also add to the pipeline object for backward compatibility
-                $_ | Add-Member -NotePropertyName EnrollmentAgentEKUExist -NotePropertyValue $enrollmentAgentEKUExist -Force
+                # Set the property directly on the LS2AdcsObject
+                $_.EnrollmentAgentEKUExist = $enrollmentAgentEKUExist
+                Write-Verbose "Updated $($_.distinguishedName) with EnrollmentAgentEKUExist = $enrollmentAgentEKUExist"
                 
                 # Return the modified object
                 $_
             } catch {
-                Write-Error "Error processing template $($_.Properties.distinguishedName[0]): $_"
+                Write-Error "Error processing template $($_.distinguishedName): $_"
             }
         }
     }
