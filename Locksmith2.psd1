@@ -25,4 +25,5 @@
         }, 'Microsoft.PowerShell.Utility', 'Microsoft.PowerShell.Archive', 'Microsoft.PowerShell.Management', 'Microsoft.PowerShell.Security', 'PowerShellGet', 'CimCmdlets')
     RootModule           = 'Locksmith2.psm1'
     ScriptsToProcess     = @('Classes\LS2Principal.ps1', 'Classes\LS2AdcsObject.ps1')
+    FormatsToProcess     = @('Formats\LS2Issue.format.ps1xml')
 }
