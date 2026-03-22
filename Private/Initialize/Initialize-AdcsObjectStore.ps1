@@ -79,6 +79,7 @@ function Initialize-AdcsObjectStore {
         Set-ManagerApprovalNotRequired |
         Set-AuthorizedSignatureNotRequired |
         Set-TemplateEnabled |
+        Set-Owner |
         Set-HasNonStandardOwner
         
         # Process Certification Authorities
@@ -97,6 +98,7 @@ function Initialize-AdcsObjectStore {
         Set-LowPrivilegeCAAdministrator |
         Set-DangerousCACertificateManager |
         Set-LowPrivilegeCACertificateManager |
+        Set-Owner |
         Set-HasNonStandardOwner
         
         # Process all other infrastructure objects for non-standard owners
@@ -110,6 +112,7 @@ function Initialize-AdcsObjectStore {
         $OtherObjects = $OtherObjects | 
         Set-DangerousEditor |
         Set-LowPrivilegeEditor |
+        Set-Owner |
         Set-HasNonStandardOwner
         
         Write-Verbose "AdcsObjectStore initialization complete. Statistics:"
