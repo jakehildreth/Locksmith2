@@ -5,7 +5,7 @@ function Set-CADisableExtensionList {
 
     .DESCRIPTION
         This function queries the DisableExtensionList registry value for each CA using PSCertutil's
-        Get-PCDisableExtensionList cmdlet. The DisableExtensionList indicates which certificate extensions
+        Get-PSCDisableExtensionList cmdlet. The DisableExtensionList indicates which certificate extensions
         are disabled on the CA, which is relevant for ESC16 detection (disabled CRL/AIA extensions).
 
         The function updates the AdcsObjectStore with:
@@ -22,7 +22,7 @@ function Set-CADisableExtensionList {
         Set-CAComputerPrincipal | Set-CAInterfaceFlags | Set-CAEditFlags | Set-CAAuditFilter | Set-CADisableExtensionList
 
     .NOTES
-        Requires PSCertutil module with Get-PCDisableExtensionList cmdlet.
+        Requires PSCertutil module with Get-PSCDisableExtensionList cmdlet.
         Part of the CA configuration pipeline in Invoke-Locksmith2.
     #>
     [CmdletBinding()]
@@ -35,8 +35,8 @@ function Set-CADisableExtensionList {
         Write-Verbose "Querying DisableExtensionList for Certification Authorities..."
         
         # Verify PSCertutil is available
-        if (-not (Get-Command -Name Get-PCDisableExtensionList -ErrorAction SilentlyContinue)) {
-            Write-Error "Get-PCDisableExtensionList cmdlet not found. Please ensure PSCertutil module is loaded."
+        if (-not (Get-Command -Name Get-PSCDisableExtensionList -ErrorAction SilentlyContinue)) {
+            Write-Error "Get-PSCDisableExtensionList cmdlet not found. Please ensure PSCertutil module is loaded."
             return
         }
     }
@@ -59,9 +59,9 @@ function Set-CADisableExtensionList {
                 Write-Verbose "  Querying DisableExtensionList for: $caFullName"
 
                 # Query DisableExtensionList using PSCertutil
-                $disableExtensionListResult = Get-PCDisableExtensionList -CAFullName $caFullName -ErrorAction Stop
+                $disableExtensionListResult = Get-PSCDisableExtensionList -CAFullName $caFullName -ErrorAction Stop
                 
-                # Get-PCDisableExtensionList returns an array of objects with DisabledExtension property
+                # Get-PSCDisableExtensionList returns an array of objects with DisabledExtension property
                 # or $null if no extensions are disabled
                 # Force array wrapping with @() for PS 5.1 compatibility (.Count on single objects)
                 if ($disableExtensionListResult -and @($disableExtensionListResult).Count -gt 0) {

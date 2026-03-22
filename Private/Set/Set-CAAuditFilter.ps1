@@ -5,7 +5,7 @@ function Set-CAAuditFilter {
 
         .DESCRIPTION
         For each pKIEnrollmentService (CA) object, queries the CA's AuditFilter registry
-        configuration using PSCertutil's Get-PCAuditFilter cmdlet and stores the results
+        configuration using PSCertutil's Get-PSCAuditFilter cmdlet and stores the results
         in the AdcsObjectStore.
         
         This function tracks the AuditFilter registry value which controls what events
@@ -42,7 +42,7 @@ function Set-CAAuditFilter {
         The function silently skips CAs that:
         - Don't have a CAFullName property
         - Are unreachable or don't respond to certutil queries
-        - Return errors from Get-PCAuditFilter
+        - Return errors from Get-PSCAuditFilter
 
         .LINK
         https://posts.specterops.io/certified-pre-owned-d95910965cd2
@@ -80,7 +80,7 @@ function Set-CAAuditFilter {
                 
                 try {
                     # Query AuditFilter using PSCertutil
-                    $auditFilterResult = Get-PCAuditFilter -CAFullName $caFullName -ErrorAction Stop
+                    $auditFilterResult = Get-PSCAuditFilter -CAFullName $caFullName -ErrorAction Stop
                     
                     if ($auditFilterResult -and $null -ne $auditFilterResult.AuditFilter) {
                         $auditFilter = $auditFilterResult.AuditFilter
@@ -91,7 +91,7 @@ function Set-CAAuditFilter {
                         Write-Verbose "  Updated $($_.distinguishedName) with AuditFilter data"
                         
                     } else {
-                        Write-Verbose "  No AuditFilter returned from Get-PCAuditFilter"
+                        Write-Verbose "  No AuditFilter returned from Get-PSCAuditFilter"
                     }
                 } catch {
                     Write-Verbose "  Failed to query AuditFilter for '$caFullName': $($_.Exception.Message)"

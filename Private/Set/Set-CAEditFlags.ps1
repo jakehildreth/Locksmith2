@@ -5,7 +5,7 @@ function Set-CAEditFlags {
 
         .DESCRIPTION
         For each pKIEnrollmentService (CA) object, queries the CA's EditFlags registry
-        configuration using PSCertutil's Get-PCEditFlag cmdlet and stores the results
+        configuration using PSCertutil's Get-PSCEditFlag cmdlet and stores the results
         in the AdcsObjectStore.
         
         This function specifically tracks the EDITF_ATTRIBUTESUBJECTALTNAME2 flag, which
@@ -13,7 +13,7 @@ function Set-CAEditFlags {
         leading to the ESC6 vulnerability.
         
         The function adds these properties to each CA object:
-        - EditFlags: Array of all EditFlag objects returned by Get-PCEditFlag
+        - EditFlags: Array of all EditFlag objects returned by Get-PSCEditFlag
         - SANFlagEnabled: Boolean indicating if EDITF_ATTRIBUTESUBJECTALTNAME2 is enabled (ESC6)
 
         .PARAMETER AdcsObject
@@ -43,7 +43,7 @@ function Set-CAEditFlags {
         The function silently skips CAs that:
         - Don't have a CAFullName property
         - Are unreachable or don't respond to certutil queries
-        - Return errors from Get-PCEditFlag
+        - Return errors from Get-PSCEditFlag
 
         .LINK
         https://posts.specterops.io/certified-pre-owned-d95910965cd2
@@ -80,7 +80,7 @@ function Set-CAEditFlags {
                 
                 try {
                     # Query EditFlags using PSCertutil
-                    $editFlags = Get-PCEditFlag -CAFullName $caFullName -ErrorAction Stop
+                    $editFlags = Get-PSCEditFlag -CAFullName $caFullName -ErrorAction Stop
                     
                     if ($editFlags) {
                         Write-Verbose "  Retrieved $(@($editFlags).Count) EditFlags"
@@ -97,7 +97,7 @@ function Set-CAEditFlags {
                         Write-Verbose "  Updated $($_.distinguishedName) with EditFlags data"
                         
                     } else {
-                        Write-Verbose "  No EditFlags returned from Get-PCEditFlag"
+                        Write-Verbose "  No EditFlags returned from Get-PSCEditFlag"
                     }
                     
                 } catch {

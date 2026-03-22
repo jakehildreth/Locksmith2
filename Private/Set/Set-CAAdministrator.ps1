@@ -5,7 +5,7 @@ function Set-CAAdministrator {
 
         .DESCRIPTION
         For each pKIEnrollmentService (CA) object, queries the CA's CA Administrator
-        role assignments using PSCertutil's Get-PCCAAdministrator cmdlet and stores the 
+        role assignments using PSCertutil's Get-PSCCAAdministrator cmdlet and stores the 
         results in the AdcsObjectStore.
         
         CA Administrators have full control over the CA and can approve certificate requests,
@@ -13,7 +13,7 @@ function Set-CAAdministrator {
         inappropriate CA Administrator assignments can lead to ESC7 vulnerabilities.
         
         The function adds these properties to each CA object:
-        - CAAdministrators: Array of all CA Administrator objects returned by Get-PCCAAdministrator
+        - CAAdministrators: Array of all CA Administrator objects returned by Get-PSCCAAdministrator
 
         .PARAMETER AdcsObject
         One or more DirectoryEntry objects representing AD CS Certification Authorities.
@@ -42,7 +42,7 @@ function Set-CAAdministrator {
         The function silently skips CAs that:
         - Don't have a CAFullName property
         - Are unreachable or don't respond to certutil queries
-        - Return errors from Get-PCCAAdministrator
+        - Return errors from Get-PSCCAAdministrator
 
         .LINK
         https://posts.specterops.io/certified-pre-owned-d95910965cd2
@@ -79,7 +79,7 @@ function Set-CAAdministrator {
                 
                 try {
                     # Query CA Administrators using PSCertutil
-                    $caAdministrators = Get-PCCAAdministrator -CAFullName $caFullName -ErrorAction Stop
+                    $caAdministrators = Get-PSCCAAdministrator -CAFullName $caFullName -ErrorAction Stop
                     
                     if ($caAdministrators) {
                         $adminCount = @($caAdministrators).Count
@@ -104,7 +104,7 @@ function Set-CAAdministrator {
                         Write-Verbose "  Updated $($_.distinguishedName) with CA Administrator data"
                         
                     } else {
-                        Write-Verbose "  No CA Administrators returned from Get-PCCAAdministrator"
+                        Write-Verbose "  No CA Administrators returned from Get-PSCCAAdministrator"
                     }
                     
                 } catch {

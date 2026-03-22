@@ -5,7 +5,7 @@ function Set-CACertificateManager {
 
         .DESCRIPTION
         For each pKIEnrollmentService (CA) object, queries the CA's Certificate Manager
-        role assignments using PSCertutil's Get-PCCertificateManager cmdlet and stores the 
+        role assignments using PSCertutil's Get-PSCCertificateManager cmdlet and stores the 
         results in the AdcsObjectStore.
         
         Certificate Managers can approve or deny certificate requests, revoke certificates,
@@ -13,7 +13,7 @@ function Set-CACertificateManager {
         Certificate Manager assignments can lead to ESC7 vulnerabilities.
         
         The function adds these properties to each CA object:
-        - CertificateManagers: Array of all Certificate Manager objects returned by Get-PCCertificateManager
+        - CertificateManagers: Array of all Certificate Manager objects returned by Get-PSCCertificateManager
 
         .PARAMETER AdcsObject
         One or more DirectoryEntry objects representing AD CS Certification Authorities.
@@ -42,7 +42,7 @@ function Set-CACertificateManager {
         The function silently skips CAs that:
         - Don't have a CAFullName property
         - Are unreachable or don't respond to certutil queries
-        - Return errors from Get-PCCertificateManager
+        - Return errors from Get-PSCCertificateManager
 
         .LINK
         https://posts.specterops.io/certified-pre-owned-d95910965cd2
@@ -79,7 +79,7 @@ function Set-CACertificateManager {
                 
                 try {
                     # Query Certificate Managers using PSCertutil
-                    $certificateManagers = Get-PCCertificateManager -CAFullName $caFullName -ErrorAction Stop
+                    $certificateManagers = Get-PSCCertificateManager -CAFullName $caFullName -ErrorAction Stop
                     
                     if ($certificateManagers) {
                         $managerCount = @($certificateManagers).Count
@@ -104,7 +104,7 @@ function Set-CACertificateManager {
                         Write-Verbose "  Updated $($_.distinguishedName) with Certificate Manager data"
                         
                     } else {
-                        Write-Verbose "  No Certificate Managers returned from Get-PCCertificateManager"
+                        Write-Verbose "  No Certificate Managers returned from Get-PSCCertificateManager"
                     }
                     
                 } catch {

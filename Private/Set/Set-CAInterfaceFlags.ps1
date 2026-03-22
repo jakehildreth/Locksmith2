@@ -5,7 +5,7 @@ function Set-CAInterfaceFlags {
 
         .DESCRIPTION
         For each pKIEnrollmentService (CA) object, queries the CA's InterfaceFlags registry
-        configuration using PSCertutil's Get-PCInterfaceFlag cmdlet and stores the results
+        configuration using PSCertutil's Get-PSCInterfaceFlag cmdlet and stores the results
         in the AdcsObjectStore.
         
         This function tracks various interface flags that control CA RPC/DCOM behavior,
@@ -13,7 +13,7 @@ function Set-CAInterfaceFlags {
         the ESC11 vulnerability (allowing unauthenticated/unencrypted certificate requests).
         
         The function adds these properties to each CA object:
-        - InterfaceFlags: Array of all InterfaceFlag objects returned by Get-PCInterfaceFlag
+        - InterfaceFlags: Array of all InterfaceFlag objects returned by Get-PSCInterfaceFlag
         - RPCEncryptionNotRequired: Boolean indicating if IF_ENFORCEENCRYPTICERTREQUEST is disabled (ESC11)
 
         .PARAMETER AdcsObject
@@ -43,7 +43,7 @@ function Set-CAInterfaceFlags {
         The function silently skips CAs that:
         - Don't have a CAFullName property
         - Are unreachable or don't respond to certutil queries
-        - Return errors from Get-PCInterfaceFlag
+        - Return errors from Get-PSCInterfaceFlag
 
         .LINK
         https://posts.specterops.io/certified-pre-owned-d95910965cd2
@@ -80,7 +80,7 @@ function Set-CAInterfaceFlags {
                 
                 try {
                     # Query InterfaceFlags using PSCertutil
-                    $interfaceFlags = Get-PCInterfaceFlag -CAFullName $caFullName -ErrorAction Stop
+                    $interfaceFlags = Get-PSCInterfaceFlag -CAFullName $caFullName -ErrorAction Stop
                     
                     if ($interfaceFlags) {
                         Write-Verbose "  Retrieved $(@($interfaceFlags).Count) InterfaceFlags"
@@ -97,7 +97,7 @@ function Set-CAInterfaceFlags {
                         Write-Verbose "  Updated $($_.distinguishedName) with InterfaceFlags data"
                         
                     } else {
-                        Write-Verbose "  No InterfaceFlags returned from Get-PCInterfaceFlag"
+                        Write-Verbose "  No InterfaceFlags returned from Get-PSCInterfaceFlag"
                     }
                     
                 } catch {
