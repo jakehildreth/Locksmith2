@@ -57,6 +57,21 @@ function Convert-IdentityReferenceToSid {
     )
 
     process {
+        $identityValue = $IdentityReference.Value
+
+        # Some ACL APIs can return SID-shaped values wrapped in non-SID IdentityReference types.
+        # Normalize them early so we do not perform bogus sAMAccountName LDAP lookups.
+        if ($IdentityReference -isnot [System.Security.Principal.SecurityIdentifier] -and $identityValue -match '^(?:O:)?(S-1-[\d-]+)$') {
+            try {
+                $IdentityReference = [System.Security.Principal.SecurityIdentifier]::new($Matches[1])
+                $identityValue = $IdentityReference.Value
+                Write-Verbose "Normalized SID-shaped identity reference '$identityValue' to SecurityIdentifier"
+            } catch {
+                Write-Warning "Could not parse SID-shaped identity reference '$identityValue': $_"
+                return $IdentityReference
+            }
+        }
+
         # If already a SID, return it
         if ($IdentityReference -is [System.Security.Principal.SecurityIdentifier]) {
             return $IdentityReference
@@ -65,9 +80,9 @@ function Convert-IdentityReferenceToSid {
         # Check PrincipalStore first (if it exists) - it has the SID already
         if ($script:PrincipalStore) {
             # Try to find by NTAccount value
-            $matchingPrincipal = $script:PrincipalStore.Values | Where-Object { $_.ntAccountName -eq $IdentityReference.Value } | Select-Object -First 1
+            $matchingPrincipal = $script:PrincipalStore.Values | Where-Object { $_.ntAccountName -eq $identityValue } | Select-Object -First 1
             if ($matchingPrincipal -and $matchingPrincipal.sid) {
-                Write-Verbose "PrincipalStore HIT for '$($IdentityReference.Value)' → SID: $($matchingPrincipal.sid)"
+                Write-Verbose "PrincipalStore HIT for '$identityValue' → SID: $($matchingPrincipal.sid)"
                 return [System.Security.Principal.SecurityIdentifier]::new($matchingPrincipal.sid)
             }
         }
@@ -88,7 +103,7 @@ function Convert-IdentityReferenceToSid {
 
         try {
             # Parse the NTAccount name
-            $ntAccountString = $IdentityReference.Value
+            $ntAccountString = $identityValue
             if ($ntAccountString -match '^(.+?)\\(.+)$') {
                 $samAccountName = $Matches[2]
             } else {

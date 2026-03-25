@@ -66,13 +66,28 @@ function Convert-IdentityReferenceToNTAccount {
     )
 
     process {
+        $identityValue = $SecurityIdentifier.Value
+
+        # Some ACL APIs can surface SID-shaped values wrapped in non-SID IdentityReference types.
+        # Normalize them early so we use SID resolution instead of treating them as NTAccount names.
+        if ($SecurityIdentifier -isnot [System.Security.Principal.SecurityIdentifier] -and $identityValue -match '^(?:O:)?(S-1-[\d-]+)$') {
+            try {
+                $SecurityIdentifier = [System.Security.Principal.SecurityIdentifier]::new($Matches[1])
+                $identityValue = $SecurityIdentifier.Value
+                Write-Verbose "Normalized SID-shaped identity reference '$identityValue' to SecurityIdentifier"
+            } catch {
+                Write-Warning "Could not parse SID-shaped identity reference '$identityValue': $_"
+                return $SecurityIdentifier
+            }
+        }
+
         # If already an NTAccount, return it
         if ($SecurityIdentifier -is [System.Security.Principal.NTAccount]) {
             return $SecurityIdentifier
         }
 
         # Check PrincipalStore first (if it exists) - it has the NTAccount name already
-        $sidString = $SecurityIdentifier.Value
+        $sidString = $identityValue
         if ($script:PrincipalStore -and $script:PrincipalStore.ContainsKey($sidString)) {
             $storedPrincipal = $script:PrincipalStore[$sidString]
             if ($storedPrincipal.ntAccountName) {
@@ -96,9 +111,6 @@ function Convert-IdentityReferenceToNTAccount {
         }
 
         try {
-            # Get the SID string
-            $sidString = $SecurityIdentifier.Value
-
             # First try Global Catalog search for forest-wide lookup
             Write-Verbose "Attempting Global Catalog search for SID '$sidString'"
             $gcSearcher = New-GCSearcher -Filter "(objectSid=$sidString)" -PropertiesToLoad @('distinguishedName', 'sAMAccountName')
