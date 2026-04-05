@@ -73,6 +73,28 @@ function Resolve-Principal {
             Write-Warning "Could not convert IdentityReference to SID: $($IdentityReference.Value)"
             return $null
         }
+
+        if ($sidKey -isnot [System.Security.Principal.SecurityIdentifier]) {
+            $sidValue = if ($sidKey -is [string]) {
+                $sidKey
+            } elseif ($sidKey.PSObject.Properties['Value']) {
+                $sidKey.Value
+            } else {
+                $null
+            }
+
+            if ($sidValue -match '^(?:O:)?(S-1-[\d-]+)$') {
+                try {
+                    $sidKey = [System.Security.Principal.SecurityIdentifier]::new($Matches[1])
+                } catch {
+                    Write-Warning "Could not parse SID value '$sidValue' while resolving principal '$($IdentityReference.Value)': $_"
+                    return $null
+                }
+            } else {
+                Write-Warning "Could not convert IdentityReference '$($IdentityReference.Value)' to a SecurityIdentifier. Resolved type: $($sidKey.GetType().FullName)"
+                return $null
+            }
+        }
         
         $sidString = $sidKey.Value
         
@@ -195,7 +217,7 @@ function Resolve-Principal {
                 return $null
             }
         } catch {
-            Write-Warning "LDAP query failed for SID '$sidString': $_"
+            Write-Warning "Principal resolution failed for SID '$sidString': $_"
             return $null
         } finally {
             if ($searcher) { $searcher.Dispose() }

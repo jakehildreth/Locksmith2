@@ -108,7 +108,7 @@ Build-Module -ModuleName 'Locksmith2' {
 
     # configuration for documentation, at the same time it enables documentation processing
     New-ConfigurationDocumentation -Enable:$false -StartClean -UpdateWhenNew -PathReadme 'Docs\Readme.md' -Path 'Docs'
-
+    New-ConfigurationInformation -IncludeAll 'Private\Data'
     New-ConfigurationImportModule -ImportSelf -ImportRequiredModules
 
     New-ConfigurationBuild -Enable:$true -SignModule:$false -DeleteTargetModuleBeforeBuild -MergeModuleOnBuild -MergeFunctionsFromApprovedModules -DoNotAttemptToFixRelativePaths -UseWildcardForFunctions

@@ -431,14 +431,23 @@ function Find-LS2VulnerableTemplate {
             $revertScript = $revertTemplate `
                 -replace '\$\(DistinguishedName\)', $template.distinguishedName
 
+            # Get principal objectClass from PrincipalStore
+            $principalObjectClass = if ($script:PrincipalStore -and $script:PrincipalStore.ContainsKey($enrolleeSid)) {
+                $script:PrincipalStore[$enrolleeSid].objectClass
+            } else {
+                $null
+            }
+
             # Create LS2Issue object
             $issue = [LS2Issue]@{
                 Technique             = $technique
                 Forest                = $forestName
                 Name                  = $template.Name
                 DistinguishedName     = $template.distinguishedName
+                ObjectClass           = 'pKICertificateTemplate'
                 IdentityReference     = $identityReferenceName
                 IdentityReferenceSID  = $enrolleeSid
+                IdentityReferenceClass = $principalObjectClass
                 ActiveDirectoryRights = $ace.ActiveDirectoryRights
                 Enabled               = $template.Enabled
                 EnabledOn             = $template.EnabledOn
