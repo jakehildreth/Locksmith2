@@ -45,8 +45,6 @@ class LS2AdcsObject {
     [Nullable[bool]]$EnrollmentAgentEKUExist
     [Nullable[bool]]$NoSecurityExtension
     [Nullable[bool]]$RequiresEnrollmentAgentSignature
-    [Nullable[bool]]$AuthorizedSignatureRequired
-    [Nullable[bool]]$ManagerApprovalRequired
     [string[]]$DangerousEnrollee
     [string[]]$DangerousEnrolleeNames
     [string[]]$LowPrivilegeEnrollee
@@ -130,8 +128,6 @@ class LS2AdcsObject {
         $this.EnrollmentAgentEKUExist = $null
         $this.NoSecurityExtension = $null
         $this.RequiresEnrollmentAgentSignature = $null
-        $this.AuthorizedSignatureRequired = $null
-        $this.ManagerApprovalRequired = $null
         $this.DangerousEnrollee = @()
         $this.DangerousEnrolleeNames = @()
         $this.LowPrivilegeEnrollee = @()
