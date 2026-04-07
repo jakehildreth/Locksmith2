@@ -62,7 +62,7 @@ jobs:
         PSGALLERY_API_KEY: ${{ secrets.PSGALLERY_API_KEY }}
       run: |
         Write-Host "Building and publishing Locksmith2 (prerelease)..." -ForegroundColor Cyan
-        ./Build/Build-Module.ps1 -PublishToPSGallery -PSGalleryAPIKey $env:PSGALLERY_API_KEY -Prerelease 'prerelease'
+        ./Build/Build-Module.ps1 -PublishToPSGallery -PSGalleryAPIKey $env:PSGALLERY_API_KEY -Prerelease 'pre'
         Write-Host "Published successfully" -ForegroundColor Green
 
     - name: Get module version
