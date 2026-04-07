@@ -28,15 +28,9 @@ $CopyrightYear = if ($Calver) { $CalVer.Split('.')[0] } else { (Get-Date -Format
 
 Build-Module -ModuleName 'Locksmith2' {
     # Usual defaults as per standard module
-    # PSGallery requires exactly 3-part versions when using a Prerelease string,
-    # so fold the time component into the prerelease tag for non-main builds.
-    if ($Prerelease) {
-        $moduleVersion = if ($CalVer) { $CalVer } else { (Get-Date -Format yyyy.M.d) }
-        $timeSuffix = Get-Date -Format Hmm
-        $prereleaseTag = "$Prerelease$timeSuffix"
-    } else {
-        $moduleVersion = if ($CalVer) { $CalVer } else { (Get-Date -Format yyyy.M.d.Hmm) }
-    }
+    # Always use 3-part CalVer: yyyy.M.dHHmm (e.g., 2026.4.70225)
+    # Prerelease builds append -pre to the version string.
+    $moduleVersion = if ($CalVer) { $CalVer } else { (Get-Date -Format 'yyyy.M.dHHmm') }
     $Manifest = [ordered] @{
         ModuleVersion        = $moduleVersion
         CompatiblePSEditions = @('Desktop', 'Core')
@@ -49,8 +43,8 @@ Build-Module -ModuleName 'Locksmith2' {
         PowerShellVersion    = '5.1'
         Tags                 = @('Locksmith', 'Locksmith2', 'ActiveDirectory', 'ADCS', 'CA', 'Certificate', 'CertificateAuthority', 'CertificateServices', 'PKI', 'X509', 'Windows')
     }
-    if ($prereleaseTag) {
-        $Manifest['Prerelease'] = $prereleaseTag
+    if ($Prerelease) {
+        $Manifest['Prerelease'] = $Prerelease
     }
     New-ConfigurationManifest @Manifest
 
