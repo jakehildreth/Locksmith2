@@ -190,7 +190,11 @@ function Convert-IdentityReferenceToNTAccount {
                 Write-Verbose "Resolved SID '$sidString' to '$ntAccountString' via LDAP"
                 return $ntAccount
             } else {
-                Write-Warning "Could not find SID '$sidString' in Active Directory via LDAP query."
+                if ($SecurityIdentifier.AccountDomainSid -eq $null) {
+                    Write-Verbose "Well-known SID '$sidString' not found as foreignSecurityPrincipal in AD."
+                } else {
+                    Write-Warning "Could not find SID '$sidString' in Active Directory via LDAP query."
+                }
                 return $SecurityIdentifier
             }
         } catch {

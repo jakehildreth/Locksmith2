@@ -200,7 +200,13 @@ function Resolve-Principal {
                 Write-Verbose "Resolved SID '$sidString' to '$distinguishedName' via LDAP"
                 return $objectEntry
             } else {
-                Write-Warning "Could not find SID '$sidString' in Active Directory via LDAP query."
+                # Non-domain SIDs (Everyone, Anonymous Logon, etc.) may or may not
+                # exist as foreignSecurityPrincipal objects. Not finding them is normal.
+                if ($sidKey.AccountDomainSid -eq $null) {
+                    Write-Verbose "Well-known SID '$sidString' not found as foreignSecurityPrincipal in AD."
+                } else {
+                    Write-Warning "Could not find SID '$sidString' in Active Directory via LDAP query."
+                }
                 
                 # For well-known SIDs that don't exist in AD, create a minimal store entry
                 # This includes BUILTIN groups and other system principals
