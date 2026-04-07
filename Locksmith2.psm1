@@ -93,4 +93,8 @@ if ($FoundErrors.Count -gt 0) {
     break
 }
 
+# Alias nTSecurityDescriptor to ObjectSecurity for AD naming familiarity
+Update-TypeData -TypeName 'LS2AdcsObject' -MemberType AliasProperty -MemberName 'nTSecurityDescriptor' -Value 'ObjectSecurity' -Force
+Update-TypeData -TypeName 'LS2Principal' -MemberType AliasProperty -MemberName 'nTSecurityDescriptor' -Value 'ObjectSecurity' -Force
+
 Export-ModuleMember -Function '*' -Alias '*' -Cmdlet '*'

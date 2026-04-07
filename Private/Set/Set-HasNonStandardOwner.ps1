@@ -108,8 +108,6 @@ function Set-HasNonStandardOwner {
                     $owner = $object.Owner
                 } elseif ($object.ObjectSecurity -and $object.ObjectSecurity.Owner) {
                     $owner = $object.ObjectSecurity.Owner
-                } elseif ($object.nTSecurityDescriptor -and $object.nTSecurityDescriptor.Owner) {
-                    $owner = $object.nTSecurityDescriptor.Owner
                 }
                 
                 if (-not $owner) {

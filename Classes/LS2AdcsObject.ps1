@@ -16,17 +16,18 @@ class LS2AdcsObject {
     [Nullable[int]]$pKIMaxIssuingDepth
     [string[]]$pKICriticalExtensions
     [string[]]$pKIExtendedKeyUsage
-    [Nullable[int]]$CertificateNameFlag      # msPKI-Certificate-Name-Flag
-    [Nullable[int]]$EnrollmentFlag            # msPKI-Enrollment-Flag
-    [Nullable[int]]$PrivateKeyFlag            # msPKI-Private-Key-Flag
-    [Nullable[int]]$RASignature               # msPKI-RA-Signature
-    [string[]]$RAApplicationPolicies            # msPKI-RA-Application-Policies
-    [Nullable[int]]$TemplateSchemaVersion     # msPKI-Template-Schema-Version
-    [Nullable[int]]$TemplateMinorRevision     # msPKI-Template-Minor-Revision
+    [Nullable[int]]$CertificateNameFlag    # msPKI-Certificate-Name-Flag
+    [Nullable[int]]$EnrollmentFlag         # msPKI-Enrollment-Flag
+    [Nullable[int]]$PrivateKeyFlag         # msPKI-Private-Key-Flag
+    [Nullable[int]]$RASignature            # msPKI-RA-Signature
+    [string[]]$RAApplicationPolicies       # msPKI-RA-Application-Policies
+    [Nullable[int]]$TemplateSchemaVersion  # msPKI-Template-Schema-Version
+    [Nullable[int]]$TemplateMinorRevision  # msPKI-Template-Minor-Revision
     
     # CA properties (pKIEnrollmentService)
     [string[]]$certificateTemplates
     [string]$dNSHostName
+    [string]$CAFullName
     [object[]]$CAAdministrators
     [object[]]$CertificateManagers
     [string[]]$DangerousCAAdministrator
@@ -79,9 +80,18 @@ class LS2AdcsObject {
         $this.cn = if ($DirectoryEntry.cn) { $DirectoryEntry.cn.Value } else { $null }
         $this.Path = $DirectoryEntry.Path
         
-        # CA properties - set dNSHostName early for CAFullName ScriptProperty
+        # CA properties - set dNSHostName and compute CAFullName
         $this.certificateTemplates = if ($DirectoryEntry.Properties.Contains('certificateTemplates')) { @($DirectoryEntry.certificateTemplates) } else { @() }
         $this.dNSHostName = if ($DirectoryEntry.Properties.Contains('dNSHostName')) { $DirectoryEntry.Properties['dNSHostName'][0] } else { $null }
+        
+        # Compute CAFullName once from dNSHostName and cn
+        if ($this.dNSHostName -and $this.cn) {
+            $this.CAFullName = "$($this.dNSHostName)\$($this.cn)"
+        } elseif ($this.cn) {
+            $this.CAFullName = $this.cn
+        } else {
+            $this.CAFullName = $null
+        }
         
         # Determine schema class name (most specific objectClass)
         if ($this.objectClass.Count -gt 0) {
@@ -156,24 +166,6 @@ class LS2AdcsObject {
         $this.DangerousCACertificateManagerNames = @()
         $this.LowPrivilegeCACertificateManager = @()
         $this.LowPrivilegeCACertificateManagerNames = @()
-        
-        # Add CAFullName as a ScriptProperty for CA objects
-        if ($this.IsCertificationAuthority()) {
-            $this | Add-Member -MemberType ScriptProperty -Name CAFullName -Value {
-                if ($this.dNSHostName -and $this.cn) {
-                    return "$($this.dNSHostName)\$($this.cn)"
-                } elseif ($this.cn) {
-                    return $this.cn
-                } else {
-                    return $null
-                }
-            }
-        }
-        
-        # Add nTSecurityDescriptor as an alias for ObjectSecurity
-        $this | Add-Member -MemberType ScriptProperty -Name nTSecurityDescriptor -Value {
-            return $this.ObjectSecurity
-        }
     }
     
     # Method to check if this is a Certificate Template
