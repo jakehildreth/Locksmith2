@@ -32,7 +32,7 @@ Build-Module -ModuleName 'Locksmith2' {
         GUID                 = 'e32f7d0d-2b10-4db2-b776-a193958e3d69'
         Author               = 'Jake Hildreth'
         CompanyName          = 'Gilmour Technologies Ltd'
-        Copyright            = "(c) 2025 - $CopyrightYear. All rights reserved."
+        Copyright            = "(c) 2024 - $CopyrightYear. All rights reserved."
         Description          = 'An AD CS toolkit for AD Admins, Defensive Security Professionals, and Filthy Red Teamers'
         ProjectUri           = 'https://github.com/jakehildreth/Locksmith2'
         PowerShellVersion    = '5.1'
@@ -41,7 +41,7 @@ Build-Module -ModuleName 'Locksmith2' {
     New-ConfigurationManifest @Manifest
 
     # Add standard module dependencies (directly, but can be used with loop as well)
-    New-ConfigurationModule -Type RequiredModule -Name 'PSCertutil' -Guid 'Auto' -Version 'Latest'
+    # New-ConfigurationModule -Type RequiredModule -Name 'PSCertutil' -Guid 'Auto' -Version 'Latest'
 
     # Add external module dependencies, using loop for simplicity
     $RequiredExternalModules = @(
@@ -50,8 +50,7 @@ Build-Module -ModuleName 'Locksmith2' {
         'Microsoft.PowerShell.Management',
         'Microsoft.PowerShell.Security',
         'PowerShellGet',
-        'CimCmdlets',
-        'PSWriteHTML'
+        'CimCmdlets'
     )
     foreach ($Module in $RequiredExternalModules) {
         New-ConfigurationModule -Type ExternalModule -Name $Module
@@ -64,7 +63,7 @@ Build-Module -ModuleName 'Locksmith2' {
 
     #New-ConfigurationModuleSkip -IgnoreFunctionName 'Invoke-Formatter', 'Find-Module' -IgnoreModuleName 'platyPS'
 
-    New-ConfigurationModuleSkip -IgnoreModuleName 'PwshSpectreConsole', 'PSWriteHTML'
+    New-ConfigurationModuleSkip -IgnoreModuleName 'PwshSpectreConsole', 'PSWriteHTML', 'PSCertutil'
 
     $ConfigurationFormat = [ordered] @{
         RemoveComments                              = $false
