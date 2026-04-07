@@ -1,6 +1,8 @@
 ﻿param (
     # A CalVer string if you need to manually override the default yyyy.M.d version string.
     [string]$CalVer,
+    # A prerelease tag to append to the module version (e.g., 'alpha', 'beta', 'rc1').
+    [string]$Prerelease,
     [switch]$PublishToPSGallery,
     [string]$PSGalleryAPIPath,
     [string]$PSGalleryAPIKey
@@ -37,6 +39,9 @@ Build-Module -ModuleName 'Locksmith2' {
         ProjectUri           = 'https://github.com/jakehildreth/Locksmith2'
         PowerShellVersion    = '5.1'
         Tags                 = @('Locksmith', 'Locksmith2', 'ActiveDirectory', 'ADCS', 'CA', 'Certificate', 'CertificateAuthority', 'CertificateServices', 'PKI', 'X509', 'Windows')
+    }
+    if ($Prerelease) {
+        $Manifest['Prerelease'] = $Prerelease
     }
     New-ConfigurationManifest @Manifest
 

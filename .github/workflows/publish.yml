@@ -2,7 +2,6 @@ name: Build and Publish to PSGallery
 
 on:
   push:
-    branches: [ main ]
     paths:
       - 'Public/**'
       - 'Private/**'
@@ -46,13 +45,24 @@ jobs:
     #
     #     Write-Host "All tests passed!" -ForegroundColor Green
 
-    - name: Build and Publish to PowerShell Gallery
+    - name: Build and Publish (Release)
+      if: github.ref == 'refs/heads/main'
       shell: pwsh
       env:
         PSGALLERY_API_KEY: ${{ secrets.PSGALLERY_API_KEY }}
       run: |
-        Write-Host "Building and publishing Locksmith2 module..." -ForegroundColor Cyan
+        Write-Host "Building and publishing Locksmith2 (release)..." -ForegroundColor Cyan
         ./Build/Build-Module.ps1 -PublishToPSGallery -PSGalleryAPIKey $env:PSGALLERY_API_KEY
+        Write-Host "Published successfully" -ForegroundColor Green
+
+    - name: Build and Publish (Prerelease)
+      if: github.ref != 'refs/heads/main'
+      shell: pwsh
+      env:
+        PSGALLERY_API_KEY: ${{ secrets.PSGALLERY_API_KEY }}
+      run: |
+        Write-Host "Building and publishing Locksmith2 (prerelease)..." -ForegroundColor Cyan
+        ./Build/Build-Module.ps1 -PublishToPSGallery -PSGalleryAPIKey $env:PSGALLERY_API_KEY -Prerelease 'prerelease'
         Write-Host "Published successfully" -ForegroundColor Green
 
     - name: Get module version
@@ -61,5 +71,7 @@ jobs:
       run: |
         $manifest = Import-PowerShellDataFile ./Locksmith2.psd1
         $version = $manifest.ModuleVersion
-        echo "version=$version" >> $env:GITHUB_OUTPUT
-        Write-Host "Module version: $version" -ForegroundColor Green
+        $prerelease = $manifest.PrivateData.PSData.Prerelease
+        $fullVersion = if ($prerelease) { "$version-$prerelease" } else { $version }
+        echo "version=$fullVersion" >> $env:GITHUB_OUTPUT
+        Write-Host "Module version: $fullVersion" -ForegroundColor Green
