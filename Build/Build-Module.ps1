@@ -1,6 +1,8 @@
 ﻿param (
     # A CalVer string if you need to manually override the default yyyy.M.d version string.
     [string]$CalVer,
+    # A prerelease tag to append to the module version (e.g., 'alpha', 'beta', 'rc1').
+    [string]$Prerelease,
     [switch]$PublishToPSGallery,
     [string]$PSGalleryAPIPath,
     [string]$PSGalleryAPIKey
@@ -26,8 +28,11 @@ $CopyrightYear = if ($Calver) { $CalVer.Split('.')[0] } else { (Get-Date -Format
 
 Build-Module -ModuleName 'Locksmith2' {
     # Usual defaults as per standard module
+    # Always use 3-part CalVer: yyyy.M.dHHmm (e.g., 2026.4.70225)
+    # Prerelease builds append -pre to the version string.
+    $moduleVersion = if ($CalVer) { $CalVer } else { (Get-Date -Format 'yyyy.M.dHHmm') }
     $Manifest = [ordered] @{
-        ModuleVersion        = if ($Calver) { $CalVer } else { (Get-Date -Format yyyy.M.d.Hmm) }
+        ModuleVersion        = $moduleVersion
         CompatiblePSEditions = @('Desktop', 'Core')
         GUID                 = 'e32f7d0d-2b10-4db2-b776-a193958e3d69'
         Author               = 'Jake Hildreth'
@@ -37,6 +42,9 @@ Build-Module -ModuleName 'Locksmith2' {
         ProjectUri           = 'https://github.com/jakehildreth/Locksmith2'
         PowerShellVersion    = '5.1'
         Tags                 = @('Locksmith', 'Locksmith2', 'ActiveDirectory', 'ADCS', 'CA', 'Certificate', 'CertificateAuthority', 'CertificateServices', 'PKI', 'X509', 'Windows')
+    }
+    if ($Prerelease) {
+        $Manifest['Prerelease'] = $Prerelease
     }
     New-ConfigurationManifest @Manifest
 
