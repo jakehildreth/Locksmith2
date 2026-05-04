@@ -8,6 +8,25 @@
     [string]$PSGalleryAPIKey
 )
 
+# The VS Code PowerShell Extension pre-loads PSScriptAnalyzer into the host
+# process. PSPublishModule imports PSScriptAnalyzer internally, and loading a
+# second copy of its assembly into the same appdomain throws an assembly-already-
+# loaded error. Re-invoke in a clean pwsh -NoProfile child process to avoid it.
+if ($Host.Name -eq 'Visual Studio Code Host' -or
+    $null -ne [System.AppDomain]::CurrentDomain.GetAssemblies().Where({
+            $_.GetName().Name -eq 'Microsoft.Windows.PowerShell.ScriptAnalyzer'
+        }, 'First')[0]) {
+    Write-Host 'Re-invoking in a clean pwsh process to avoid PSScriptAnalyzer assembly conflict...'
+    $passThrough = @('-NoProfile', '-File', $PSCommandPath)
+    if ($CalVer) { $passThrough += '-CalVer'; $passThrough += $CalVer }
+    if ($Prerelease) { $passThrough += '-Prerelease'; $passThrough += $Prerelease }
+    if ($PublishToPSGallery) { $passThrough += '-PublishToPSGallery' }
+    if ($PSGalleryAPIPath) { $passThrough += '-PSGalleryAPIPath'; $passThrough += $PSGalleryAPIPath }
+    if ($PSGalleryAPIKey) { $passThrough += '-PSGalleryAPIKey'; $passThrough += $PSGalleryAPIKey }
+    & pwsh @passThrough
+    exit $LASTEXITCODE
+}
+
 if (Get-Module -Name 'PSPublishModule' -ListAvailable) {
     Write-Verbose 'PSPublishModule is installed.'
 } else {
@@ -104,14 +123,16 @@ Build-Module -ModuleName 'Locksmith2' {
 
         UseCorrectCasingEnable                      = $true
     }
-    # format PSD1 and PSM1 files when merging into a single file
+    # format PSM1 files when merging into a single file
     # enable formatting is not required as Configuration is provided
-    # New-ConfigurationFormat -ApplyTo 'OnMergePSM1', 'OnMergePSD1' -Sort None @ConfigurationFormat
-    # format PSD1 and PSM1 files within the module
+    # New-ConfigurationFormat -ApplyTo 'OnMergePSM1' -Sort None @ConfigurationFormat
+    # format PSM1 files within the module
     # enable formatting is required to make sure that formatting is applied (with default settings)
-    New-ConfigurationFormat -ApplyTo 'DefaultPSD1', 'DefaultPSM1' -EnableFormatting -Sort None
+    New-ConfigurationFormat -ApplyTo 'DefaultPSM1' -EnableFormatting -Sort None
     # when creating PSD1 use special style without comments and with only required parameters
-    New-ConfigurationFormat -ApplyTo 'DefaultPSD1', 'OnMergePSD1' -PSD1Style 'Minimal'
+    # DefaultPSD1 is intentionally excluded: PSPublishModule rewrites the source PSD1 during the
+    # build and produces mixed CRLF/LF endings, which causes PSScriptAnalyzer to throw.
+    New-ConfigurationFormat -ApplyTo 'OnMergePSD1' -PSD1Style 'Minimal'
 
     # configuration for documentation, at the same time it enables documentation processing
     New-ConfigurationDocumentation -Enable:$false -StartClean -UpdateWhenNew -PathReadme 'Docs\Readme.md' -Path 'Docs'
