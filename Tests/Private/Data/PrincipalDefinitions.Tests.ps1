@@ -3,7 +3,7 @@ BeforeAll {
     $PesterPreference = [PesterConfiguration]::Default
     $PesterPreference.Should.ErrorAction = 'Continue'
 
-    $DataFilePath = Join-Path $PSScriptRoot '..' '..' '..' 'Private' 'Data' 'PrincipalDefinitions.psd1'
+    $DataFilePath = Join-Path (Split-Path (Split-Path (Split-Path $PSScriptRoot))) 'Private\Data\PrincipalDefinitions.psd1'
     $script:Data = Import-PowerShellDataFile -Path $DataFilePath
 }
 

@@ -157,7 +157,7 @@ Describe 'LS2Principal class' -Tag 'Unit' {
 
         It 'should be of type LS2Principal' {
             $p = [LS2Principal]::new('S-1-0-0', 'NULL SID')
-            $p | Should -BeOfType [LS2Principal]
+            $p.GetType().Name | Should -Be 'LS2Principal'
         }
 
         It 'should have two constructors' {

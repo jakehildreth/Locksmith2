@@ -169,25 +169,29 @@ Describe 'LS2Issue class' -Tag 'Unit' {
 
         It 'should return false when Technique differs' {
             $issueA = New-MockLS2Issue -Overrides $script:BaseProps
-            $issueB = New-MockLS2Issue -Overrides ($script:BaseProps + @{ Technique = 'ESC2' })
+            $propsB = $script:BaseProps.Clone(); $propsB['Technique'] = 'ESC2'
+            $issueB = New-MockLS2Issue -Overrides $propsB
             $issueA.Matches($issueB) | Should -BeFalse
         }
 
         It 'should return false when DistinguishedName differs' {
             $issueA = New-MockLS2Issue -Overrides $script:BaseProps
-            $issueB = New-MockLS2Issue -Overrides ($script:BaseProps + @{ DistinguishedName = 'CN=Other,DC=contoso,DC=com' })
+            $propsB = $script:BaseProps.Clone(); $propsB['DistinguishedName'] = 'CN=Other,DC=contoso,DC=com'
+            $issueB = New-MockLS2Issue -Overrides $propsB
             $issueA.Matches($issueB) | Should -BeFalse
         }
 
         It 'should return false when IdentityReferenceSID differs' {
             $issueA = New-MockLS2Issue -Overrides $script:BaseProps
-            $issueB = New-MockLS2Issue -Overrides ($script:BaseProps + @{ IdentityReferenceSID = 'S-1-5-21-9999-9999-9999-500' })
+            $propsB = $script:BaseProps.Clone(); $propsB['IdentityReferenceSID'] = 'S-1-5-21-9999-9999-9999-500'
+            $issueB = New-MockLS2Issue -Overrides $propsB
             $issueA.Matches($issueB) | Should -BeFalse
         }
 
         It 'should return false when ActiveDirectoryRights differs' {
             $issueA = New-MockLS2Issue -Overrides $script:BaseProps
-            $issueB = New-MockLS2Issue -Overrides ($script:BaseProps + @{ ActiveDirectoryRights = 'GenericAll' })
+            $propsB = $script:BaseProps.Clone(); $propsB['ActiveDirectoryRights'] = 'GenericAll'
+            $issueB = New-MockLS2Issue -Overrides $propsB
             $issueA.Matches($issueB) | Should -BeFalse
         }
 

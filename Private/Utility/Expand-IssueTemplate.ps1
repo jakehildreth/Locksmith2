@@ -64,7 +64,7 @@ function Expand-IssueTemplate {
 
     # Expand variables in all templates
     foreach ($key in $Variables.Keys) {
-        $pattern = "`$(`$key)"
+        $pattern = "`$($key)"
         $escapedPattern = [regex]::Escape($pattern)
         $value = $Variables[$key]
         

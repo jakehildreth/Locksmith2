@@ -1,6 +1,6 @@
 #requires -Version 5.1
 BeforeAll {
-    $ModuleRoot = Join-Path $PSScriptRoot '..' '..' '..'
+    $ModuleRoot = Split-Path (Split-Path (Split-Path $PSScriptRoot))
     Import-Module (Join-Path $ModuleRoot 'Locksmith2.psd1') -Force -ErrorAction Stop
 }
 

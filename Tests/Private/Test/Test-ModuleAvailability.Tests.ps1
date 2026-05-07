@@ -1,6 +1,6 @@
 #requires -Version 5.1
 BeforeAll {
-    $PrivateTestRoot = Join-Path $PSScriptRoot '..' '..' '..' 'Private' 'Test'
+    $PrivateTestRoot = Join-Path (Split-Path (Split-Path (Split-Path $PSScriptRoot))) 'Private\Test'
     . ([scriptblock]::Create((Get-Content -Path (Join-Path $PrivateTestRoot 'Test-IsModuleAvailable.ps1') -Raw)))
     . ([scriptblock]::Create((Get-Content -Path (Join-Path $PrivateTestRoot 'Test-IsModuleLoaded.ps1') -Raw)))
 }

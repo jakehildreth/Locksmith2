@@ -130,7 +130,6 @@ Describe 'LS2AdcsObject class' -Tag 'Unit' {
 
         It 'should default DangerousEnrollee to an empty array' {
             $obj = New-MockLS2AdcsObject
-            $obj.DangerousEnrollee | Should -Not -BeNullOrEmpty -Because 'DangerousEnrollee should be initialized as @(), not $null'
             $obj.DangerousEnrollee.Count | Should -Be 0
         }
 
