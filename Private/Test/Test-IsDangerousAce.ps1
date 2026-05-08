@@ -94,21 +94,11 @@ function Test-IsDangerousAce {
     #requires -Version 5.1
 
     begin {
-        # Load dangerous ACE definitions from PSD1 data file
         if (-not $script:DangerousAces) {
-            $dataFilePath = Join-Path $PSScriptRoot '..\Data\AceDefinitions.psd1'
-            
-            if (Test-Path $dataFilePath) {
-                $data = Import-PowerShellDataFile -Path $dataFilePath
-                $script:DangerousAces = $data.DangerousAces
-                Write-Verbose "Loaded $($script:DangerousAces.Count) dangerous ACE definitions from $dataFilePath"
-            } else {
-                Write-Warning "AceDefinitions.psd1 not found at $dataFilePath. Unable to test for dangerous permissions."
-                return
-            }
-        } else {
-            Write-Verbose "Using cached $($script:DangerousAces.Count) dangerous ACE definitions"
+            Write-Warning 'DangerousAces definitions not initialized. Unable to test for dangerous permissions.'
+            return
         }
+        Write-Verbose "Using $($script:DangerousAces.Count) dangerous ACE definitions"
         
         # Filter to ACEs applicable to this object class
         $applicableAces = $script:DangerousAces | Where-Object { $_.ApplicableToClasses -contains $ObjectClass }

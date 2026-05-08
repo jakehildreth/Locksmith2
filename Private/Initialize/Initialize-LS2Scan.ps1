@@ -58,6 +58,38 @@ function Initialize-LS2Scan {
 
     #requires -Version 5.1
 
+    # Validate definition data loaded at module import
+    if (-not $script:DangerousAces) {
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.InvalidOperationException]::new('DangerousAces definitions not loaded. The module may not have imported correctly.'),
+                'DangerousAcesNotInitialized',
+                [System.Management.Automation.ErrorCategory]::InvalidOperation,
+                $null
+            )
+        )
+    }
+    if (-not $script:ESCDefinitions) {
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.InvalidOperationException]::new('ESCDefinitions not loaded. The module may not have imported correctly.'),
+                'ESCDefinitionsNotInitialized',
+                [System.Management.Automation.ErrorCategory]::InvalidOperation,
+                $null
+            )
+        )
+    }
+    if (-not $script:PrincipalDefinitionsBase) {
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.InvalidOperationException]::new('PrincipalDefinitionsBase not loaded. The module may not have imported correctly.'),
+                'PrincipalDefinitionsBaseNotInitialized',
+                [System.Management.Automation.ErrorCategory]::InvalidOperation,
+                $null
+            )
+        )
+    }
+
     # Prevent recursive calls during initialization
     if ($script:InitializingStores) {
         return $true

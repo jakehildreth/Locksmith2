@@ -4,7 +4,7 @@ function Find-LS2VulnerableCA {
         Identifies vulnerable AD CS Certification Authorities based on ESC technique definitions.
 
     .DESCRIPTION
-        Reads ESC technique definitions from ESCDefinitions.psd1, queries the AdcsObjectStore
+        Uses ESC technique definitions loaded at module initialization, queries the AdcsObjectStore
         for matching CAs, and generates issues for configuration problems or dangerous role assignments.
         
         ESC6: Detects CAs with EDITF_ATTRIBUTESUBJECTALTNAME2 enabled
@@ -115,12 +115,13 @@ function Find-LS2VulnerableCA {
         return
     }
 
-    # Load all ESC definitions
-    $definitionsPath = Join-Path $PSScriptRoot '..\Private\Data\ESCDefinitions.psd1'
-    $allDefinitions = Import-PowerShellDataFile -Path $definitionsPath
-    $config = $allDefinitions[$Technique]
+    if (-not $script:ESCDefinitions) {
+        Write-Warning 'ESCDefinitions not initialized. Cannot scan for vulnerabilities.'
+        return
+    }
+    $config = $script:ESCDefinitions[$Technique]
 
-    Write-Verbose "Scanning for $Technique using definitions from $definitionsPath"
+    Write-Verbose "Scanning for $Technique"
 
     # Query AdcsObjectStore for CAs
     $allCAs = $script:AdcsObjectStore.Values | Where-Object { $_.objectClass -contains 'pKIEnrollmentService' }

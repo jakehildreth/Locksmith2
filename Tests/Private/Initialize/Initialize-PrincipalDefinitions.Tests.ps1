@@ -12,11 +12,16 @@ Describe 'Initialize-PrincipalDefinitions' -Tag 'Unit' {
     InModuleScope 'Locksmith2' {
 
         BeforeEach {
-            $script:SafePrincipals      = @()
-            $script:DangerousPrincipals = @()
-            $script:StandardOwners      = @()
-            $script:RootDSE             = $null
-            $script:DomainStore         = @{}
+            $savedPrincipalDefinitionsBase = $script:PrincipalDefinitionsBase
+            $script:SafePrincipals         = @()
+            $script:DangerousPrincipals    = @()
+            $script:StandardOwners         = @()
+            $script:RootDSE                = $null
+            $script:DomainStore            = @{}
+        }
+
+        AfterEach {
+            $script:PrincipalDefinitionsBase = $savedPrincipalDefinitionsBase
         }
 
         Context 'Successful file load — without RootDSE/DomainStore' {
@@ -113,14 +118,9 @@ Describe 'Initialize-PrincipalDefinitions' -Tag 'Unit' {
         }
 
         Context 'Error resilience' {
-            It 'should initialise arrays to empty rather than leaving them null when data file is missing' {
-                Mock 'Test-Path' { $false }
-                Initialize-PrincipalDefinitions
-                # Piping @() into Should loses the value (empty pipeline = $null to Pester).
-                # Use -is [array] piped via a scalar $true/$false comparison instead.
-                ($script:SafePrincipals      -is [array]) | Should -Be $true -Because 'fallback initialises to @()'
-                ($script:DangerousPrincipals -is [array]) | Should -Be $true -Because 'fallback initialises to @()'
-                ($script:StandardOwners      -is [array]) | Should -Be $true -Because 'fallback initialises to @()'
+            It 'should throw when $script:PrincipalDefinitionsBase is not initialized' {
+                $script:PrincipalDefinitionsBase = $null
+                { Initialize-PrincipalDefinitions } | Should -Throw
             }
         }
     }
