@@ -1,7 +1,7 @@
 #requires -Version 5.1
 BeforeAll {
     # Dot-source via scriptblock to handle UTF-16LE source encoding
-    $SourcePath = Join-Path $PSScriptRoot '..' '..' '..' 'Private' 'Utility' 'Expand-IssueTemplate.ps1'
+    $SourcePath = Join-Path (Split-Path (Split-Path (Split-Path $PSScriptRoot))) 'Private\Utility\Expand-IssueTemplate.ps1'
     . ([scriptblock]::Create((Get-Content -Path $SourcePath -Raw)))
 }
 

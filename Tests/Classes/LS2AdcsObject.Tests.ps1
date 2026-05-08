@@ -2,7 +2,7 @@
 BeforeAll {
     $ModuleRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
     Import-Module (Join-Path $ModuleRoot 'Locksmith2.psd1') -Force -ErrorAction Stop
-    Import-Module (Join-Path $ModuleRoot 'Tests' 'Shared' 'TestHelpers.psm1') -Force -ErrorAction Stop
+    Import-Module (Join-Path $ModuleRoot 'Tests\Shared\TestHelpers.psm1') -Force -ErrorAction Stop
 }
 
 Describe 'LS2AdcsObject class' -Tag 'Unit' {
@@ -130,7 +130,6 @@ Describe 'LS2AdcsObject class' -Tag 'Unit' {
 
         It 'should default DangerousEnrollee to an empty array' {
             $obj = New-MockLS2AdcsObject
-            $obj.DangerousEnrollee | Should -Not -BeNullOrEmpty -Because 'DangerousEnrollee should be initialized as @(), not $null'
             $obj.DangerousEnrollee.Count | Should -Be 0
         }
 

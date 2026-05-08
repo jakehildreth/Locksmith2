@@ -81,9 +81,9 @@ function Convert-IdentityReferenceToSid {
         if ($script:PrincipalStore) {
             # Try to find by NTAccount value
             $matchingPrincipal = $script:PrincipalStore.Values | Where-Object { $_.ntAccountName -eq $identityValue } | Select-Object -First 1
-            if ($matchingPrincipal -and $matchingPrincipal.sid) {
-                Write-Verbose "PrincipalStore HIT for '$identityValue' → SID: $($matchingPrincipal.sid)"
-                return [System.Security.Principal.SecurityIdentifier]::new($matchingPrincipal.sid)
+            if ($matchingPrincipal -and $matchingPrincipal.objectSid) {
+                Write-Verbose "PrincipalStore HIT for '$identityValue' → SID: $($matchingPrincipal.objectSid)"
+                return [System.Security.Principal.SecurityIdentifier]::new($matchingPrincipal.objectSid)
             }
         }
 

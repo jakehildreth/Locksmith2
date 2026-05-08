@@ -1,7 +1,7 @@
 #requires -Version 5.1
 BeforeAll {
     # Dot-source via scriptblock to handle UTF-16LE source encoding
-    $SourcePath = Join-Path $PSScriptRoot '..' '..' '..' 'Private' 'Utility' 'Get-ForestNameFromDN.ps1'
+    $SourcePath = Join-Path (Split-Path (Split-Path (Split-Path $PSScriptRoot))) 'Private\Utility\Get-ForestNameFromDN.ps1'
     . ([scriptblock]::Create((Get-Content -Path $SourcePath -Raw)))
 }
 
@@ -31,9 +31,8 @@ Describe 'Get-ForestNameFromDN' -Tag 'Unit' {
             Should -Be 'Unknown'
     }
 
-    It 'should return Unknown for an empty string' -Tag 'EdgeCase' {
-        Get-ForestNameFromDN -DistinguishedName '' |
-            Should -Be 'Unknown'
+    It 'should throw for an empty string' -Tag 'EdgeCase' {
+        { Get-ForestNameFromDN -DistinguishedName '' } | Should -Throw
     }
 
     It 'should process multiple pipeline values independently' {

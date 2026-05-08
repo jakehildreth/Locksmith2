@@ -1,6 +1,6 @@
 #requires -Version 5.1
 BeforeAll {
-    $DataPath = Join-Path $PSScriptRoot '..' '..' '..' 'Private' 'Data' 'ESCDefinitions.psd1'
+    $DataPath = Join-Path (Split-Path (Split-Path (Split-Path $PSScriptRoot))) 'Private\Data\ESCDefinitions.psd1'
     $script:Definitions = Import-PowerShellDataFile -Path $DataPath
 }
 
