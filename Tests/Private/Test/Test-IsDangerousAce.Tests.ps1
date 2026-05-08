@@ -40,10 +40,6 @@ Describe 'Test-IsDangerousAce' -Tag 'Unit' {
             }
         }
 
-        BeforeEach {
-            $script:DangerousAces = $null
-        }
-
         Context 'Return type and shape' {
 
             It 'should return a [PSCustomObject]' {
@@ -173,14 +169,26 @@ Describe 'Test-IsDangerousAce' -Tag 'Unit' {
         }
 
         Context 'Caching behaviour' {
+            BeforeEach {
+                $savedDangerousAces = $script:DangerousAces
+            }
 
-            It 'should populate $script:DangerousAces after first call' {
-                $script:DangerousAces = $null
-                New-MockAce -Rights GenericRead | Test-IsDangerousAce -ObjectClass 'pKICertificateTemplate' | Out-Null
+            AfterEach {
+                $script:DangerousAces = $savedDangerousAces
+            }
+
+            It '$script:DangerousAces should be populated at module load time' {
                 $script:DangerousAces | Should -Not -BeNullOrEmpty
             }
 
-            It 'should use an existing $script:DangerousAces cache instead of reloading from file' {
+            It 'should emit a warning and return IsDangerous=$false when $script:DangerousAces is null' {
+                $script:DangerousAces = $null
+                $ace = New-MockAce -Rights GenericAll
+                $result = $ace | Test-IsDangerousAce -ObjectClass 'pKICertificateTemplate' -WarningAction SilentlyContinue
+                $result.IsDangerous | Should -BeFalse
+            }
+
+            It 'should use a custom $script:DangerousAces value when set' {
                 $script:DangerousAces = @(
                     @{
                         Name                = 'GenericAll'

@@ -4,7 +4,7 @@ function Find-LS2VulnerableTemplate {
         Identifies vulnerable AD CS templates based on ESC technique definitions.
 
     .DESCRIPTION
-        Reads ESC technique definitions from ESCDefinitions.psd1, queries the AdcsObjectStore
+        Uses ESC technique definitions loaded at module initialization, queries the AdcsObjectStore
         for matching templates, and generates issues for problematic enrollees.
 
     .PARAMETER Technique
@@ -99,12 +99,13 @@ function Find-LS2VulnerableTemplate {
         return
     }
 
-    # Load all ESC definitions
-    $definitionsPath = Join-Path $PSScriptRoot '..\Private\Data\ESCDefinitions.psd1'
-    $allDefinitions = Import-PowerShellDataFile -Path $definitionsPath
-    $config = $allDefinitions[$Technique]
+    if (-not $script:ESCDefinitions) {
+        Write-Warning 'ESCDefinitions not initialized. Cannot scan for vulnerabilities.'
+        return
+    }
+    $config = $script:ESCDefinitions[$Technique]
 
-    Write-Verbose "Scanning for $Technique using definitions from $definitionsPath"
+    Write-Verbose "Scanning for $Technique"
 
     # Query AdcsObjectStore for templates, then filter by conditions
     $allTemplates = $script:AdcsObjectStore.Values | Where-Object { $_.IsCertificateTemplate() }

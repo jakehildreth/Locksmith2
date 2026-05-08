@@ -106,12 +106,13 @@ function Find-LS2VulnerableObject {
         return
     }
 
-    # Load all ESC definitions
-    $definitionsPath = Join-Path $PSScriptRoot '..\Private\Data\ESCDefinitions.psd1'
-    $allDefinitions = Import-PowerShellDataFile -Path $definitionsPath
-    $config = $allDefinitions[$Technique]
+    if (-not $script:ESCDefinitions) {
+        Write-Warning 'ESCDefinitions not initialized. Cannot scan for vulnerabilities.'
+        return
+    }
+    $config = $script:ESCDefinitions[$Technique]
 
-    Write-Verbose "Scanning for $Technique using definitions from $definitionsPath"
+    Write-Verbose "Scanning for $Technique"
 
     # Query AdcsObjectStore for infrastructure objects and CAs (exclude templates only)
     $allObjects = $script:AdcsObjectStore.Values | Where-Object { 
