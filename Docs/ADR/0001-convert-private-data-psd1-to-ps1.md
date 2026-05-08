@@ -55,3 +55,30 @@ is verified.
 [!] Data definitions are no longer editable without rebuilding the module.
 [+] PowerShell `data` blocks in the `.ps1` files enforce the same literal-only restriction as
     `Import-PowerShellDataFile`, preserving the data-only guarantee of `.psd1`.
+
+## Test Impact
+
+Three Phase 3 Pester test files currently use `InModuleScope 'Locksmith2'` specifically
+because their source functions call `Import-PowerShellDataFile` with `$PSScriptRoot`-relative
+paths. Outside the module context, `$PSScriptRoot` resolves to the test file's directory and
+the load fails. The affected test files are:
+
+- `Tests/Private/Test/Test-IsDangerousPrincipal.Tests.ps1`
+- `Tests/Private/Test/Test-IsLowPrivilegePrincipal.Tests.ps1`
+- `Tests/Private/Test/Test-IsDangerousAce.Tests.ps1`
+
+When ADR-0001 is implemented the following test changes will be required:
+
+1. **"loaded from data file" context blocks** in `Test-IsDangerousPrincipal` and
+   `Test-IsLowPrivilegePrincipal` exercise the `Import-PowerShellDataFile` code path.
+   These contexts will become dead code. They should be replaced with `BeforeEach` blocks
+   that pre-populate `$script:DangerousPrincipals` and `$script:SafePrincipals` directly.
+
+2. **Caching tests** in `Test-IsDangerousAce` (the "should populate `$script:DangerousAces`
+   after first call" and "should use an existing cache" Its) test the current lazy-load
+   behaviour. Once the data is embedded and populated at module load time, the lazy-load
+   path no longer exists. These tests should be updated to verify the pre-populated
+   `$script:DangerousAces` value rather than the loading mechanism.
+
+3. The three files can potentially be converted from `InModuleScope` to dot-source after
+   the migration, since the dependency on `$PSScriptRoot` will be removed.
