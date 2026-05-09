@@ -132,8 +132,6 @@ function Invoke-Locksmith2 {
 
     #requires -Version 5.1
 
-    Show-Logo
-
     if (-not $SkipPowerShellCheck) {
         Test-PowerShellEnvironment | Repair-PowerShellEnvironment | Out-Null
     }
