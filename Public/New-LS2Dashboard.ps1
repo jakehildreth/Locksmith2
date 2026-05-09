@@ -14,10 +14,11 @@ function New-LS2Dashboard {
     
     .PARAMETER FilePath
     Path where the HTML dashboard will be saved.
-    Default: $env:TEMP\Locksmith2-Dashboard.html
+    Default: Locksmith2-Dashboard.html in the current working directory.
     
     .PARAMETER Show
-    Opens the dashboard in default browser after generation.
+    Opens the dashboard in the default browser after generation.
+    Defaults to $true when no parameters are specified.
     
     .PARAMETER ExpandGroups
     Expands group principals into individual member issues.
@@ -68,10 +69,10 @@ function New-LS2Dashboard {
     [CmdletBinding()]
     param(
         [Parameter()]
-        [string]$FilePath = "$env:TEMP\Locksmith2-Dashboard.html",
+        [string]$FilePath,
         
         [Parameter()]
-        [switch]$Show,
+        [bool]$Show = $true,
         
         [Parameter()]
         [switch]$ExpandGroups,
@@ -81,7 +82,12 @@ function New-LS2Dashboard {
     )
     
     #requires -Version 5.1
-    
+
+    if (-not $FilePath) {
+        $fileStamp = Get-Date -Format 'yyyy-MM-dd_HHmmss'
+        $FilePath = Join-Path (Get-Location) "Locksmith2-Dashboard-$fileStamp.html"
+    }
+
     # Check for PSWriteHTML module
     if (-not (Get-Module -ListAvailable -Name PSWriteHTML)) {
         Write-Error "PSWriteHTML module is required. Install with: Install-Module PSWriteHTML"
@@ -163,6 +169,7 @@ function New-LS2Dashboard {
     @{N = 'VulnerableObjects'; E = { $_.VulnerableObjects.Count } }
     
     $forestName = if ($script:Forest) { $script:Forest } else { 'Unknown Forest' }
+    $generatedAt  = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
     
     # Define conditional formatting rules - applies consistently to all issue tables
     $issueFormatting = {
@@ -204,8 +211,17 @@ function New-LS2Dashboard {
     }
     
     # Generate HTML Dashboard
-    New-HTML -TitleText "Locksmith2 Security Dashboard - $forestName" -Online:$Online -FilePath $FilePath -Show:$Show {
+    New-HTML -TitleText "Locksmith2 Security Dashboard - $forestName - $generatedAt" -Online:$Online -FilePath $FilePath -Show:$Show {
         
+        # Header band — forest name + generation timestamp
+        New-HTMLSection -Invisible {
+            New-HTMLPanel {
+                New-HTMLText -Text "Locksmith2 Security Dashboard" -FontSize 28 -FontWeight bold
+                New-HTMLText -Text "Forest: $forestName" -FontSize 16 -Color '#555'
+                New-HTMLText -Text "Generated: $generatedAt" -FontSize 12 -Color '#888'
+            }
+        }
+
         # Use tabs for single-page navigation with content switching
         New-HTMLTabStyle -SlimTabs -Transition -SelectorColor Magenta
         

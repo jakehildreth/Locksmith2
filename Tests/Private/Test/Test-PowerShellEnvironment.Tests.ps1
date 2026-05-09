@@ -16,8 +16,6 @@ InModuleScope 'Locksmith2' {
             Mock Test-IsWindows { return $true }
             Mock Test-IsSupportedOS { return $true }
             Mock Test-IsSupportedPS { return $true }
-            Mock Test-IsPowerShellCore { return $true }
-            Mock Test-IsWindowsTerminal { return $true }
             Mock Test-IsUtf8 { return $true }
             Mock Test-IsModuleLoaded { return $true }
         }
@@ -44,14 +42,14 @@ InModuleScope 'Locksmith2' {
                 $result.Keys -contains 'IsSupportedPS' | Should -BeTrue
             }
 
-            It 'should contain IsPowerShellCore key' {
+            It 'should NOT contain IsPowerShellCore key' {
                 $result = Test-PowerShellEnvironment
-                $result.Keys -contains 'IsPowerShellCore' | Should -BeTrue
+                $result.Keys -contains 'IsPowerShellCore' | Should -BeFalse
             }
 
-            It 'should contain IsWindowsTerminal key' {
+            It 'should NOT contain IsWindowsTerminal key' {
                 $result = Test-PowerShellEnvironment
-                $result.Keys -contains 'IsWindowsTerminal' | Should -BeTrue
+                $result.Keys -contains 'IsWindowsTerminal' | Should -BeFalse
             }
 
             It 'should contain IsUtf8 key' {
@@ -85,16 +83,6 @@ InModuleScope 'Locksmith2' {
             It 'should return IsSupportedPS as $true when Test-IsSupportedPS returns $true' {
                 $result = Test-PowerShellEnvironment
                 $result.IsSupportedPS | Should -BeTrue
-            }
-
-            It 'should return IsPowerShellCore as $true when Test-IsPowerShellCore returns $true' {
-                $result = Test-PowerShellEnvironment
-                $result.IsPowerShellCore | Should -BeTrue
-            }
-
-            It 'should return IsWindowsTerminal as $true when Test-IsWindowsTerminal returns $true' {
-                $result = Test-PowerShellEnvironment
-                $result.IsWindowsTerminal | Should -BeTrue
             }
 
             It 'should return IsUtf8 as $true when Test-IsUtf8 returns $true' {
@@ -134,9 +122,9 @@ InModuleScope 'Locksmith2' {
                 Should -Invoke Test-IsModuleLoaded -ParameterFilter { $Name -eq 'PSCertutil' } -Times 1
             }
 
-            It 'should check for PwshSpectreConsole module' {
+            It 'should NOT check for PwshSpectreConsole module' {
                 Test-PowerShellEnvironment
-                Should -Invoke Test-IsModuleLoaded -ParameterFilter { $Name -eq 'PwshSpectreConsole' } -Times 1
+                Should -Invoke Test-IsModuleLoaded -ParameterFilter { $Name -eq 'PwshSpectreConsole' } -Times 0
             }
 
             It 'should check for PSWriteHTML module' {

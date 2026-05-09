@@ -73,6 +73,27 @@ InModuleScope 'Locksmith2' {
                 New-LS2Dashboard
                 Should -Invoke 'Write-Warning' -Times 1
             }
+
+            It 'should default FilePath to the current working directory' {
+                $cwd = (Get-Location).Path
+                New-LS2Dashboard
+                Should -Invoke 'New-HTML' -Times 1 -ParameterFilter { $FilePath.StartsWith($cwd) -and $FilePath.EndsWith('.html') }
+            }
+
+            It 'should include a date and time stamp in the default file name' {
+                New-LS2Dashboard
+                Should -Invoke 'New-HTML' -Times 1 -ParameterFilter { $FilePath -match 'Locksmith2-Dashboard-\d{4}-\d{2}-\d{2}_\d{6}\.html' }
+            }
+
+            It 'should open the browser by default when no parameters are given' {
+                New-LS2Dashboard
+                Should -Invoke 'New-HTML' -Times 1 -ParameterFilter { $Show -eq $true }
+            }
+
+            It 'should include a date and time stamp in the dashboard' {
+                New-LS2Dashboard
+                Should -Invoke 'New-HTML' -Times 1 -ParameterFilter { $TitleText -match '\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}' }
+            }
         }
     }
 }
