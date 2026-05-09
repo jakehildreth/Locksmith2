@@ -90,7 +90,7 @@ Build-Module -ModuleName 'Locksmith2' {
 
     #New-ConfigurationModuleSkip -IgnoreFunctionName 'Invoke-Formatter', 'Find-Module' -IgnoreModuleName 'platyPS'
 
-    New-ConfigurationModuleSkip -IgnoreModuleName 'PwshSpectreConsole', 'PSWriteHTML', 'PSCertutil'
+    New-ConfigurationModuleSkip -IgnoreModuleName 'PSWriteHTML', 'PSCertutil'
 
     $ConfigurationFormat = [ordered] @{
         RemoveComments                              = $false
