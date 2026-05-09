@@ -10,7 +10,7 @@ function Test-IsDangerousAce {
         
         Dangerous permissions include GenericAll, WriteDacl, WriteOwner, GenericWrite, and specific
         WriteProperty rights depending on object class. The function matches ACEs against a
-        comprehensive list of dangerous permission combinations defined in AceDefinitions.psd1,
+        comprehensive list of dangerous permission combinations defined in AceDefinitions.ps1,
         filtering by object class to ensure property-specific permissions are only flagged on
         relevant object types.
         
