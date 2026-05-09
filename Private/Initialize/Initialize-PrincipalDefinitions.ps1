@@ -4,9 +4,10 @@ function Initialize-PrincipalDefinitions {
         Loads and customizes principal definitions for the current forest.
 
         .DESCRIPTION
-        Loads PrincipalDefinitions.psd1 and injects forest-specific security principals
-        (such as the forest's Enterprise Admins SID) into the definitions. Stores the
-        customized definitions in module-level variables for use throughout the scan.
+        Reads principal definitions from $script:PrincipalDefinitionsBase (loaded at module
+        import) and injects forest-specific security principals (such as the forest's
+        Enterprise Admins SID). Stores the customized definitions in module-level variables
+        for use throughout the scan.
         
         This function should be called after Initialize-DomainStore so that domain SIDs
         are available for injection.

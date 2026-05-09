@@ -75,7 +75,10 @@ Describe 'Test-IsLowPrivilegePrincipal' -Tag 'Unit' {
             }
         }
 
-        Context 'When loading from PrincipalDefinitions.psd1' {
+        Context 'When loading from module state' {
+            BeforeAll {
+                Initialize-PrincipalDefinitions
+            }
 
             It 'should return $true for a custom principal not in either list' {
                 Test-IsLowPrivilegePrincipal -IdentityReference 'CONTOSO\CustomServiceAccount' | Should -BeTrue
