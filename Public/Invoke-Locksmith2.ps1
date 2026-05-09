@@ -135,7 +135,15 @@ function Invoke-Locksmith2 {
     if (-not $SkipPowerShellCheck) {
         Test-PowerShellEnvironment | Repair-PowerShellEnvironment | Out-Null
     }
-        
+
+    foreach ($depName in @('PSWriteHTML', 'PSCertutil')) {
+        $depRoot = Join-Path $PSScriptRoot "Modules\$depName"
+        if (Test-Path $depRoot) {
+            $depVer = (Get-ChildItem $depRoot | Sort-Object Name -Descending | Select-Object -First 1).Name
+            Import-Module (Join-Path $depRoot "$depVer\$depName.psm1") -Force
+        }
+    }
+
     Write-Verbose "Starting Locksmith2 AD CS security audit..."
         
     # Initialize and optionally rescan

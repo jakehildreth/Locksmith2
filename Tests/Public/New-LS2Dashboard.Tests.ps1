@@ -20,27 +20,25 @@ InModuleScope 'Locksmith2' {
 
         Context 'PSWriteHTML not available' {
             BeforeEach {
-                Mock 'Get-Module' { $null } -ParameterFilter { $ListAvailable -and $Name -eq 'PSWriteHTML' }
+                Mock 'Get-Command' { $null } -ParameterFilter { $Name -eq 'New-HTML' }
                 Mock 'Write-Error' { }
+                Mock 'New-HTML' { }
             }
 
-            It 'should write an error when PSWriteHTML is not installed' {
+            It 'should write an error when PSWriteHTML is not loaded' {
                 { New-LS2Dashboard } | Should -Not -Throw
                 Should -Invoke 'Write-Error' -Times 1
             }
 
-            It 'should return early without calling Import-Module for PSWriteHTML' {
-                Mock 'Import-Module' { } -ParameterFilter { $Name -eq 'PSWriteHTML' }
+            It 'should return early without calling New-HTML' {
                 New-LS2Dashboard
-                Should -Invoke 'Import-Module' -Times 0 -ParameterFilter { $Name -eq 'PSWriteHTML' }
+                Should -Invoke 'New-HTML' -Times 0
             }
         }
 
         Context 'PSWriteHTML available' {
             BeforeEach {
-                $fakeModule = [PSCustomObject]@{ Name = 'PSWriteHTML'; Version = '1.0.0' }
-                Mock 'Get-Module' { $fakeModule } -ParameterFilter { $ListAvailable -and $Name -eq 'PSWriteHTML' }
-                Mock 'Import-Module' { } -ParameterFilter { $Name -eq 'PSWriteHTML' }
+                Mock 'Get-Command' { [PSCustomObject]@{ Name = 'New-HTML' } } -ParameterFilter { $Name -eq 'New-HTML' }
                 Mock 'Get-FlattenedIssues' { @() }
                 Mock 'Find-LS2RiskyPrincipal' { @() }
                 Mock 'New-HTML' { }
@@ -61,11 +59,6 @@ InModuleScope 'Locksmith2' {
             It 'should call New-HTML to build the dashboard' {
                 New-LS2Dashboard
                 Should -Invoke 'New-HTML' -Times 1
-            }
-
-            It 'should call Import-Module for PSWriteHTML' {
-                New-LS2Dashboard
-                Should -Invoke 'Import-Module' -Times 1 -ParameterFilter { $Name -eq 'PSWriteHTML' }
             }
 
             It 'should write a warning when IssueStore is empty' {

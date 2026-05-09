@@ -857,8 +857,8 @@ Description:  Gathers AD CS data, processes it, and returns full
               processing.
 
 Cmdlet:       New-LS2Dashboard
-Description:  Creates an HTML dashboard and opens it in your default
-              browser.
+Description:  Creates an HTML dashboard and opens it in your
+              default browser.
 
 '@
 }

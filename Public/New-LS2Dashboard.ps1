@@ -88,14 +88,12 @@ function New-LS2Dashboard {
         $FilePath = Join-Path (Get-Location) "Locksmith2-Dashboard-$fileStamp.html"
     }
 
-    # Check for PSWriteHTML module
-    if (-not (Get-Module -ListAvailable -Name PSWriteHTML)) {
-        Write-Error "PSWriteHTML module is required. Install with: Install-Module PSWriteHTML"
+    # Check for PSWriteHTML module (loaded as a NestedModule or installed separately)
+    if (-not (Get-Command -Name 'New-HTML' -ErrorAction SilentlyContinue)) {
+        Write-Error "PSWriteHTML module is required but was not loaded. Reinstall Locksmith2 or Install-Module PSWriteHTML."
         return
     }
-    
-    Import-Module PSWriteHTML -ErrorAction Stop
-    
+
     # Check if IssueStore is populated
     if (-not $script:IssueStore -or $script:IssueStore.Count -eq 0) {
         Write-Warning "IssueStore is empty. Run Invoke-Locksmith2 or Find-LS2Vulnerable* functions first."

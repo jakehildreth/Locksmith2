@@ -17,7 +17,6 @@ InModuleScope 'Locksmith2' {
             Mock Test-IsSupportedOS { return $true }
             Mock Test-IsSupportedPS { return $true }
             Mock Test-IsUtf8 { return $true }
-            Mock Test-IsModuleLoaded { return $true }
         }
 
         Context 'Return value structure' {
@@ -57,14 +56,14 @@ InModuleScope 'Locksmith2' {
                 $result.Keys -contains 'IsUtf8' | Should -BeTrue
             }
 
-            It 'should contain AllModulesLoaded key' {
+            It 'should NOT contain AllModulesLoaded key' {
                 $result = Test-PowerShellEnvironment
-                $result.Keys -contains 'AllModulesLoaded' | Should -BeTrue
+                $result.Keys -contains 'AllModulesLoaded' | Should -BeFalse
             }
 
-            It 'should contain MissingModules key' {
+            It 'should NOT contain MissingModules key' {
                 $result = Test-PowerShellEnvironment
-                $result.Keys -contains 'MissingModules' | Should -BeTrue
+                $result.Keys -contains 'MissingModules' | Should -BeFalse
             }
         }
 
@@ -90,46 +89,27 @@ InModuleScope 'Locksmith2' {
                 $result.IsUtf8 | Should -BeTrue
             }
 
-            It 'should return AllModulesLoaded as $true when all modules are loaded' {
-                Mock Test-IsModuleLoaded { return $true }
-                $result = Test-PowerShellEnvironment
-                $result.AllModulesLoaded | Should -BeTrue
-            }
 
-            It 'should return MissingModules as an empty collection when all modules are loaded' {
-                Mock Test-IsModuleLoaded { return $true }
-                $result = Test-PowerShellEnvironment
-                $result.MissingModules | Should -BeNullOrEmpty
-            }
         }
 
-        Context 'Non-fatal warnings — module checks' {
+        Context 'Module checks removed' {
 
-            It 'should set AllModulesLoaded to $false when at least one module is not loaded' {
-                Mock Test-IsModuleLoaded { return $false }
-                $result = Test-PowerShellEnvironment
-                $result.AllModulesLoaded | Should -BeFalse
-            }
-
-            It 'should populate MissingModules when modules are not loaded' {
-                Mock Test-IsModuleLoaded { return $false }
-                $result = Test-PowerShellEnvironment
-                $result.MissingModules | Should -Not -BeNullOrEmpty
-            }
-
-            It 'should check for PSCertutil module' {
+            It 'should NOT check for PSCertutil module' {
+                Mock Test-IsModuleLoaded { return $true }
                 Test-PowerShellEnvironment
-                Should -Invoke Test-IsModuleLoaded -ParameterFilter { $Name -eq 'PSCertutil' } -Times 1
+                Should -Invoke Test-IsModuleLoaded -ParameterFilter { $Name -eq 'PSCertutil' } -Times 0
             }
 
             It 'should NOT check for PwshSpectreConsole module' {
+                Mock Test-IsModuleLoaded { return $true }
                 Test-PowerShellEnvironment
                 Should -Invoke Test-IsModuleLoaded -ParameterFilter { $Name -eq 'PwshSpectreConsole' } -Times 0
             }
 
-            It 'should check for PSWriteHTML module' {
+            It 'should NOT check for PSWriteHTML module' {
+                Mock Test-IsModuleLoaded { return $true }
                 Test-PowerShellEnvironment
-                Should -Invoke Test-IsModuleLoaded -ParameterFilter { $Name -eq 'PSWriteHTML' } -Times 1
+                Should -Invoke Test-IsModuleLoaded -ParameterFilter { $Name -eq 'PSWriteHTML' } -Times 0
             }
         }
 

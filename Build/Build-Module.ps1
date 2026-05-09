@@ -43,6 +43,16 @@ if (Get-Module -Name 'PSPublishModule' -ListAvailable) {
 # Update-Module -Name PSPublishModule
 Import-Module -Name PSPublishModule -Force
 
+# Ensure vendored dependencies are available so PSPublishModule can resolve
+# function calls to their source module during analysis (required for
+# New-ConfigurationModuleSkip -IgnoreModuleName to match correctly).
+foreach ($depName in @('PSWriteHTML', 'PSCertutil')) {
+    if (-not (Get-Module -Name $depName -ListAvailable)) {
+        Write-Host "Installing $depName for build-time analysis..."
+        Install-Module -Name $depName -Scope CurrentUser -Force -AllowClobber
+    }
+}
+
 $CopyrightYear = if ($Calver) { $CalVer.Split('.')[0] } else { (Get-Date -Format yyyy) }
 
 Build-Module -ModuleName 'Locksmith2' {
@@ -67,11 +77,7 @@ Build-Module -ModuleName 'Locksmith2' {
     }
     New-ConfigurationManifest @Manifest
 
-    # Add standard module dependencies (directly, but can be used with loop as well)
-    # New-ConfigurationModule -Type RequiredModule -Name 'PSCertutil' -Guid 'Auto' -Version 'Latest'
-
-    # Add external module dependencies, using loop for simplicity
-    $RequiredExternalModules = @(
+    New-ConfigurationModule -Type ExternalModule -Name @(
         'Microsoft.PowerShell.Utility',
         'Microsoft.PowerShell.Archive',
         'Microsoft.PowerShell.Management',
@@ -79,18 +85,28 @@ Build-Module -ModuleName 'Locksmith2' {
         'PowerShellGet',
         'CimCmdlets'
     )
-    foreach ($Module in $RequiredExternalModules) {
-        New-ConfigurationModule -Type ExternalModule -Name $Module
-    }
 
     # Add approved modules, that can be used as a dependency, but only when specific function from those modules is used
     # And on that time only that function and dependant functions will be copied over
     # Keep in mind it has it's limits when "copying" functions such as it should not depend on DLLs or other external files
     #New-ConfigurationModule -Type ApprovedModule -Name 'PSSharedGoods', 'PSWriteColor', 'Connectimo', 'PSUnifi', 'PSWebToolbox', 'PSMyPassword'
 
+    # New-ConfigurationModule -Type ApprovedModule -Name @(
+    #     'PSWriteHTML', 'PSCertutil'
+    # )
+
     #New-ConfigurationModuleSkip -IgnoreFunctionName 'Invoke-Formatter', 'Find-Module' -IgnoreModuleName 'platyPS'
 
-    New-ConfigurationModuleSkip -IgnoreModuleName 'PSWriteHTML', 'PSCertutil'
+    # New-ConfigurationModuleSkip -IgnoreFunctionName @(
+    #     'Format-HTML',                
+    #     'Optimize-HTML',              
+    #     'Compare-TwoArrays',          
+    #     'IsNumeric',                  
+    #     'IsOfType',                   
+    #     'Select-Unique'
+    # ) 
+
+    New-ConfigurationModuleSkip -IgnoreModuleName 'PSWriteHtml', 'PSCertutil'
 
     $ConfigurationFormat = [ordered] @{
         RemoveComments                              = $false
@@ -156,3 +172,34 @@ Build-Module -ModuleName 'Locksmith2' {
         }
     }
 }
+
+# ── Post-build: vendor PSWriteHTML and PSCertutil into the artefact ──────────
+# PSPublishModule has already written Artefacts\Unpacked\Locksmith2\ by this point.
+# We copy each dependency into a Modules\ subfolder and patch NestedModules.
+$artefactRoot  = Join-Path $PSScriptRoot '..\Artefacts\Unpacked\Locksmith2'
+$modulesTarget = Join-Path $artefactRoot 'Modules'
+New-Item -ItemType Directory -Path $modulesTarget -Force | Out-Null
+
+$nestedEntries = @()
+# Pin versions here. Set a value to $null to always pull latest from PSGallery.
+$vendorVersions = @{
+    PSWriteHTML = '1.41.0'
+    PSCertutil  = '0.0.3'
+}
+
+foreach ($depName in $vendorVersions.Keys) {
+    $pinned = $vendorVersions[$depName]
+    $saveParams = @{ Name = $depName; Path = $modulesTarget; Force = $true }
+    if ($pinned) { $saveParams['RequiredVersion'] = $pinned }
+    Write-Host "Saving $depName$(if ($pinned) { " $pinned" } else { ' (latest)' }) from PSGallery..."
+    Save-Module @saveParams
+    $ver = (Get-ChildItem (Join-Path $modulesTarget $depName) |
+        Sort-Object Name -Descending |
+        Select-Object -First 1).Name
+    Write-Host "Vendored $depName $ver from PSGallery."
+    $nestedEntries += "Modules\$depName\$ver\$depName.psm1"
+}
+
+$psd1 = Join-Path $artefactRoot 'Locksmith2.psd1'
+Update-ModuleManifest -Path $psd1 -NestedModules $nestedEntries
+Write-Host "Locksmith2.psd1 patched: NestedModules = $($nestedEntries -join ', ')"
