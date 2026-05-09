@@ -67,11 +67,7 @@ Build-Module -ModuleName 'Locksmith2' {
     }
     New-ConfigurationManifest @Manifest
 
-    # Add standard module dependencies (directly, but can be used with loop as well)
-    # New-ConfigurationModule -Type RequiredModule -Name 'PSCertutil' -Guid 'Auto' -Version 'Latest'
-
-    # Add external module dependencies, using loop for simplicity
-    $RequiredExternalModules = @(
+    New-ConfigurationModule -Type ExternalModule -Name @(
         'Microsoft.PowerShell.Utility',
         'Microsoft.PowerShell.Archive',
         'Microsoft.PowerShell.Management',
@@ -79,18 +75,28 @@ Build-Module -ModuleName 'Locksmith2' {
         'PowerShellGet',
         'CimCmdlets'
     )
-    foreach ($Module in $RequiredExternalModules) {
-        New-ConfigurationModule -Type ExternalModule -Name $Module
-    }
 
     # Add approved modules, that can be used as a dependency, but only when specific function from those modules is used
     # And on that time only that function and dependant functions will be copied over
     # Keep in mind it has it's limits when "copying" functions such as it should not depend on DLLs or other external files
     #New-ConfigurationModule -Type ApprovedModule -Name 'PSSharedGoods', 'PSWriteColor', 'Connectimo', 'PSUnifi', 'PSWebToolbox', 'PSMyPassword'
 
+    New-ConfigurationModule -Type ApprovedModule -Name @(
+        'PSWriteHTML', 'PSCertutil'
+    )
+    
     #New-ConfigurationModuleSkip -IgnoreFunctionName 'Invoke-Formatter', 'Find-Module' -IgnoreModuleName 'platyPS'
 
-    New-ConfigurationModuleSkip -IgnoreModuleName 'PSWriteHTML', 'PSCertutil'
+    New-ConfigurationModuleSkip -IgnoreFunctionName @(
+        'Format-HTML',                
+        'Optimize-HTML',              
+        'Compare-TwoArrays',          
+        'IsNumeric',                  
+        'IsOfType',                   
+        'Select-Unique'
+    ) 
+
+    # New-ConfigurationModuleSkip -IgnoreModuleName 'PSWriteHTML', 'PSCertutil'
 
     $ConfigurationFormat = [ordered] @{
         RemoveComments                              = $false
