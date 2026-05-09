@@ -846,7 +846,19 @@ if ($Host.Name -eq 'Windows PowerShell ISE Host') {
         Write-Host $line
     }
 
-    Write-Host 'https://locksmith.ad                               by Jake Hildreth'
-    Write-Host ''
-    Write-Host 'Quick Start: Invoke-Locksmith2'
+    Write-Host @'
+https://locksmith.ad                               by Jake Hildreth
+
+Quick Start:
+
+Cmdlet:       Invoke-Locksmith2
+Description:  Gathers AD CS data, processes it, and returns full
+              objects to the pipeline for capture or further
+              processing.
+
+Cmdlet:       New-LS2Dashboard
+Description:  Creates an HTML dashboard and opens it in your default
+              browser.
+
+'@
 }

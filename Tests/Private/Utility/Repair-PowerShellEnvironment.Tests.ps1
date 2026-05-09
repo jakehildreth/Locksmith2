@@ -45,14 +45,12 @@ InModuleScope 'Locksmith2' {
         BeforeEach {
             Mock Test-PowerShellEnvironment {
                 return @{
-                    IsWindows         = $true
-                    IsSupportedOS     = $true
-                    IsSupportedPS     = $true
-                    IsPowerShellCore  = $true
-                    IsWindowsTerminal = $true
-                    IsUtf8            = $true
-                    AllModulesLoaded  = $true
-                    MissingModules    = @()
+                    IsWindows        = $true
+                    IsSupportedOS    = $true
+                    IsSupportedPS    = $true
+                    IsUtf8           = $true
+                    AllModulesLoaded = $true
+                    MissingModules   = @()
                 }
             }
             Mock Update-OutputEncoding { }
@@ -65,8 +63,7 @@ InModuleScope 'Locksmith2' {
             It 'should return a PSCustomObject' {
                 $result = Repair-PowerShellEnvironment -EnvironmentTest @{
                     IsWindows = $true; IsSupportedOS = $true; IsSupportedPS = $true
-                    IsPowerShellCore = $true; IsWindowsTerminal = $true; IsUtf8 = $true
-                    AllModulesLoaded = $true; MissingModules = @()
+                    IsUtf8 = $true; AllModulesLoaded = $true; MissingModules = @()
                 }
                 $result | Should -BeOfType [PSCustomObject]
             }
@@ -74,8 +71,7 @@ InModuleScope 'Locksmith2' {
             It 'should have EncodingRepaired property' {
                 $result = Repair-PowerShellEnvironment -EnvironmentTest @{
                     IsWindows = $true; IsSupportedOS = $true; IsSupportedPS = $true
-                    IsPowerShellCore = $true; IsWindowsTerminal = $true; IsUtf8 = $true
-                    AllModulesLoaded = $true; MissingModules = @()
+                    IsUtf8 = $true; AllModulesLoaded = $true; MissingModules = @()
                 }
                 $result.PSObject.Properties.Name | Should -Contain 'EncodingRepaired'
             }
@@ -83,8 +79,7 @@ InModuleScope 'Locksmith2' {
             It 'should have ProfileUpdated property' {
                 $result = Repair-PowerShellEnvironment -EnvironmentTest @{
                     IsWindows = $true; IsSupportedOS = $true; IsSupportedPS = $true
-                    IsPowerShellCore = $true; IsWindowsTerminal = $true; IsUtf8 = $true
-                    AllModulesLoaded = $true; MissingModules = @()
+                    IsUtf8 = $true; AllModulesLoaded = $true; MissingModules = @()
                 }
                 $result.PSObject.Properties.Name | Should -Contain 'ProfileUpdated'
             }
@@ -92,8 +87,7 @@ InModuleScope 'Locksmith2' {
             It 'should have ModulesInstalled property' {
                 $result = Repair-PowerShellEnvironment -EnvironmentTest @{
                     IsWindows = $true; IsSupportedOS = $true; IsSupportedPS = $true
-                    IsPowerShellCore = $true; IsWindowsTerminal = $true; IsUtf8 = $true
-                    AllModulesLoaded = $true; MissingModules = @()
+                    IsUtf8 = $true; AllModulesLoaded = $true; MissingModules = @()
                 }
                 $result.PSObject.Properties.Name | Should -Contain 'ModulesInstalled'
             }
@@ -101,8 +95,7 @@ InModuleScope 'Locksmith2' {
             It 'should have ModulesImported property' {
                 $result = Repair-PowerShellEnvironment -EnvironmentTest @{
                     IsWindows = $true; IsSupportedOS = $true; IsSupportedPS = $true
-                    IsPowerShellCore = $true; IsWindowsTerminal = $true; IsUtf8 = $true
-                    AllModulesLoaded = $true; MissingModules = @()
+                    IsUtf8 = $true; AllModulesLoaded = $true; MissingModules = @()
                 }
                 $result.PSObject.Properties.Name | Should -Contain 'ModulesImported'
             }
@@ -110,8 +103,7 @@ InModuleScope 'Locksmith2' {
             It 'should have RemainingIssues property' {
                 $result = Repair-PowerShellEnvironment -EnvironmentTest @{
                     IsWindows = $true; IsSupportedOS = $true; IsSupportedPS = $true
-                    IsPowerShellCore = $true; IsWindowsTerminal = $true; IsUtf8 = $true
-                    AllModulesLoaded = $true; MissingModules = @()
+                    IsUtf8 = $true; AllModulesLoaded = $true; MissingModules = @()
                 }
                 $result.PSObject.Properties.Name | Should -Contain 'RemainingIssues'
             }
@@ -119,8 +111,7 @@ InModuleScope 'Locksmith2' {
             It 'should have Success property' {
                 $result = Repair-PowerShellEnvironment -EnvironmentTest @{
                     IsWindows = $true; IsSupportedOS = $true; IsSupportedPS = $true
-                    IsPowerShellCore = $true; IsWindowsTerminal = $true; IsUtf8 = $true
-                    AllModulesLoaded = $true; MissingModules = @()
+                    IsUtf8 = $true; AllModulesLoaded = $true; MissingModules = @()
                 }
                 $result.PSObject.Properties.Name | Should -Contain 'Success'
             }
@@ -131,8 +122,7 @@ InModuleScope 'Locksmith2' {
             It 'should set EncodingRepaired to $true when IsUtf8 is $false and Force is used' {
                 $result = Repair-PowerShellEnvironment -Force -EnvironmentTest @{
                     IsWindows = $true; IsSupportedOS = $true; IsSupportedPS = $true
-                    IsPowerShellCore = $true; IsWindowsTerminal = $true; IsUtf8 = $false
-                    AllModulesLoaded = $true; MissingModules = @()
+                    IsUtf8 = $false; AllModulesLoaded = $true; MissingModules = @()
                 }
                 $result.EncodingRepaired | Should -BeTrue
             }
@@ -140,8 +130,7 @@ InModuleScope 'Locksmith2' {
             It 'should not set EncodingRepaired to $true when IsUtf8 is already $true' {
                 $result = Repair-PowerShellEnvironment -EnvironmentTest @{
                     IsWindows = $true; IsSupportedOS = $true; IsSupportedPS = $true
-                    IsPowerShellCore = $true; IsWindowsTerminal = $true; IsUtf8 = $true
-                    AllModulesLoaded = $true; MissingModules = @()
+                    IsUtf8 = $true; AllModulesLoaded = $true; MissingModules = @()
                 }
                 $result.EncodingRepaired | Should -BeFalse
             }
@@ -152,8 +141,7 @@ InModuleScope 'Locksmith2' {
             It 'should record an OS issue in RemainingIssues when IsWindows is $false' {
                 $result = Repair-PowerShellEnvironment -EnvironmentTest @{
                     IsWindows = $false; IsSupportedOS = $true; IsSupportedPS = $true
-                    IsPowerShellCore = $true; IsWindowsTerminal = $true; IsUtf8 = $true
-                    AllModulesLoaded = $true; MissingModules = @()
+                    IsUtf8 = $true; AllModulesLoaded = $true; MissingModules = @()
                 }
                 $result.RemainingIssues | Should -Not -BeNullOrEmpty
             }
@@ -161,8 +149,7 @@ InModuleScope 'Locksmith2' {
             It 'should record an OS version issue in RemainingIssues when IsSupportedOS is $false' {
                 $result = Repair-PowerShellEnvironment -EnvironmentTest @{
                     IsWindows = $true; IsSupportedOS = $false; IsSupportedPS = $true
-                    IsPowerShellCore = $true; IsWindowsTerminal = $true; IsUtf8 = $true
-                    AllModulesLoaded = $true; MissingModules = @()
+                    IsUtf8 = $true; AllModulesLoaded = $true; MissingModules = @()
                 }
                 $result.RemainingIssues | Should -Not -BeNullOrEmpty
             }
@@ -170,8 +157,7 @@ InModuleScope 'Locksmith2' {
             It 'should record a PS version issue in RemainingIssues when IsSupportedPS is $false' {
                 $result = Repair-PowerShellEnvironment -EnvironmentTest @{
                     IsWindows = $true; IsSupportedOS = $true; IsSupportedPS = $false
-                    IsPowerShellCore = $true; IsWindowsTerminal = $true; IsUtf8 = $true
-                    AllModulesLoaded = $true; MissingModules = @()
+                    IsUtf8 = $true; AllModulesLoaded = $true; MissingModules = @()
                 }
                 $result.RemainingIssues | Should -Not -BeNullOrEmpty
             }
@@ -182,8 +168,7 @@ InModuleScope 'Locksmith2' {
             It 'should skip profile update when SkipProfileUpdate switch is specified' {
                 $result = Repair-PowerShellEnvironment -SkipProfileUpdate -Force -EnvironmentTest @{
                     IsWindows = $true; IsSupportedOS = $true; IsSupportedPS = $true
-                    IsPowerShellCore = $true; IsWindowsTerminal = $true; IsUtf8 = $false
-                    AllModulesLoaded = $true; MissingModules = @()
+                    IsUtf8 = $false; AllModulesLoaded = $true; MissingModules = @()
                 }
                 $result.ProfileUpdated | Should -BeFalse
                 Should -Invoke Update-DollarSignProfile -Times 0
@@ -200,8 +185,7 @@ InModuleScope 'Locksmith2' {
             It 'should not call Test-PowerShellEnvironment when EnvironmentTest is provided' {
                 Repair-PowerShellEnvironment -EnvironmentTest @{
                     IsWindows = $true; IsSupportedOS = $true; IsSupportedPS = $true
-                    IsPowerShellCore = $true; IsWindowsTerminal = $true; IsUtf8 = $true
-                    AllModulesLoaded = $true; MissingModules = @()
+                    IsUtf8 = $true; AllModulesLoaded = $true; MissingModules = @()
                 }
                 Should -Invoke Test-PowerShellEnvironment -Times 0
             }
