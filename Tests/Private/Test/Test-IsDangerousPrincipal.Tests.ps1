@@ -58,7 +58,10 @@ Describe 'Test-IsDangerousPrincipal' -Tag 'Unit' {
             }
         }
 
-        Context 'When DangerousEnrollee is loaded from PrincipalDefinitions.psd1' {
+        Context 'When DangerousEnrollee is loaded from module state' {
+            BeforeAll {
+                Initialize-PrincipalDefinitions
+            }
 
             It 'should return $true for Everyone' {
                 Test-IsDangerousPrincipal -IdentityReference 'Everyone' | Should -BeTrue

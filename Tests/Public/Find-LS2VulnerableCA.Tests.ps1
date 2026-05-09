@@ -13,7 +13,7 @@ InModuleScope 'Locksmith2' {
     Describe 'Find-LS2VulnerableCA' -Tag 'Unit' {
         BeforeAll {
             $ModuleRoot = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
-            $script:ESCDefs = Import-PowerShellDataFile (Join-Path $ModuleRoot 'Private\Data\ESCDefinitions.psd1')
+            $script:ESCDefs = $script:ESCDefinitions
         }
 
         BeforeEach {

@@ -15,7 +15,7 @@ InModuleScope 'Locksmith2' {
             # Recalculate ModuleRoot inside InModuleScope since $ModuleRoot from outer BeforeAll
             # is not accessible via closure here
             $ModuleRoot = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
-            $script:ESCDefs = Import-PowerShellDataFile (Join-Path $ModuleRoot 'Private\Data\ESCDefinitions.psd1')
+            $script:ESCDefs = $script:ESCDefinitions
 
             function script:New-ESC1VulnerableTemplate {
                 $t = New-MockLS2AdcsObject -Properties @{
