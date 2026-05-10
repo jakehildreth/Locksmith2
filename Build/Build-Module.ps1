@@ -159,47 +159,23 @@ Build-Module -ModuleName 'Locksmith2' {
     New-ConfigurationArtefact -Type Unpacked -Enable -Path "$PSScriptRoot\..\Artefacts\Unpacked" #-RequiredModulesPath "$PSScriptRoot\..\Artefacts\Modules"
     New-ConfigurationArtefact -Type Packed -Enable -Path "$PSScriptRoot\..\Artefacts\Packed" -IncludeTagName
 
-    # global options for publishing to github/psgallery
-    if ($PublishToPSGallery) {
-        if ($PSGalleryAPIKey) {
-            # Use API key directly (from environment variable in CI)
-            New-ConfigurationPublish -Type PowerShellGallery -ApiKey $PSGalleryAPIKey -Enabled:$true
-        } elseif ($PSGalleryAPIPath) {
-            # Use API key from file (for local development)
-            New-ConfigurationPublish -Type PowerShellGallery -FilePath $PSGalleryAPIPath -Enabled:$true
-        } else {
-            Write-Error "PublishToPSGallery specified but neither PSGalleryAPIKey nor PSGalleryAPIPath provided."
-        }
-    }
 }
 
-# ── Post-build: vendor PSWriteHTML and PSCertutil into the artefact ──────────
-# PSPublishModule has already written Artefacts\Unpacked\Locksmith2\ by this point.
-# We copy each dependency into a Modules\ subfolder and patch NestedModules.
-$artefactRoot  = Join-Path $PSScriptRoot '..\Artefacts\Unpacked\Locksmith2'
-$modulesTarget = Join-Path $artefactRoot 'Modules'
-New-Item -ItemType Directory -Path $modulesTarget -Force | Out-Null
+# NOTE: Publishing is intentionally NOT configured inside Build-Module {}.
+# PSPublishModule's Publish-Module call uses -Name (resolves from PSModulePath),
+# which publishes the pre-vendoring copy of the module and excludes PSWriteHTML
+# and PSCertutil. We publish via -Path after vendoring instead (see below).
 
-$nestedEntries = @()
-# Pin versions here. Set a value to $null to always pull latest from PSGallery.
-$vendorVersions = @{
-    PSWriteHTML = '1.41.0'
-    PSCertutil  = '0.0.3'
+# ── Post-build: vendor deps and optionally publish from artefact path ─────────
+# Vendoring and publishing are deliberately deferred until after Build-Module {}
+# so that Publish-Module -Path sees the fully patched artefact directory.
+. "$PSScriptRoot\Invoke-LS2PostBuildPublish.ps1"
+
+$postBuildParams = @{
+    ArtefactRoot      = Join-Path $PSScriptRoot '..\Artefacts\Unpacked\Locksmith2'
+    PublishToPSGallery = $PublishToPSGallery
 }
+if ($PSGalleryAPIKey) { $postBuildParams['PSGalleryAPIKey'] = $PSGalleryAPIKey }
+if ($PSGalleryAPIPath) { $postBuildParams['PSGalleryAPIPath'] = $PSGalleryAPIPath }
 
-foreach ($depName in $vendorVersions.Keys) {
-    $pinned = $vendorVersions[$depName]
-    $saveParams = @{ Name = $depName; Path = $modulesTarget; Force = $true }
-    if ($pinned) { $saveParams['RequiredVersion'] = $pinned }
-    Write-Host "Saving $depName$(if ($pinned) { " $pinned" } else { ' (latest)' }) from PSGallery..."
-    Save-Module @saveParams
-    $ver = (Get-ChildItem (Join-Path $modulesTarget $depName) |
-        Sort-Object Name -Descending |
-        Select-Object -First 1).Name
-    Write-Host "Vendored $depName $ver from PSGallery."
-    $nestedEntries += "Modules\$depName\$ver\$depName.psm1"
-}
-
-$psd1 = Join-Path $artefactRoot 'Locksmith2.psd1'
-Update-ModuleManifest -Path $psd1 -NestedModules $nestedEntries
-Write-Host "Locksmith2.psd1 patched: NestedModules = $($nestedEntries -join ', ')"
+Invoke-LS2PostBuildPublish @postBuildParams
