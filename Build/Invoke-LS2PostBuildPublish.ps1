@@ -52,6 +52,9 @@ function Invoke-LS2PostBuildPublish {
     )
 
     # ── Vendor dependencies ────────────────────────────────────────────────────
+    Write-Host ''
+    Write-Host '[i] Vendoring dependencies into artefact' -ForegroundColor Cyan
+
     $modulesTarget = Join-Path $ArtefactRoot 'Modules'
     New-Item -ItemType Directory -Path $modulesTarget -Force | Out-Null
 
@@ -69,24 +72,28 @@ function Invoke-LS2PostBuildPublish {
             Force = $true
         }
         if ($pinned) { $saveParams['RequiredVersion'] = $pinned }
-        Write-Host "Saving $depName$(if ($pinned) { " $pinned" } else { ' (latest)' }) from PSGallery..."
+        $versionLabel = if ($pinned) { " $pinned" } else { ' (latest)' }
+        Write-Host "   [>] Saving $depName$versionLabel from PSGallery..." -ForegroundColor Yellow
         Save-Module @saveParams
 
         $ver = (Get-ChildItem (Join-Path $modulesTarget $depName) |
             Sort-Object Name -Descending |
             Select-Object -First 1).Name
-        Write-Host "Vendored $depName $ver."
+        Write-Host "   [+] Vendored $depName $ver" -ForegroundColor Green
         $nestedEntries += "Modules\$depName\$ver\$depName.psm1"
     }
 
     $psd1 = Join-Path $ArtefactRoot 'Locksmith2.psd1'
     Update-ModuleManifest -Path $psd1 -NestedModules $nestedEntries
-    Write-Host "Locksmith2.psd1 patched: NestedModules = $($nestedEntries -join ', ')"
+    Write-Host "[+] Locksmith2.psd1 patched - NestedModules = $($nestedEntries -join ', ')" -ForegroundColor Green
 
     # ── Publish from artefact path (not from PSModulePath) ────────────────────
     if (-not $PublishToPSGallery) {
         return
     }
+
+    Write-Host ''
+    Write-Host '[i] Publishing to PSGallery' -ForegroundColor Cyan
 
     if ($PSGalleryAPIKey) {
         $apiKey = $PSGalleryAPIKey
@@ -94,11 +101,13 @@ function Invoke-LS2PostBuildPublish {
         $apiKey = Get-Content -Path $PSGalleryAPIPath -ErrorAction Stop -Encoding UTF8 |
             Select-Object -First 1
     } else {
+        Write-Host '[x] -PublishToPSGallery specified but neither -PSGalleryAPIKey nor -PSGalleryAPIPath was provided.' -ForegroundColor Red
         Write-Error '-PublishToPSGallery was specified but neither -PSGalleryAPIKey nor -PSGalleryAPIPath was provided.'
         return
     }
 
     if ($PSCmdlet.ShouldProcess($ArtefactRoot, 'Publish-Module to PSGallery')) {
+        Write-Host "   [>] Calling Publish-Module -Path $ArtefactRoot" -ForegroundColor Yellow
         $publishParams = @{
             Path        = $ArtefactRoot
             NuGetApiKey = $apiKey
@@ -107,6 +116,6 @@ function Invoke-LS2PostBuildPublish {
             ErrorAction = 'Stop'
         }
         Publish-Module @publishParams
-        Write-Host "Published Locksmith2 to PSGallery from $ArtefactRoot"
+        Write-Host '[+] Published Locksmith2 to PSGallery successfully' -ForegroundColor Green
     }
 }
