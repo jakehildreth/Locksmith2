@@ -145,20 +145,49 @@ function Invoke-Locksmith2 {
     }
 
     Write-Verbose "Starting Locksmith2 AD CS security audit..."
-        
-    # Initialize and optionally rescan
-    # Only pass Forest/Credential if explicitly provided by user
-    $initParams = @{}
-    if ($PSBoundParameters.ContainsKey('Forest')) {
-        $initParams['Forest'] = $Forest
+
+    # Reset credential-resolved flag so each run re-evaluates context
+    $script:CredentialResolved = $false
+
+    # Resolve connection context - auto-detects forest and credential if not supplied at CLI
+    $ctxParams = @{}
+    if ($PSBoundParameters.ContainsKey('Forest')) { $ctxParams['Forest'] = $Forest }
+    if ($PSBoundParameters.ContainsKey('Credential')) { $ctxParams['Credential'] = $Credential }
+    $ctx = Resolve-LS2ConnectionContext @ctxParams
+
+    if (-not $ctx) {
+        Write-Error 'Failed to resolve connection context. Supply -Forest and -Credential explicitly.'
+        return
     }
-    if ($PSBoundParameters.ContainsKey('Credential')) {
-        $initParams['Credential'] = $Credential
+
+    Write-Verbose "Connection context resolved: Forest=$($ctx.Forest), Method=$($ctx.Method)"
+
+    if (Test-IsInteractiveSession) {
+        $rawUser = if ($ctx.Credential) { $ctx.Credential.UserName } else { [System.Security.Principal.WindowsIdentity]::GetCurrent().Name }
+        $userDisplay = if ($rawUser -match '^([^\\]+)\\(.+)$') { "$($Matches[1].ToUpper())\$($Matches[2])" } else { $rawUser }
+        Write-Host ''
+        Write-Host 'Connection Context' -ForegroundColor Cyan
+        Write-Host "  Forest   : $($ctx.Forest)"
+        Write-Host "  User     : $userDisplay"
+        Write-Host "  Computer : $($env:USERDOMAIN.ToUpper())\$($env:COMPUTERNAME.ToUpper())"
+        Write-Host "  Method   : $($ctx.Method)"
+        Write-Host ''
+        $confirm = Read-Choice -Question 'Proceed with scan?' -Options @('y', 'n') -Default 'y'
+        if ($confirm -ne 'y') {
+            Write-Host 'Scan cancelled.' -ForegroundColor Yellow
+            return
+        }
+        Write-Host ''
+    }
+
+    $initParams = @{
+        Forest     = $ctx.Forest
+        Credential = $ctx.Credential
     }
     if ($Rescan) {
         $initParams['Rescan'] = $true
     }
-    
+
     $initResult = Initialize-LS2Scan @initParams
         
     if (-not $initResult) {
