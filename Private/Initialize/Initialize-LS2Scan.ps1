@@ -111,8 +111,11 @@ function Initialize-LS2Scan {
             Set-LS2Forest -Forest $Forest
         }
         
-        if ($PSBoundParameters.ContainsKey('Credential') -or -not $script:Credential) {
-            Set-LS2Credential -Credential $Credential
+        # Skip credential prompt if Resolve-LS2ConnectionContext already determined none is needed
+        if (-not $script:CredentialResolved) {
+            if ($PSBoundParameters.ContainsKey('Credential') -or -not $script:Credential) {
+                Set-LS2Credential -Credential $Credential
+            }
         }
         
         if (-not $script:RootDSE) {

@@ -47,8 +47,8 @@ function Initialize-DomainStore {
     }
 
     process {
-        # Require Credential and RootDSE
-        if (-not $script:Credential) {
+        # Require Credential unless Resolve-LS2ConnectionContext determined none is needed (e.g. DomainUser path)
+        if (-not $script:Credential -and -not $script:CredentialResolved) {
             Write-Warning "Credential not set. Cannot initialize DomainStore."
             return
         }

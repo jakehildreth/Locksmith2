@@ -38,9 +38,13 @@ function New-AuthenticatedDirectoryEntry {
         $Path
     )
 
-    return New-Object System.DirectoryServices.DirectoryEntry(
-        $Path,
-        $script:Credential.UserName,
-        $script:Credential.GetNetworkCredential().Password
-    )
+    if ($script:Credential) {
+        return New-Object System.DirectoryServices.DirectoryEntry(
+            $Path,
+            $script:Credential.UserName,
+            $script:Credential.GetNetworkCredential().Password
+        )
+    } else {
+        return New-Object System.DirectoryServices.DirectoryEntry($Path)
+    }
 }
