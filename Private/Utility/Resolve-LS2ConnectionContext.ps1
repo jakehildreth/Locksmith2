@@ -123,7 +123,7 @@ function Resolve-LS2ConnectionContext {
             Write-Host ''
             Write-Host 'Windows PowerShell credential request'
             Write-Host "Enter credentials for forest '$promptedForest'"
-            $promptedUser   = Read-Host 'User'
+            $promptedUser   = Read-Host 'User (DOMAIN\username or user@domain.com)'
             $promptedPass   = Read-Host "Password for user $promptedUser" -AsSecureString
             $promptedCred   = [System.Management.Automation.PSCredential]::new($promptedUser, $promptedPass)
 
