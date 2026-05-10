@@ -120,7 +120,12 @@ function Resolve-LS2ConnectionContext {
         # Step 3: non-domain machine — must prompt for both
         if (Test-IsInteractiveSession) {
             $promptedForest = Read-Host -Prompt 'Enter the target AD forest DNS name'
-            $promptedCred   = Get-Credential -Message "Enter credentials for forest '$promptedForest'"
+            Write-Host ''
+            Write-Host 'Windows PowerShell credential request'
+            Write-Host "Enter credentials for forest '$promptedForest'"
+            $promptedUser   = Read-Host 'User'
+            $promptedPass   = Read-Host "Password for user $promptedUser" -AsSecureString
+            $promptedCred   = [System.Management.Automation.PSCredential]::new($promptedUser, $promptedPass)
 
             if ($promptedForest -and $promptedCred) {
                 $ctx = @{

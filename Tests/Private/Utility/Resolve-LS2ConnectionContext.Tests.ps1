@@ -139,38 +139,22 @@ Describe 'Resolve-LS2ConnectionContext' -Tag 'Unit' {
             Mock Test-IsDomainComputer    { $false }
             Mock Test-IsInteractiveSession { $true }
             Mock Get-RootDSE { [PSCustomObject]@{ Name = 'rootDSE' } }
+            Mock Read-Host { 'external.contoso.com' } -ParameterFilter { -not $AsSecureString }
+            Mock Read-Host { ConvertTo-SecureString 'pass' -AsPlainText -Force } -ParameterFilter { $AsSecureString }
         }
 
         It 'should prompt for both forest and credentials' {
-            $securePass = ConvertTo-SecureString 'pass' -AsPlainText -Force
-            Mock Get-Credential {
-                [System.Management.Automation.PSCredential]::new('EXTERNAL\user', $securePass)
-            }
-            Mock Read-Host { 'external.contoso.com' }
-
             $result = Resolve-LS2ConnectionContext
-            Should -Invoke Get-Credential -Exactly 1
-            Should -Invoke Read-Host -Exactly 1
+            # 3 Read-Host calls: forest, username, password
+            Should -Invoke Read-Host -Exactly 3
         }
 
         It 'should set Method to PromptedAll' {
-            $securePass = ConvertTo-SecureString 'pass' -AsPlainText -Force
-            Mock Get-Credential {
-                [System.Management.Automation.PSCredential]::new('EXTERNAL\user', $securePass)
-            }
-            Mock Read-Host { 'external.contoso.com' }
-
             $result = Resolve-LS2ConnectionContext
             $result.Method | Should -Be 'PromptedAll'
         }
 
         It 'should use the prompted forest value' {
-            $securePass = ConvertTo-SecureString 'pass' -AsPlainText -Force
-            Mock Get-Credential {
-                [System.Management.Automation.PSCredential]::new('EXTERNAL\user', $securePass)
-            }
-            Mock Read-Host { 'external.contoso.com' }
-
             $result = Resolve-LS2ConnectionContext
             $result.Forest | Should -Be 'external.contoso.com'
         }
@@ -200,11 +184,8 @@ Describe 'Resolve-LS2ConnectionContext' -Tag 'Unit' {
         }
 
         It 'should retry up to 3 times and return result on successful retry' {
-            $securePass = ConvertTo-SecureString 'pass' -AsPlainText -Force
-            Mock Get-Credential {
-                [System.Management.Automation.PSCredential]::new('CONTOSO\user', $securePass)
-            }
-            Mock Read-Host { 'contoso.com' }
+            Mock Read-Host { 'contoso.com' } -ParameterFilter { -not $AsSecureString }
+            Mock Read-Host { ConvertTo-SecureString 'pass' -AsPlainText -Force } -ParameterFilter { $AsSecureString }
             Mock Get-RootDSE {
                 $script:_retryCount++
                 if ($script:_retryCount -lt 3) { return $null }
@@ -218,11 +199,8 @@ Describe 'Resolve-LS2ConnectionContext' -Tag 'Unit' {
         }
 
         It 'should write a terminating error after 3 failed attempts' {
-            Mock Get-Credential {
-                $securePass = ConvertTo-SecureString 'pass' -AsPlainText -Force
-                [System.Management.Automation.PSCredential]::new('CONTOSO\user', $securePass)
-            }
-            Mock Read-Host { 'bad.domain' }
+            Mock Read-Host { 'bad.domain' } -ParameterFilter { -not $AsSecureString }
+            Mock Read-Host { ConvertTo-SecureString 'pass' -AsPlainText -Force } -ParameterFilter { $AsSecureString }
             Mock Get-RootDSE { return $null }
 
             { Resolve-LS2ConnectionContext -ErrorAction Stop } | Should -Throw
