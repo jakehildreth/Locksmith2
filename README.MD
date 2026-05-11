@@ -22,11 +22,11 @@ Locksmith 2 represents the next generation in the Locksmith line of open-source 
 
 ## Features
 
-- [x] Scan certificate templates (ESC1, ESC2, ESC3, ESC4a (ACE), ESC4o (Ownership), ESC9)
-- [x] Audit certification authorities (ESC6, ESC7a (CA Administrator), ESC7m (Certificate Manager), ESC11, ESC16)
-- [x] Check PKI infrastructure objects (ESC5a (ACE), ESC5o (Ownership)
+- [x] Scan certificate templates for ESC vulnerabilities
+- [x] Audit certification authorities for ESC vulnerabilities
+- [x] Check PKI infrastructure objects for ESC vulnerabilities
 - [x] Generate PowerShell remediation scripts
-- [ ] Generate PowerShell scripts to revert remediations
+- [ ] Generate PowerShell scripts to revert remediations (partial)
 - [x] Support for non-domain-joined systems - excluding ESC6,7a/m, 11, 16)
 - [x] Object output
 - [x] HTML/CSV/PDF/Excel output 
@@ -61,6 +61,9 @@ Invoke-Locksmith2 -Forest 'contoso.com' -Credential $cred
 Find-LS2VulnerableTemplate -Technique ESC1
 Find-LS2VulnerableCA -Technique ESC6
 
+# Analyze which principals have the most exploitable paths
+Find-LS2RiskyPrincipal -Top 10
+
 # Inspect results
 $stores = Get-LS2Stores
 $stores.IssueStore['ESC1']
@@ -92,8 +95,9 @@ For detailed information on ESC techniques, see [Certified Pre-Owned](https://po
 Performs comprehensive AD CS security audit scanning for all known ESC vulnerabilities.
 
 ```powershell
-Invoke-Locksmith2 [-Forest <String>] [-Credential <PSCredential>] 
+Invoke-Locksmith2 [-Forest <String>] [-Credential <PSCredential>] [-Mode <Int>]
                   [-SkipVersionCheck] [-SkipPowerShellCheck] [-SkipForestCheck]
+                  [-ExpandGroups] [-Rescan]
 ```
 
 #### `Find-LS2VulnerableTemplate`
@@ -162,9 +166,29 @@ Sets credentials for AD queries. Useful for running multiple scans or using Find
 Set-LS2Credential -Credential <PSCredential>
 ```
 
+#### `Find-LS2RiskyPrincipal`
+
+Pivots from configuration-centric to principal-centric risk analysis. Aggregates vulnerabilities by individual principal to show which users or service accounts have the highest AD CS exposure.
+
+```powershell
+Find-LS2RiskyPrincipal [-Technique <String>] [-MinimumIssueCount <Int>] [-Top <Int>] [-Rescan]
+```
+
+Returns: PSCustomObject with Principal, IssueCount, Techniques, VulnerableObjects, Issues
+
+#### `New-LS2Dashboard`
+
+Generates an interactive HTML dashboard from current scan results. Requires the PSWriteHTML module.
+
+```powershell
+New-LS2Dashboard [-FilePath <String>] [-Show] [-ExpandGroups] [-Online]
+```
+
+Returns: HTML file at the specified path. Run `Invoke-Locksmith2` or `Find-LS2Vulnerable*` first to populate the store.
+
 ## Requirements
 
-- **PowerShell**: 5.1 or higher (Windows PowerShell)
+- **PowerShell**: 5.1+
 - **Permissions**: Read access to Active Directory Configuration partition
 - **Network**: Connectivity to domain controller LDAP/GC ports (389, 3268)
 - **Credentials**: Domain user or computer account
@@ -175,16 +199,12 @@ Locksmith 2 is "Open Source, acknowledged contribution", this means that any con
 
 1. Open an issue and discuss your proposed change
 2. Fork the repository
-4. Write some code following PowerShell best practices and existing code style
-5. Write clear commit messages using conventional commits
-6. Submit a pull request
-7. Request a review from @jakehildreth
+3. Write some code following PowerShell best practices and existing code style
+4. Write clear commit messages using conventional commits
+5. Submit a pull request
+6. Request a review from @jakehildreth
 
-## Credits
 
-**Author**: Jake Hildreth ([@jakehildreth](https://github.com/jakehildreth))  
-**Website**: [locksmith.ad](https://locksmith.ad) | [jakehildreth.com](https://jakehildreth.com)  
-**License**: MIT
 
 ### Acknowledgments
 
@@ -202,10 +222,6 @@ Locksmith 2 is "Open Source, acknowledged contribution", this means that any con
 ## Disclaimer
 
 Locksmith 2 is provided for legitimate security assessment and defensive purposes only. Users are responsible for obtaining proper authorization before running security audits. The authors are not responsible for misuse or damage caused by this tool.
-
-## Support
-
-- **Issues**: [GitHub Issues](https://github.com/jakehildreth/Locksmith2/issues)
 
 ## License
 
