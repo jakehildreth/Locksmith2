@@ -94,6 +94,7 @@ function Initialize-AdcsObjectStore {
         Set-CADisableExtensionList |
         Set-CAAdministrator |
         Set-CACertificateManager |
+        Set-CAWebEnrollmentEndpoints |
         Set-DangerousCAAdministrator |
         Set-LowPrivilegeCAAdministrator |
         Set-DangerousCACertificateManager |
