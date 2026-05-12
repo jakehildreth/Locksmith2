@@ -1,3 +1,11 @@
+# MAINTENANCE: When adding a new ESC entry here, you MUST also:
+#   1. Add the technique name to the [ValidateSet(...)] in the appropriate Find-LS2Vulnerable* function:
+#        - Template techniques  -> Public/Find-LS2VulnerableTemplate.ps1
+#        - CA techniques        -> Public/Find-LS2VulnerableCA.ps1
+#        - Object techniques    -> Public/Find-LS2VulnerableObject.ps1
+#   2. Add the technique name to the matching $*Techniques array in Private/Initialize/Initialize-LS2Scan.ps1
+#   3. Add the technique name to the $techniques array in Public/Invoke-Locksmith2.ps1
+#   4. Add an elseif detection branch in the appropriate Find-LS2Vulnerable* function
 $script:ESCDefinitions = data {
     @{
         ESC1   = @{
@@ -621,6 +629,39 @@ $script:ESCDefinitions = data {
                 "`$ObjectSecurity = `$Object.ObjectSecurity"
                 "`$ObjectSecurity.SetOwner(`$Owner)"
                 "`$Object.CommitChanges()"
+            )
+        }
+
+        ESC8   = @{
+            # ESC8: NTLM Relay to AD CS HTTP Endpoints
+            Technique      = 'ESC8'
+
+            # EndpointBased signals Find-LS2VulnerableCA to use the per-endpoint branch
+            EndpointBased  = $true
+
+            # Issue text is built dynamically per endpoint in Find-LS2VulnerableCA.
+            # These templates are used as fallback / documentation only.
+            IssueTemplate  = @(
+                "The web enrollment endpoint at `$(URL) is vulnerable to NTLM relay attacks.`n`n"
+                "An attacker who can intercept network traffic (e.g., via responder, mitm6, or similar) "
+                "can relay NTLM authentication to this endpoint and obtain a certificate on behalf of the "
+                "intercepted account.`n`n"
+                "More info:`n"
+                "  - https://posts.specterops.io/certified-pre-owned-d95910965cd2"
+            )
+
+            FixTemplate    = @(
+                "# ESC8 Fix: require HTTPS with EPA and disable NTLM where possible.`n"
+                "# 1. Enable EPA (Extended Protection for Authentication) on IIS.`n"
+                "# 2. Disable NTLM authentication on the web enrollment site and use Kerberos only.`n"
+                "# 3. If HTTP is enabled, redirect all traffic to HTTPS.`n"
+                "# Reference: https://support.microsoft.com/kb/5005413"
+            )
+
+            RevertTemplate = @(
+                "# ESC8 Revert: re-enable NTLM or HTTP as required by your environment.`n"
+                "# Review IIS authentication settings on the CA host.`n"
+                "# Reference: https://learn.microsoft.com/en-us/windows-server/networking/core-network-guide/cncg/server-certs/configure-server-certificate-autoenrollment"
             )
         }
     }

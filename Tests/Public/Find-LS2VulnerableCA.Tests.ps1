@@ -143,5 +143,177 @@ InModuleScope 'Locksmith2' {
                 $result.Count | Should -Be 0
             }
         }
+
+        Context 'Path C — ESC8 endpoint-based scan' {
+            BeforeEach {
+                Mock 'Test-IssueExists' { $false }
+            }
+
+            Context 'HTTP endpoint always a finding' {
+                It 'should return one LS2Issue for an HTTP certsrv endpoint' {
+                    $mockCA = New-MockLS2AdcsObject -Properties @{
+                        objectClass            = @('top', 'pKIEnrollmentService')
+                        SchemaClassName        = 'pKIEnrollmentService'
+                        CAFullName             = 'CONTOSO\CA01'
+                        cn                     = 'CA01'
+                        distinguishedName      = 'CN=CA01,...'
+                        WebEnrollmentEndpoints = @(
+                            [PSCustomObject]@{ URL = 'http://ca1.contoso.com/certsrv/'; NtlmOffered = $null; EpaNotRequired = $null }
+                        )
+                    }
+                    $script:AdcsObjectStore = @{ $mockCA.distinguishedName = $mockCA }
+                    $result = @(Find-LS2VulnerableCA -Technique 'ESC8')
+                    $result.Count | Should -Be 1
+                    $result[0].Technique | Should -Be 'ESC8'
+                }
+
+                It 'should set Technique to ESC8 on the returned issue' {
+                    $mockCA = New-MockLS2AdcsObject -Properties @{
+                        objectClass            = @('top', 'pKIEnrollmentService')
+                        SchemaClassName        = 'pKIEnrollmentService'
+                        CAFullName             = 'CONTOSO\CA01'
+                        cn                     = 'CA01'
+                        distinguishedName      = 'CN=CA01,...'
+                        WebEnrollmentEndpoints = @(
+                            [PSCustomObject]@{ URL = 'http://ca1.contoso.com/certsrv/'; NtlmOffered = $null; EpaNotRequired = $null }
+                        )
+                    }
+                    $script:AdcsObjectStore = @{ $mockCA.distinguishedName = $mockCA }
+                    $result = @(Find-LS2VulnerableCA -Technique 'ESC8')
+                    $result[0].Technique | Should -Be 'ESC8'
+                }
+            }
+
+            Context 'HTTPS endpoint with NTLM offered' {
+                It 'should return one LS2Issue for an HTTPS endpoint where NtlmOffered is true' {
+                    $mockCA = New-MockLS2AdcsObject -Properties @{
+                        objectClass            = @('top', 'pKIEnrollmentService')
+                        SchemaClassName        = 'pKIEnrollmentService'
+                        CAFullName             = 'CONTOSO\CA01'
+                        cn                     = 'CA01'
+                        distinguishedName      = 'CN=CA01,...'
+                        WebEnrollmentEndpoints = @(
+                            [PSCustomObject]@{ URL = 'https://ca1.contoso.com/certsrv/'; NtlmOffered = $true; EpaNotRequired = $false }
+                        )
+                    }
+                    $script:AdcsObjectStore = @{ $mockCA.distinguishedName = $mockCA }
+                    $result = @(Find-LS2VulnerableCA -Technique 'ESC8')
+                    $result.Count | Should -Be 1
+                }
+            }
+
+            Context 'HTTPS endpoint where EPA is not required (Kerberos relay)' {
+                It 'should return one LS2Issue for an HTTPS endpoint where EpaNotRequired is true' {
+                    $mockCA = New-MockLS2AdcsObject -Properties @{
+                        objectClass            = @('top', 'pKIEnrollmentService')
+                        SchemaClassName        = 'pKIEnrollmentService'
+                        CAFullName             = 'CONTOSO\CA01'
+                        cn                     = 'CA01'
+                        distinguishedName      = 'CN=CA01,...'
+                        WebEnrollmentEndpoints = @(
+                            [PSCustomObject]@{ URL = 'https://ca1.contoso.com/certsrv/'; NtlmOffered = $false; EpaNotRequired = $true }
+                        )
+                    }
+                    $script:AdcsObjectStore = @{ $mockCA.distinguishedName = $mockCA }
+                    $result = @(Find-LS2VulnerableCA -Technique 'ESC8')
+                    $result.Count | Should -Be 1
+                }
+            }
+
+            Context 'HTTPS endpoint with NTLM and Kerberos relay both applicable' {
+                It 'should return one LS2Issue (not two) when both NtlmOffered and EpaNotRequired are true' {
+                    $mockCA = New-MockLS2AdcsObject -Properties @{
+                        objectClass            = @('top', 'pKIEnrollmentService')
+                        SchemaClassName        = 'pKIEnrollmentService'
+                        CAFullName             = 'CONTOSO\CA01'
+                        cn                     = 'CA01'
+                        distinguishedName      = 'CN=CA01,...'
+                        WebEnrollmentEndpoints = @(
+                            [PSCustomObject]@{ URL = 'https://ca1.contoso.com/certsrv/'; NtlmOffered = $true; EpaNotRequired = $true }
+                        )
+                    }
+                    $script:AdcsObjectStore = @{ $mockCA.distinguishedName = $mockCA }
+                    $result = @(Find-LS2VulnerableCA -Technique 'ESC8')
+                    $result.Count | Should -Be 1
+                }
+            }
+
+            Context 'HTTPS endpoint that is safe' {
+                It 'should return no issues for an HTTPS endpoint where NtlmOffered=$false and EpaNotRequired=$false' {
+                    $mockCA = New-MockLS2AdcsObject -Properties @{
+                        objectClass            = @('top', 'pKIEnrollmentService')
+                        SchemaClassName        = 'pKIEnrollmentService'
+                        CAFullName             = 'CONTOSO\CA01'
+                        cn                     = 'CA01'
+                        distinguishedName      = 'CN=CA01,...'
+                        WebEnrollmentEndpoints = @(
+                            [PSCustomObject]@{ URL = 'https://ca1.contoso.com/certsrv/'; NtlmOffered = $false; EpaNotRequired = $false }
+                        )
+                    }
+                    $script:AdcsObjectStore = @{ $mockCA.distinguishedName = $mockCA }
+                    $result = @(Find-LS2VulnerableCA -Technique 'ESC8')
+                    $result.Count | Should -Be 0
+                }
+            }
+
+            Context 'CA with no WebEnrollmentEndpoints' {
+                It 'should return no issues when WebEnrollmentEndpoints is empty' {
+                    $mockCA = New-MockLS2AdcsObject -Properties @{
+                        objectClass            = @('top', 'pKIEnrollmentService')
+                        SchemaClassName        = 'pKIEnrollmentService'
+                        CAFullName             = 'CONTOSO\CA01'
+                        cn                     = 'CA01'
+                        distinguishedName      = 'CN=CA01,...'
+                        WebEnrollmentEndpoints = @()
+                    }
+                    $script:AdcsObjectStore = @{ $mockCA.distinguishedName = $mockCA }
+                    $result = @(Find-LS2VulnerableCA -Technique 'ESC8')
+                    $result.Count | Should -Be 0
+                }
+
+                It 'should return no issues when WebEnrollmentEndpoints is null' {
+                    $mockCA = New-MockLS2AdcsObject -Properties @{
+                        objectClass            = @('top', 'pKIEnrollmentService')
+                        SchemaClassName        = 'pKIEnrollmentService'
+                        CAFullName             = 'CONTOSO\CA01'
+                        cn                     = 'CA01'
+                        distinguishedName      = 'CN=CA01,...'
+                        WebEnrollmentEndpoints = $null
+                    }
+                    $script:AdcsObjectStore = @{ $mockCA.distinguishedName = $mockCA }
+                    $result = @(Find-LS2VulnerableCA -Technique 'ESC8')
+                    $result.Count | Should -Be 0
+                }
+            }
+
+            Context 'Multiple endpoints — mixed vulnerable and safe' {
+                It 'should return one issue per vulnerable endpoint' {
+                    $mockCA = New-MockLS2AdcsObject -Properties @{
+                        objectClass            = @('top', 'pKIEnrollmentService')
+                        SchemaClassName        = 'pKIEnrollmentService'
+                        CAFullName             = 'CONTOSO\CA01'
+                        cn                     = 'CA01'
+                        distinguishedName      = 'CN=CA01,...'
+                        WebEnrollmentEndpoints = @(
+                            [PSCustomObject]@{ URL = 'http://ca1.contoso.com/certsrv/'; NtlmOffered = $null; EpaNotRequired = $null },
+                            [PSCustomObject]@{ URL = 'https://ca1.contoso.com/certsrv/'; NtlmOffered = $false; EpaNotRequired = $false },
+                            [PSCustomObject]@{ URL = 'https://ca1.contoso.com/certsrv/mscep/'; NtlmOffered = $true; EpaNotRequired = $false }
+                        )
+                    }
+                    $script:AdcsObjectStore = @{ $mockCA.distinguishedName = $mockCA }
+                    $result = @(Find-LS2VulnerableCA -Technique 'ESC8')
+                    $result.Count | Should -Be 2
+                }
+            }
+
+            Context 'Initialize-LS2Scan returns false' {
+                It 'should return no issues when Initialize-LS2Scan returns false' {
+                    Mock 'Initialize-LS2Scan' { $false }
+                    $result = @(Find-LS2VulnerableCA -Technique 'ESC8')
+                    $result.Count | Should -Be 0
+                }
+            }
+        }
     }
 }
+

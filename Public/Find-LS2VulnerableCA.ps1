@@ -10,11 +10,12 @@ function Find-LS2VulnerableCA {
         ESC6: Detects CAs with EDITF_ATTRIBUTESUBJECTALTNAME2 enabled
         ESC7a: Detects dangerous CA Administrator role assignments
         ESC7m: Detects dangerous Certificate Manager role assignments
+        ESC8: Detects vulnerable web enrollment endpoints (HTTP always; HTTPS if NTLM offered or EPA not required)
         ESC11: Detects CAs that don't require RPC encryption
         ESC16: Detects CAs with disabled CRL/AIA extensions
 
     .PARAMETER Technique
-        ESC technique name to scan for (e.g., 'ESC6', 'ESC7a', 'ESC7m', 'ESC11', 'ESC16')
+        ESC technique name to scan for (e.g., 'ESC6', 'ESC7a', 'ESC7m', 'ESC8', 'ESC11', 'ESC16')
 
     .EXAMPLE
         Find-LS2VulnerableCA -Technique ESC6
@@ -57,6 +58,7 @@ function Find-LS2VulnerableCA {
         - ESC6: EDITF_ATTRIBUTESUBJECTALTNAME2 flag enabled
         - ESC7a: Dangerous CA Administrator role assignments
         - ESC7m: Dangerous Certificate Manager role assignments
+        - ESC8: Vulnerable web enrollment endpoints
         - ESC11: Missing RPC encryption requirement
         - ESC16: Disabled CRL/AIA security extensions
 
@@ -72,7 +74,7 @@ function Find-LS2VulnerableCA {
     [CmdletBinding()]
     param(
         [Parameter()]
-        [ValidateSet('ESC6', 'ESC7a', 'ESC7m', 'ESC11', 'ESC16')]
+        [ValidateSet('ESC6', 'ESC7a', 'ESC7m', 'ESC8', 'ESC11', 'ESC16')]
         [string]$Technique,
         
         [Parameter()]
@@ -104,7 +106,7 @@ function Find-LS2VulnerableCA {
     if (-not $Technique) {
         Write-Verbose "No technique specified. Returning all CA issues..."
         $allIssues = Get-FlattenedIssues
-        $caTechniques = @('ESC6', 'ESC7a', 'ESC7m', 'ESC11', 'ESC16')
+        $caTechniques = @('ESC6', 'ESC7a', 'ESC7m', 'ESC8', 'ESC11', 'ESC16')
         $caIssues = $allIssues | Where-Object { $_.Technique -in $caTechniques }
         
         if ($ExpandGroups) {
@@ -262,6 +264,90 @@ function Find-LS2VulnerableCA {
                         $issue
                     }
                 }
+            }
+        }
+    }
+    # ESC8: endpoint-based (one issue per vulnerable web enrollment endpoint)
+    elseif ($Technique -eq 'ESC8') {
+        $fixText = if ($config.FixTemplate -is [array]) { $config.FixTemplate -join "`n" } else { $config.FixTemplate }
+        $revertText = if ($config.RevertTemplate -is [array]) { $config.RevertTemplate -join "`n" } else { $config.RevertTemplate }
+
+        foreach ($ca in $allCAs) {
+            $caName = if ($ca.cn) { $ca.cn } else { 'Unknown CA' }
+            $caFullName = $ca.CAFullName
+            if (-not $caFullName) {
+                Write-Verbose "  CA '$caName' has no CAFullName - skipping ESC8 check"
+                continue
+            }
+
+            $forestName = if ($ca.distinguishedName -match 'DC=([^,]+)') {
+                $ca.distinguishedName -replace '^.*?DC=(.*)$', '$1' -replace ',DC=', '.'
+            } else {
+                'Unknown'
+            }
+
+            $endpoints = @($ca.WebEnrollmentEndpoints)
+            if (-not $endpoints -or $endpoints.Count -eq 0) {
+                Write-Verbose "  CA '$caName' has no web enrollment endpoints"
+                continue
+            }
+
+            foreach ($endpoint in $endpoints) {
+                $url = $endpoint.URL
+                $isHttp = $url -match '^http://'
+
+                # Determine if this endpoint is vulnerable
+                $vulnerable = $false
+                if ($isHttp) {
+                    $vulnerable = $true
+                } elseif ($endpoint.NtlmOffered -eq $true -or $endpoint.EpaNotRequired -eq $true) {
+                    $vulnerable = $true
+                }
+
+                if (-not $vulnerable) {
+                    Write-Verbose "  Endpoint $url is not vulnerable - skipping"
+                    continue
+                }
+
+                # Build issue text describing the applicable attack vectors
+                if ($isHttp) {
+                    $issueText = "The web enrollment endpoint at $url uses plain HTTP and is vulnerable to NTLM relay attacks.`n`n" +
+                        "Any attacker who can intercept network traffic can relay NTLM credentials to this endpoint " +
+                        "and request a certificate on behalf of the victim.`n`nMore info:`n  - https://posts.specterops.io/certified-pre-owned-d95910965cd2"
+                } else {
+                    $vectors = @()
+                    if ($endpoint.NtlmOffered -eq $true) { $vectors += 'NTLM relay (NTLM offered on HTTPS endpoint)' }
+                    if ($endpoint.EpaNotRequired -eq $true) { $vectors += 'Kerberos relay (EPA not required)' }
+                    $vectorList = $vectors -join ' and '
+                    $issueText = "The web enrollment endpoint at $url is vulnerable to $vectorList.`n`n" +
+                        "An attacker who can intercept network traffic can relay credentials to this endpoint " +
+                        "and request a certificate on behalf of the victim.`n`nMore info:`n  - https://posts.specterops.io/certified-pre-owned-d95910965cd2"
+                }
+
+                $issue = [LS2Issue]@{
+                    Technique         = 'ESC8'
+                    Forest            = $forestName
+                    Name              = $caName
+                    DistinguishedName = $ca.distinguishedName
+                    ObjectClass       = 'pKIEnrollmentService'
+                    CAFullName        = $caFullName
+                    Issue             = $issueText
+                    Fix               = $fixText
+                    Revert            = $revertText
+                }
+
+                $dn = $ca.distinguishedName
+                $issueKey = "ESC8:$url"
+                if (-not $script:IssueStore) { $script:IssueStore = @{} }
+                if (-not $script:IssueStore.ContainsKey($dn)) { $script:IssueStore[$dn] = @{} }
+                if (-not $script:IssueStore[$dn].ContainsKey($issueKey)) { $script:IssueStore[$dn][$issueKey] = @() }
+
+                if (-not (Test-IssueExists -Issue $issue -DistinguishedName $dn -Technique $Technique)) {
+                    $script:IssueStore[$dn][$issueKey] += $issue
+                    $issueCount++
+                }
+
+                $issue
             }
         }
     }
