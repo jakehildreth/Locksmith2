@@ -162,14 +162,19 @@ function New-LS2Dashboard {
     $generatedAt  = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
     $scanUser     = if ($script:Credential) { $script:Credential.UserName } else { [System.Security.Principal.WindowsIdentity]::GetCurrent().Name }
     $scanComputer = "$env:USERDOMAIN\$env:COMPUTERNAME"
-    # Resolve logo — try module base first, then walk up for source-tree runs
-    $logoPath = $null
+    # Resolve logo and encode as base64 data URI for self-contained HTML
+    $logoSource = $null
     $moduleBase = (Get-Module -Name Locksmith2 -ErrorAction SilentlyContinue).ModuleBase
     foreach ($candidate in @(
         (Join-Path $moduleBase 'Images\Locksmith2.png'),
         (Join-Path $moduleBase '..\..\..\Images\Locksmith2.png')
     )) {
-        if (Test-Path $candidate) { $logoPath = (Resolve-Path $candidate).Path; break }
+        if (Test-Path $candidate) {
+            $logoBytes  = [System.IO.File]::ReadAllBytes((Resolve-Path $candidate).Path)
+            $logoBase64 = [System.Convert]::ToBase64String($logoBytes)
+            $logoSource = "data:image/png;base64,$logoBase64"
+            break
+        }
     }
 
     # Conditional formatting shared by all issue tables
@@ -215,8 +220,8 @@ function New-LS2Dashboard {
         # container and does not create a tab-content slot (unlike New-HTMLSection/Panel at this level).
         New-HTMLHeader {
             Add-HTMLStyle -Content 'header { text-align: center; padding: 12px 0; } header img { max-width: 50%; height: auto; display: inline-block; }'
-            if ($logoPath) {
-                New-HTMLImage -Source $logoPath -Width '50%' -DisableCache -AlternativeText 'Locksmith 2'
+            if ($logoSource) {
+                New-HTMLImage -Source $logoSource -Width '50%' -AlternativeText 'Locksmith 2'
             }
             New-HTMLText -Text "Forest: $forestName  |  User: $scanUser  |  Computer: $scanComputer  |  Generated: $generatedAt" -FontSize 12 -Color '#555' -Alignment center
         }
