@@ -17,6 +17,20 @@ function Find-LS2VulnerableCA {
     .PARAMETER Technique
         ESC technique name to scan for (e.g., 'ESC6', 'ESC7a', 'ESC7m', 'ESC8', 'ESC11', 'ESC16')
 
+    .PARAMETER Forest
+        Fully qualified domain name of the target AD forest. If not specified, uses the value already
+        set in module scope or auto-detected by Resolve-LS2ConnectionContext.
+
+    .PARAMETER Credential
+        PSCredential for authenticating to Active Directory. If not specified, uses the credential
+        already set in module scope or the current user's identity.
+
+    .PARAMETER ExpandGroups
+        When specified, expands group principals in discovered issues into individual per-member issues.
+
+    .PARAMETER Rescan
+        Forces a fresh vulnerability scan even if the IssueStore is already populated.
+
     .EXAMPLE
         Find-LS2VulnerableCA -Technique ESC6
         Checks for CAs with EDITF_ATTRIBUTESUBJECTALTNAME2 enabled.

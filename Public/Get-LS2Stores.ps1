@@ -31,18 +31,6 @@ function Get-LS2Stores {
         These stores are populated during the execution of Invoke-Locksmith2 and persist
         for the duration of the PowerShell session.
 
-        .PARAMETER Name
-        Optional. Name of a specific store to retrieve. Valid values:
-        - PrincipalStore
-        - AdcsObjectStore
-        - DomainStore
-        - IssueStore
-        - SafePrincipals
-        - DangerousPrincipals
-        - StandardOwners
-        
-        If not specified, returns an object containing all stores.
-
         .INPUTS
         None. This function does not accept pipeline input.
 

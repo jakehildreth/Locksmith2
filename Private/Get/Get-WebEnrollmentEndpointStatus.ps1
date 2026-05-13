@@ -26,6 +26,11 @@ function Get-WebEnrollmentEndpointStatus {
         PSCustomObject with properties URL, NtlmOffered, EpaNotRequired.
         Returns $null when the endpoint is unreachable or times out.
 
+    .EXAMPLE
+        Get-WebEnrollmentEndpointStatus -Url 'http://ca.contoso.com/certsrv/'
+        Checks whether the certsrv web enrollment endpoint at the given URL requires NTLM
+        authentication and whether Extended Protection for Authentication (EPA) is enforced.
+
     .NOTES
         Intentionally has no unit tests - HttpClient cannot be mocked in Pester.
         Use integration tests (Get-WebEnrollmentEndpointStatus.Integration.Tests.ps1)

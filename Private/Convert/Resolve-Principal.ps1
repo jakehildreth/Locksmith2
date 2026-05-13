@@ -17,13 +17,6 @@ function Resolve-Principal {
         .PARAMETER IdentityReference
         The IdentityReference object to convert. Can be either NTAccount or SecurityIdentifier.
 
-        .PARAMETER Credential
-        PSCredential for authenticating to Active Directory. Required for LDAP queries.
-
-        .PARAMETER RootDSE
-        A DirectoryEntry object for the RootDSE. Used to determine the domain context for LDAP queries.
-        If not specified, attempts to query without specific domain context.
-
         .INPUTS
         System.Security.Principal.IdentityReference
         Accepts IdentityReference objects (NTAccount or SecurityIdentifier) via the pipeline.

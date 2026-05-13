@@ -42,6 +42,11 @@ function Initialize-LS2Scan {
         
         The full vulnerability scan only runs once per session. Subsequent calls to any Find-LS2*
         function will use the cached IssueStore data.
+
+        .EXAMPLE
+        Initialize-LS2Scan -Forest 'contoso.com'
+        Initializes the Locksmith2 scan context for the contoso.com forest using the current user's
+        credentials. Returns $true on success.
     #>
     [CmdletBinding()]
     [OutputType([bool])]
