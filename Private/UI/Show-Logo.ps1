@@ -35,6 +35,31 @@ $LowerHalfBlock = [char]0x2584
 $UpperHalfBlock = [char]0x2580
 
 function ConvertTo-ConsoleColor {
+    <#
+        .SYNOPSIS
+        Maps an RGB color value to the nearest System.ConsoleColor.
+
+        .DESCRIPTION
+        Finds the closest match to the given RGB values from the 16 standard console colors
+        using squared Euclidean distance in RGB space.
+
+        .PARAMETER R
+        Red channel value (0-255).
+
+        .PARAMETER G
+        Green channel value (0-255).
+
+        .PARAMETER B
+        Blue channel value (0-255).
+
+        .OUTPUTS
+        System.ConsoleColor
+        The nearest ConsoleColor to the given RGB values.
+
+        .EXAMPLE
+        ConvertTo-ConsoleColor -R 0 -G 128 -B 255
+        Returns the ConsoleColor closest to a medium blue.
+    #>
     param([int]$R, [int]$G, [int]$B)
     $colorMap = @(
         @{ Color = [System.ConsoleColor]::Black;       R = 0;   G = 0;   B = 0   }
@@ -70,11 +95,61 @@ function ConvertTo-ConsoleColor {
 }
 
 function Get-TrueColorFg {
+    <#
+        .SYNOPSIS
+        Returns an ANSI escape sequence for a true-color (24-bit) foreground color.
+
+        .DESCRIPTION
+        Builds the ANSI CSI SGR escape sequence for setting the terminal foreground to the
+        specified 24-bit RGB color. Requires a terminal with VT/ANSI true-color support.
+
+        .PARAMETER R
+        Red channel value (0-255).
+
+        .PARAMETER G
+        Green channel value (0-255).
+
+        .PARAMETER B
+        Blue channel value (0-255).
+
+        .OUTPUTS
+        System.String
+        The ANSI escape sequence string for the requested foreground color.
+
+        .EXAMPLE
+        Get-TrueColorFg -R 0 -G 200 -B 255
+        Returns the ANSI sequence to set the foreground to a cyan-blue.
+    #>
     param([int]$R, [int]$G, [int]$B)
     return "$ESC[38;2;${R};${G};${B}m"
 }
 
 function Get-TrueColorBg {
+    <#
+        .SYNOPSIS
+        Returns an ANSI escape sequence for a true-color (24-bit) background color.
+
+        .DESCRIPTION
+        Builds the ANSI CSI SGR escape sequence for setting the terminal background to the
+        specified 24-bit RGB color. Requires a terminal with VT/ANSI true-color support.
+
+        .PARAMETER R
+        Red channel value (0-255).
+
+        .PARAMETER G
+        Green channel value (0-255).
+
+        .PARAMETER B
+        Blue channel value (0-255).
+
+        .OUTPUTS
+        System.String
+        The ANSI escape sequence string for the requested background color.
+
+        .EXAMPLE
+        Get-TrueColorBg -R 30 -G 30 -B 46
+        Returns the ANSI sequence to set the background to a dark navy.
+    #>
     param([int]$R, [int]$G, [int]$B)
     return "$ESC[48;2;${R};${G};${B}m"
 }

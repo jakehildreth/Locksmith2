@@ -13,15 +13,8 @@ function Convert-IdentityReferenceToSid {
         Supports forest-wide searches using Global Catalog when RootDSE is provided, enabling resolution
         of principals from child domains and trusted domains within the forest.
 
-        .PARAMETER Principal
+        .PARAMETER IdentityReference
         The IdentityReference object to convert. Typically from ACL IdentityReference properties.
-
-        .PARAMETER Credential
-        PSCredential for authenticating to Active Directory. Required when running from non-domain joined computers.
-
-        .PARAMETER RootDSE
-        A DirectoryEntry object for the RootDSE. Used to determine the domain context for LDAP queries.
-        If not specified, attempts to derive the domain from the NTAccount name.
 
         .INPUTS
         System.Security.Principal.IdentityReference

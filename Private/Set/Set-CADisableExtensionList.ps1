@@ -12,8 +12,8 @@ function Set-CADisableExtensionList {
         - DisableExtensionList: Array of disabled extension OIDs
         - SecurityExtensionDisabled: Boolean indicating if the security extension (1.3.6.1.4.1.311.25.2) is disabled
 
-    .PARAMETER InputObject
-        Pipeline input from previous Set-CA* functions. Must contain DistinguishedName and CAFullName properties.
+    .PARAMETER AdcsObject
+        Pipeline input of LS2AdcsObject instances. Must contain DistinguishedName and CAFullName properties.
 
     .OUTPUTS
         PSCustomObject with DistinguishedName and CAFullName properties for pipeline continuation.

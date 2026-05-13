@@ -15,7 +15,21 @@ function Find-LS2VulnerableObject {
         by focusing on the supporting infrastructure objects.
 
     .PARAMETER Technique
-        ESC technique name to scan for. Currently supports 'ESC5'.
+        ESC technique name to scan for. Currently supports 'ESC5a' and 'ESC5o'.
+
+    .PARAMETER Forest
+        Fully qualified domain name of the target AD forest. If not specified, uses the value already
+        set in module scope or auto-detected by Resolve-LS2ConnectionContext.
+
+    .PARAMETER Credential
+        PSCredential for authenticating to Active Directory. If not specified, uses the credential
+        already set in module scope or the current user's identity.
+
+    .PARAMETER ExpandGroups
+        When specified, expands group principals in discovered issues into individual per-member issues.
+
+    .PARAMETER Rescan
+        Forces a fresh vulnerability scan even if the IssueStore is already populated.
 
     .EXAMPLE
         Find-LS2VulnerableObject -Technique ESC5o
