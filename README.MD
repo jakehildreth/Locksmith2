@@ -27,9 +27,10 @@ Locksmith 2 represents the next generation in the Locksmith line of open-source 
 - [x] Check PKI infrastructure objects for ESC vulnerabilities
 - [x] Generate PowerShell remediation scripts
 - [ ] Generate PowerShell scripts to revert remediations (partial)
-- [x] Support for non-domain-joined systems - excluding ESC6,7a/m, 11, 16)
+- [x] Support for non-domain-joined systems
 - [x] Object output
-- [x] HTML/CSV/PDF/Excel output 
+- [x] HTML dashboard output
+- [x] In-dashboard export to CSV, Excel, PDF
 - [ ] Interactive TUI for guided remediation
 
 ## Installation
@@ -71,18 +72,19 @@ $stores.IssueStore['ESC1']
 
 ## Supported ESC Techniques
 
-| Technique | Description | Target Objects |
-|-----------|-------------|----------------|
-| **ESC1** | Misconfigured Certificate Templates | Templates |
-| **ESC2** | Certificate SubCA Abuse | Templates |
-| **ESC3** | Enrollment Agent Restrictions | Templates |
-| **ESC4** | Vulnerable Access Control | Templates |
-| **ESC5** | Vulnerable PKI Object Access Control | Infrastructure Objects |
-| **ESC6** | EDITF_ATTRIBUTESUBJECTALTNAME2 Enabled | CAs |
-| **ESC7** | Vulnerable CA Administrator/Manager Roles | CAs |
-| **ESC9** | Weak Certificate Mappings | Templates |
-| **ESC11** | Missing RPC Encryption | CAs |
-| **ESC16** | Disabled CRL/AIA Security Extensions | CAs |
+| Technique | Description | Target Objects | Sub-techniques |
+|-----------|-------------|----------------|----------------|
+| **ESC1** | Misconfigured Certificate Templates | Templates | — |
+| **ESC2** | Certificate SubCA Abuse | Templates | — |
+| **ESC3** | Enrollment Agent Restrictions | Templates | ESC3c1, ESC3c2 |
+| **ESC4** | Vulnerable Access Control | Templates | ESC4a (ACL), ESC4o (owner) |
+| **ESC5** | Vulnerable PKI Object Access Control | Infrastructure Objects | ESC5a (ACL), ESC5o (owner) |
+| **ESC6** | EDITF_ATTRIBUTESUBJECTALTNAME2 Enabled | CAs | — |
+| **ESC7** | Vulnerable CA Administrator/Manager Roles | CAs | ESC7a (admin), ESC7m (manager) |
+| **ESC8** | Vulnerable Web Enrollment Endpoints | CAs | — |
+| **ESC9** | Weak Certificate Mappings | Templates | — |
+| **ESC11** | Missing RPC Encryption | CAs | — |
+| **ESC16** | Disabled CRL/AIA Security Extensions | CAs | — |
 
 For detailed information on ESC techniques, see [Certified Pre-Owned](https://posts.specterops.io/certified-pre-owned-d95910965cd2) by SpecterOps.
 
@@ -96,8 +98,12 @@ Performs comprehensive AD CS security audit scanning for all known ESC vulnerabi
 
 ```powershell
 Invoke-Locksmith2 [-Forest <String>] [-Credential <PSCredential>] [-Mode <Int>]
-                  [-SkipVersionCheck] [-SkipPowerShellCheck] [-SkipForestCheck]
+                  [-SkipVersionCheck] [-SkipPowerShellCheck]
                   [-ExpandGroups] [-Rescan]
+# -Mode values:
+#   (omit)  = return LS2Issue objects to the pipeline (default)
+#   0       = Emulates Mode 0/no parameters from the original Locksmith: output issues to console as table
+#   1       = Emulates Mode 1 from the original Locksmith: output issues + fix scripts to console as list
 ```
 
 #### `Find-LS2VulnerableTemplate`
@@ -117,7 +123,7 @@ Scans certification authorities for configuration issues and dangerous role assi
 
 ```powershell
 Find-LS2VulnerableCA -Technique <String>
-# Supported: ESC6, ESC7a, ESC7m, ESC11, ESC16
+# Supported: ESC6, ESC7a, ESC7m, ESC8, ESC11, ESC16
 ```
 
 Returns: LS2Issue objects for programmatic use
@@ -138,7 +144,10 @@ Returns: LS2Issue objects for programmatic use
 Returns internal data stores populated during audits for inspection and analysis.
 
 ```powershell
-Get-LS2Stores
+Get-LS2Stores [-Name <String>]
+# Valid -Name values: PrincipalStore, AdcsObjectStore, DomainStore, IssueStore,
+#                     SafePrincipals, DangerousPrincipals, StandardOwners
+# Omit -Name to return all stores.
 ```
 
 Returns:
@@ -178,7 +187,7 @@ Returns: PSCustomObject with Principal, IssueCount, Techniques, VulnerableObject
 
 #### `New-LS2Dashboard`
 
-Generates an interactive HTML dashboard from current scan results. Requires the PSWriteHTML module.
+Generates an interactive HTML dashboard from current scan results. PSWriteHTML is included (vendored) — no separate install needed.
 
 ```powershell
 New-LS2Dashboard [-FilePath <String>] [-Show] [-ExpandGroups] [-Online]
