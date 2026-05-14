@@ -72,7 +72,7 @@ function Find-LS2VulnerableTemplate {
     [CmdletBinding()]
     param(
         [Parameter()]
-        [ValidateSet('ESC1', 'ESC2', 'ESC3c1', 'ESC3c2', 'ESC9', 'ESC4a', 'ESC4o', 'ESC13')]
+        [ValidateSet('ESC1', 'ESC2', 'ESC3c1', 'ESC3c2', 'ESC9', 'ESC4a', 'ESC4o', 'ESC13', 'ESC15', 'SchemaV1')]
         [string]$Technique,
         
         [Parameter()]
@@ -102,7 +102,7 @@ function Find-LS2VulnerableTemplate {
     if (-not $Technique) {
         Write-Verbose "No technique specified. Returning all template issues..."
         $allIssues = Get-FlattenedIssues
-        $templateTechniques = @('ESC1', 'ESC2', 'ESC3c1', 'ESC3c2', 'ESC9', 'ESC4a', 'ESC4o', 'ESC13')
+        $templateTechniques = @('ESC1', 'ESC2', 'ESC3c1', 'ESC3c2', 'ESC9', 'ESC4a', 'ESC4o', 'ESC13', 'ESC15', 'SchemaV1')
         $templateIssues = $allIssues | Where-Object { $_.Technique -in $templateTechniques }
         
         if ($ExpandGroups) {
@@ -357,6 +357,52 @@ function Find-LS2VulnerableTemplate {
             }
 
             # Always output to pipeline
+            if ($ExpandGroups) {
+                Expand-IssueByGroup -Issue $issue
+            } else {
+                $issue
+            }
+        }
+        Write-Verbose "$Technique scan complete. Found $issueCount issue(s)."
+        return
+    }
+
+    # SchemaV1: per-template hygiene finding — no enrollee iteration
+    elseif ($Technique -eq 'SchemaV1') {
+        foreach ($template in $vulnerableTemplates) {
+            $templateName = if ($template.displayName) { $template.displayName } else { $template.Name }
+
+            $forestName = Get-ForestNameFromDN -DistinguishedName $template.distinguishedName
+
+            $issueText = ($config.IssueTemplate -join '') `
+                -replace '\$\(TemplateName\)', $templateName
+
+            $fixScript  = ($config.FixTemplate  -join "`n")
+            $revertScript = ($config.RevertTemplate -join "`n")
+
+            $issue = [LS2Issue]@{
+                Technique         = $Technique
+                Forest            = $forestName
+                Name              = $templateName
+                DistinguishedName = $template.distinguishedName
+                ObjectClass       = 'pKICertificateTemplate'
+                Enabled           = $template.Enabled
+                EnabledOn         = $template.EnabledOn
+                Issue             = $issueText
+                Fix               = $fixScript
+                Revert            = $revertScript
+            }
+
+            $dn = $template.distinguishedName
+            if (-not $script:IssueStore) { $script:IssueStore = @{} }
+            if (-not $script:IssueStore.ContainsKey($dn)) { $script:IssueStore[$dn] = @{} }
+            if (-not $script:IssueStore[$dn].ContainsKey($Technique)) { $script:IssueStore[$dn][$Technique] = @() }
+
+            if (-not (Test-IssueExists -Issue $issue -DistinguishedName $dn -Technique $Technique)) {
+                $script:IssueStore[$dn][$Technique] += $issue
+                $issueCount++
+            }
+
             if ($ExpandGroups) {
                 Expand-IssueByGroup -Issue $issue
             } else {

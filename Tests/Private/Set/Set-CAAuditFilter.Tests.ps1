@@ -10,6 +10,13 @@ BeforeAll {
 
 Describe 'Set-CAAuditFilter' -Tag 'Unit' {
     InModuleScope 'Locksmith2' {
+        BeforeAll {
+            # Stub Get-PSCAuditFilter so Pester can mock it even when PSCertutil is not loaded
+            if (-not (Get-Command Get-PSCAuditFilter -ErrorAction SilentlyContinue)) {
+                function script:Get-PSCAuditFilter { param([string]$CAFullName) $null }
+            }
+        }
+
         BeforeEach {
             $script:IssueStore = @{}; $script:PrincipalStore = @{}; $script:AdcsObjectStore = @{}
             $script:DomainStore = @{}; $script:SafePrincipals = @(); $script:DangerousPrincipals = @()
@@ -71,6 +78,44 @@ Describe 'Set-CAAuditFilter' -Tag 'Unit' {
                 Mock Get-PSCAuditFilter { $null } -ParameterFilter { $CAFullName -eq 'contoso.com\MyCA' }
                 $null = $ca | Set-CAAuditFilter
                 Should -Invoke Get-PSCAuditFilter -Times 1 -Exactly -ParameterFilter { $CAFullName -eq 'contoso.com\MyCA' }
+            }
+        }
+
+        Context 'AuditingIncomplete is derived from AuditFilter value' {
+            It 'should set AuditingIncomplete to $false when AuditFilter is 127' {
+                $ca = New-MockLS2AdcsObject -Properties @{
+                    objectClass     = @('top', 'pKIEnrollmentService')
+                    SchemaClassName = 'pKIEnrollmentService'
+                    CAFullName      = 'contoso.com\MyCA'
+                    cn              = 'MyCA'
+                }
+                Mock Get-PSCAuditFilter { [PSCustomObject]@{ AuditFilter = 127 } }
+                $result = $ca | Set-CAAuditFilter
+                $result.AuditingIncomplete | Should -BeFalse
+            }
+
+            It 'should set AuditingIncomplete to $true when AuditFilter is 0' {
+                $ca = New-MockLS2AdcsObject -Properties @{
+                    objectClass     = @('top', 'pKIEnrollmentService')
+                    SchemaClassName = 'pKIEnrollmentService'
+                    CAFullName      = 'contoso.com\MyCA'
+                    cn              = 'MyCA'
+                }
+                Mock Get-PSCAuditFilter { [PSCustomObject]@{ AuditFilter = 0 } }
+                $result = $ca | Set-CAAuditFilter
+                $result.AuditingIncomplete | Should -BeTrue
+            }
+
+            It 'should set AuditingIncomplete to $true when AuditFilter is 63 (not 127)' {
+                $ca = New-MockLS2AdcsObject -Properties @{
+                    objectClass     = @('top', 'pKIEnrollmentService')
+                    SchemaClassName = 'pKIEnrollmentService'
+                    CAFullName      = 'contoso.com\MyCA'
+                    cn              = 'MyCA'
+                }
+                Mock Get-PSCAuditFilter { [PSCustomObject]@{ AuditFilter = 63 } }
+                $result = $ca | Set-CAAuditFilter
+                $result.AuditingIncomplete | Should -BeTrue
             }
         }
     }

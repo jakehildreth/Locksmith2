@@ -198,7 +198,8 @@ function Invoke-Locksmith2 {
     Write-Verbose "`nScan complete. Issue summary:"
     $techniques = @(
         'ESC1', 'ESC2', 'ESC3c1', 'ESC3c2', 'ESC4a', 'ESC4o',
-        'ESC5a', 'ESC5o', 'ESC6', 'ESC7a', 'ESC7m', 'ESC8', 'ESC9', 'ESC11', 'ESC13', 'ESC16'
+        'ESC5a', 'ESC5o', 'ESC6', 'ESC7a', 'ESC7m', 'ESC8', 'ESC9', 'ESC11', 'ESC13', 'ESC15', 'ESC16',
+        'Auditing', 'SchemaV1'
     )
 
     foreach ($technique in $techniques) {

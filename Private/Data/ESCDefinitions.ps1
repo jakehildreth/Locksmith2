@@ -711,5 +711,113 @@ $script:ESCDefinitions = data {
                 "# Reference: https://learn.microsoft.com/en-us/windows-server/networking/core-network-guide/cncg/server-certs/configure-server-certificate-autoenrollment"
             )
         }
+
+        ESC15  = @{
+            # ESC15: Schema v1 template with auth EKU — bypasses strong certificate mapping
+            # (szOID_NTDS_CA_SECURITY_EXT is absent in schema v1 certificates)
+            Technique          = 'ESC15'
+
+            Conditions         = @(
+                @{ Property = 'TemplateSchemaVersion'; Value = 1 }
+                @{ Property = 'AuthenticationEKUExist'; Value = $true }
+                @{ Property = 'ManagerApprovalNotRequired'; Value = $true }
+                @{ Property = 'AuthorizedSignatureNotRequired'; Value = $true }
+            )
+
+            EnrolleeProperties = @(
+                'DangerousEnrollee'
+                'LowPrivilegeEnrollee'
+            )
+
+            IssueTemplate      = @(
+                "`$(IdentityReference) can enroll in the `$(TemplateName) template, which uses a schema version 1 "
+                "and a Client Authentication EKU.`n`n"
+                "Schema v1 templates do not include the CA security extension (szOID_NTDS_CA_SECURITY_EXT) "
+                "introduced by KB5014754. This means certificates issued from this template are not subject to "
+                "strong certificate-to-account mapping enforcement, allowing an attacker to authenticate as any "
+                "principal whose UPN or DNS name they can include in the Subject or SAN of the certificate.`n`n"
+                "Until the template is upgraded to schema v2+, enabling Manager Approval is the recommended "
+                "short-term mitigation to prevent unapproved enrollment.`n`n"
+                "More info:`n"
+                "  - https://support.microsoft.com/help/5014754"
+            )
+
+            FixTemplate        = @(
+                "# Quick mitigation: Enable Manager Approval to require approval before certificate issuance"
+                "`$Object = '`$(DistinguishedName)'"
+                "Get-ADObject `$Object | Set-ADObject -Replace @{'msPKI-Enrollment-Flag' = 2}"
+                "# Long-term fix: supersede this template with a schema v2+ equivalent"
+                "# See: https://www.gradenegger.eu/en/basics-replace-superseding-of-certificate-templates/"
+            )
+
+            RevertTemplate     = @(
+                "# Disable Manager Approval"
+                "`$Object = '`$(DistinguishedName)'"
+                "Get-ADObject `$Object | Set-ADObject -Replace @{'msPKI-Enrollment-Flag' = 0}"
+            )
+        }
+
+        Auditing = @{
+            # Auditing: CA audit filter is not fully enabled (AuditFilter != 127)
+            Technique      = 'Auditing'
+
+            Conditions     = @(
+                @{ Property = 'AuditingIncomplete'; Value = $true }
+            )
+
+            IssueTemplate  = @(
+                "The Certification Authority `$(CAName) does not have full auditing enabled (AuditFilter=`$(AuditFilter)).`n`n"
+                "All 7 audit categories (bitmask 127) should be enabled to ensure that certificate requests, "
+                "revocations, and configuration changes are logged. Incomplete auditing makes it significantly "
+                "harder to detect and investigate certificate-based attacks.`n`n"
+                "More info:`n"
+                "  - https://posts.specterops.io/certified-pre-owned-d95910965cd2"
+            )
+
+            FixTemplate    = @(
+                "# Enable all CA audit categories (bitmask 127)"
+                "certutil -config `$(CAFullName) -setreg CA\AuditFilter 127"
+                "# Restart Certificate Services for the change to take effect"
+                "Restart-Service -Name CertSvc -Force"
+            )
+
+            RevertTemplate = @(
+                "# Restore original AuditFilter value"
+                "certutil -config `$(CAFullName) -setreg CA\AuditFilter `$(AuditFilter)"
+                "# Restart Certificate Services"
+                "Restart-Service -Name CertSvc -Force"
+            )
+        }
+
+        SchemaV1 = @{
+            # SchemaV1: Any enabled schema v1 template — informational hygiene finding
+            Technique      = 'SchemaV1'
+
+            Conditions     = @(
+                @{ Property = 'TemplateSchemaVersion'; Value = 1 }
+                @{ Property = 'Enabled'; Value = $true }
+            )
+
+            IssueTemplate  = @(
+                "The certificate template `$(TemplateName) uses schema version 1.`n`n"
+                "Schema v1 templates were introduced in Windows 2000 and lack several security features "
+                "available in later schema versions. Certificates issued from schema v1 templates do not "
+                "include the CA security extension (szOID_NTDS_CA_SECURITY_EXT), reducing their compatibility "
+                "with strong certificate mapping requirements.`n`n"
+                "Consider superseding this template with a schema v2+ equivalent."
+            )
+
+            FixTemplate    = @(
+                "# Schema v1 templates cannot be upgraded in-place."
+                "# Supersede this template by creating a new schema v2 (or later) template with equivalent settings,"
+                "# then configure the old template to be superseded by the new one."
+                "# See: https://www.gradenegger.eu/en/basics-replace-superseding-of-certificate-templates/"
+            )
+
+            RevertTemplate = @(
+                "# No automated revert. Template schema version cannot be changed via script."
+                "# If you superseded this template, re-enable the old template and remove the superseding relationship."
+            )
+        }
     }
 }

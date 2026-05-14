@@ -25,7 +25,8 @@ Describe 'ESCDefinitions data' -Tag 'Unit' {
             'ESC4a', 'ESC4o',
             'ESC5a', 'ESC5o',
             'ESC6', 'ESC7a', 'ESC7m',
-            'ESC9', 'ESC11', 'ESC16'
+            'ESC8', 'ESC9', 'ESC11', 'ESC13', 'ESC15', 'ESC16',
+            'Auditing', 'SchemaV1'
         )
 
         It 'should contain technique <_>' -ForEach $RequiredTechniques {
@@ -39,7 +40,8 @@ Describe 'ESCDefinitions data' -Tag 'Unit' {
             'ESC4a', 'ESC4o',
             'ESC5a', 'ESC5o',
             'ESC6', 'ESC7a', 'ESC7m',
-            'ESC9', 'ESC11', 'ESC16'
+            'ESC8', 'ESC9', 'ESC11', 'ESC13', 'ESC15', 'ESC16',
+            'Auditing', 'SchemaV1'
         )
 
         It '<_> should have a Technique key' -ForEach $RequiredTechniques {
@@ -64,7 +66,7 @@ Describe 'ESCDefinitions data' -Tag 'Unit' {
     }
 
     Context 'Techniques with Conditions have valid structure' {
-        $TechniquesWithConditions = @('ESC1', 'ESC2', 'ESC3c1', 'ESC3c2', 'ESC9')
+        $TechniquesWithConditions = @('ESC1', 'ESC2', 'ESC3c1', 'ESC3c2', 'ESC9', 'ESC13', 'ESC15', 'Auditing', 'SchemaV1')
 
         It '<_> should have a non-empty Conditions array' -ForEach $TechniquesWithConditions {
             $script:ESCDefinitions[$_].Conditions | Should -Not -BeNullOrEmpty
@@ -89,7 +91,8 @@ Describe 'ESCDefinitions data' -Tag 'Unit' {
             'ESC4a', 'ESC4o',
             'ESC5a', 'ESC5o',
             'ESC6', 'ESC7a', 'ESC7m',
-            'ESC9', 'ESC11', 'ESC16'
+            'ESC8', 'ESC9', 'ESC11', 'ESC13', 'ESC15', 'ESC16',
+            'Auditing', 'SchemaV1'
         )
 
         It '<_> IssueTemplate should not be null or empty' -ForEach $AllTechniques {

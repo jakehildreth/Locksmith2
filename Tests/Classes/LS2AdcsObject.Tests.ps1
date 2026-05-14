@@ -172,5 +172,15 @@ Describe 'LS2AdcsObject class' -Tag 'Unit' {
             $obj = New-MockLS2AdcsObject -Properties @{ AuditFilter = 127 }
             $obj.AuditFilter | Should -Be 127
         }
+
+        It 'should allow AuditingIncomplete to be set to $true and read back' {
+            $obj = New-MockLS2AdcsObject -Properties @{ AuditingIncomplete = $true }
+            $obj.AuditingIncomplete | Should -BeTrue
+        }
+
+        It 'should allow AuditingIncomplete to be set to $false and read back' {
+            $obj = New-MockLS2AdcsObject -Properties @{ AuditingIncomplete = $false }
+            $obj.AuditingIncomplete | Should -BeFalse
+        }
     }
 }

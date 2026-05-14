@@ -88,7 +88,7 @@ function Find-LS2VulnerableCA {
     [CmdletBinding()]
     param(
         [Parameter()]
-        [ValidateSet('ESC6', 'ESC7a', 'ESC7m', 'ESC8', 'ESC11', 'ESC16')]
+        [ValidateSet('ESC6', 'ESC7a', 'ESC7m', 'ESC8', 'ESC11', 'ESC16', 'Auditing')]
         [string]$Technique,
         
         [Parameter()]
@@ -120,7 +120,7 @@ function Find-LS2VulnerableCA {
     if (-not $Technique) {
         Write-Verbose "No technique specified. Returning all CA issues..."
         $allIssues = Get-FlattenedIssues
-        $caTechniques = @('ESC6', 'ESC7a', 'ESC7m', 'ESC8', 'ESC11', 'ESC16')
+        $caTechniques = @('ESC6', 'ESC7a', 'ESC7m', 'ESC8', 'ESC11', 'ESC16', 'Auditing')
         $caIssues = $allIssues | Where-Object { $_.Technique -in $caTechniques }
         
         if ($ExpandGroups) {
@@ -426,13 +426,15 @@ function Find-LS2VulnerableCA {
             # Expand template variables
             $issueText = $issueTemplate `
                 -replace '\$\(CAName\)', $caName `
-                -replace '\$\(CAFullName\)', $caFullName
+                -replace '\$\(CAFullName\)', $caFullName `
+                -replace '\$\(AuditFilter\)', $ca.AuditFilter
             
             $fixScript = $fixTemplate `
                 -replace '\$\(CAFullName\)', $caFullName
             
             $revertScript = $revertTemplate `
-                -replace '\$\(CAFullName\)', $caFullName
+                -replace '\$\(CAFullName\)', $caFullName `
+                -replace '\$\(AuditFilter\)', $ca.AuditFilter
 
             # Create LS2Issue object
             $issue = [LS2Issue]@{
