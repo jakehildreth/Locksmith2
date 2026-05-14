@@ -227,6 +227,53 @@ $script:ESCDefinitions = data {
             )
         }
 
+        ESC13  = @{
+            # ESC13: Vulnerable Certificate Template - Group-Linked
+            Technique          = 'ESC13'
+
+            # A template is vulnerable when it can be used for authentication AND at least one of its
+            # application policy OIDs (msPKI-Certificate-Policy) is linked to a universal group via
+            # msDS-OIDToGroupLink on an msPKI-Enterprise-Oid AD object.
+            Conditions         = @(
+                @{ Property = 'AuthenticationEKUExist'; Value = $true }
+                @{ Property = 'HasLinkedGroupOIDPolicy'; Value = $true }
+            )
+
+            # Properties to check for problematic enrollees
+            EnrolleeProperties = @(
+                'DangerousEnrollee'
+                'LowPrivilegeEnrollee'
+            )
+
+            # Issue description template
+            IssueTemplate      = @(
+                "`$(IdentityReference) can enroll in the `$(TemplateName) template, which uses a Client Authentication EKU "
+                "and has an application policy OID linked to the group `$(LinkedGroup) in Active Directory.`n`n"
+                "If this certificate is used for authentication, the holder will silently gain the rights of the linked "
+                "group. This group membership is not visible via standard AD enumeration tools.`n`n"
+                "An attacker can exploit this by enrolling in the template and then using the resulting certificate to "
+                "authenticate, gaining the privileges of the linked group without appearing in its member list.`n`n"
+                "More info:`n"
+                "  - https://posts.specterops.io/adcs-esc13-abuse-technique-fda4272fbd53"
+            )
+
+            # Fix script template (quick mitigation — Manager Approval)
+            FixTemplate        = @(
+                "# Quick mitigation: Enable Manager Approval to require approval before certificate issuance"
+                "`$Object = '`$(DistinguishedName)'"
+                "Get-ADObject `$Object | Set-ADObject -Replace @{'msPKI-Enrollment-Flag' = 2}"
+                "# Long-term fix: remove the OID-to-group link from the msPKI-Enterprise-Oid object"
+                "# Get-ADObject '<OID object DN>' | Set-ADObject -Clear msDS-OIDToGroupLink"
+            )
+
+            # Revert script template
+            RevertTemplate     = @(
+                "# Disable Manager Approval"
+                "`$Object = '`$(DistinguishedName)'"
+                "Get-ADObject `$Object | Set-ADObject -Replace @{'msPKI-Enrollment-Flag' = 0}"
+            )
+        }
+
         ESC6   = @{
             Technique      = 'ESC6'
 

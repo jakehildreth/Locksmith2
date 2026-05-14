@@ -84,6 +84,7 @@ $stores.IssueStore['ESC1']
 | **ESC8** | Vulnerable Web Enrollment Endpoints | CAs | — |
 | **ESC9** | Weak Certificate Mappings | Templates | — |
 | **ESC11** | Missing RPC Encryption | CAs | — |
+| **ESC13** | Group-Linked OID Application Policy | Templates | — |
 | **ESC16** | Disabled CRL/AIA Security Extensions | CAs | — |
 
 For detailed information on ESC techniques, see [Certified Pre-Owned](https://posts.specterops.io/certified-pre-owned-d95910965cd2) by SpecterOps.
@@ -112,7 +113,7 @@ Scans certificate templates for specific ESC vulnerabilities.
 
 ```powershell
 Find-LS2VulnerableTemplate -Technique <String>
-# Supported: ESC1, ESC2, ESC3c1, ESC3c2, ESC4a, ESC4o, ESC9
+# Supported: ESC1, ESC2, ESC3c1, ESC3c2, ESC4a, ESC4o, ESC9, ESC13
 ```
 
 Returns: LS2Issue objects for programmatic use

@@ -23,6 +23,9 @@ class LS2AdcsObject {
     [string[]]$RAApplicationPolicies       # msPKI-RA-Application-Policies
     [Nullable[int]]$TemplateSchemaVersion  # msPKI-Template-Schema-Version
     [Nullable[int]]$TemplateMinorRevision  # msPKI-Template-Minor-Revision
+    [string[]]$CertificatePolicy           # msPKI-Certificate-Policy (OIDs on templates)
+    [string]$CertTemplateOID               # msPKI-Cert-Template-OID (on msPKI-Enterprise-Oid objects)
+    [string]$OIDToGroupLink                # msDS-OIDToGroupLink (on msPKI-Enterprise-Oid objects)
     
     # CA properties (pKIEnrollmentService)
     [string[]]$certificateTemplates
@@ -67,6 +70,8 @@ class LS2AdcsObject {
     [object[]]$DisableExtensionList
     [Nullable[bool]]$SecurityExtensionDisabled
     [object[]]$WebEnrollmentEndpoints
+    [Nullable[bool]]$HasLinkedGroupOIDPolicy  # true when ≥1 CertificatePolicy OID links to a group
+    [string[]]$LinkedGroupOIDPolicies         # group DNs linked via OID application policies
     
     # Schema class name for easy type checking
     [string]$SchemaClassName
@@ -114,6 +119,9 @@ class LS2AdcsObject {
         $this.RAApplicationPolicies = if ($DirectoryEntry.Properties.Contains('msPKI-RA-Application-Policies')) { @($DirectoryEntry.Properties['msPKI-RA-Application-Policies']) } else { @() }
         $this.TemplateSchemaVersion = if ($DirectoryEntry.Properties.Contains('msPKI-Template-Schema-Version')) { [int]$DirectoryEntry.Properties['msPKI-Template-Schema-Version'][0] } else { $null }
         $this.TemplateMinorRevision = if ($DirectoryEntry.Properties.Contains('msPKI-Template-Minor-Revision')) { [int]$DirectoryEntry.Properties['msPKI-Template-Minor-Revision'][0] } else { $null }
+        $this.CertificatePolicy = if ($DirectoryEntry.Properties.Contains('msPKI-Certificate-Policy')) { @($DirectoryEntry.Properties['msPKI-Certificate-Policy']) } else { @() }
+        $this.CertTemplateOID = if ($DirectoryEntry.Properties.Contains('msPKI-Cert-Template-OID')) { $DirectoryEntry.Properties['msPKI-Cert-Template-OID'][0] } else { $null }
+        $this.OIDToGroupLink = if ($DirectoryEntry.Properties.Contains('msDS-OIDToGroupLink')) { $DirectoryEntry.Properties['msDS-OIDToGroupLink'][0] } else { $null }
         
         # Security descriptor and ownership
         try {
@@ -135,6 +143,8 @@ class LS2AdcsObject {
         # Initialize computed properties to defaults
         $this.SANAllowed = $null
         $this.AuthenticationEKUExist = $null
+        $this.HasLinkedGroupOIDPolicy = $null
+        $this.LinkedGroupOIDPolicies = @()
         $this.AnyPurposeEKUExist = $null
         $this.EnrollmentAgentEKUExist = $null
         $this.NoSecurityExtension = $null

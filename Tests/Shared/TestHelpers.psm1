@@ -66,6 +66,9 @@ function New-MockLS2AdcsObject {
     $obj.RAApplicationPolicies    = @()
     $obj.TemplateSchemaVersion    = $null
     $obj.TemplateMinorRevision    = $null
+    $obj.CertificatePolicy        = @()
+    $obj.CertTemplateOID          = $null
+    $obj.OIDToGroupLink           = $null
     $obj.certificateTemplates     = @()
     $obj.dNSHostName              = $null
     $obj.CAFullName               = $null
@@ -105,6 +108,8 @@ function New-MockLS2AdcsObject {
     $obj.AuditFilter              = $null
     $obj.DisableExtensionList     = @()
     $obj.SecurityExtensionDisabled = $null
+    $obj.HasLinkedGroupOIDPolicy  = $null
+    $obj.LinkedGroupOIDPolicies   = @()
 
     foreach ($key in $Properties.Keys) {
         $obj.$key = $Properties[$key]

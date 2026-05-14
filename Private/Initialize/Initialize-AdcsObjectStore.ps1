@@ -68,6 +68,7 @@ function Initialize-AdcsObjectStore {
         $Templates = $Templates |
         Set-SANAllowed |
         Set-AuthenticationEKUExist |
+        Set-LinkedGroupOIDPolicy |
         Set-AnyPurposeEKUExist |
         Set-EnrollmentAgentEKUExist |
         Set-RequiresEnrollmentAgentSignature |
