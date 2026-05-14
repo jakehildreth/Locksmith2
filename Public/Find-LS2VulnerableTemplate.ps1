@@ -72,7 +72,7 @@ function Find-LS2VulnerableTemplate {
     [CmdletBinding()]
     param(
         [Parameter()]
-        [ValidateSet('ESC1', 'ESC2', 'ESC3c1', 'ESC3c2', 'ESC9', 'ESC4a', 'ESC4o')]
+        [ValidateSet('ESC1', 'ESC2', 'ESC3c1', 'ESC3c2', 'ESC9', 'ESC4a', 'ESC4o', 'ESC13')]
         [string]$Technique,
         
         [Parameter()]
@@ -102,7 +102,7 @@ function Find-LS2VulnerableTemplate {
     if (-not $Technique) {
         Write-Verbose "No technique specified. Returning all template issues..."
         $allIssues = Get-FlattenedIssues
-        $templateTechniques = @('ESC1', 'ESC2', 'ESC3c1', 'ESC3c2', 'ESC9', 'ESC4a', 'ESC4o')
+        $templateTechniques = @('ESC1', 'ESC2', 'ESC3c1', 'ESC3c2', 'ESC9', 'ESC4a', 'ESC4o', 'ESC13')
         $templateIssues = $allIssues | Where-Object { $_.Technique -in $templateTechniques }
         
         if ($ExpandGroups) {
@@ -436,9 +436,16 @@ function Find-LS2VulnerableTemplate {
             $identityReferenceName = ($ace.IdentityReference | Convert-IdentityReferenceToNTAccount).Value
 
             # Expand template variables in Issue, Fix, and Revert strings
+            $linkedGroup = if ($template.LinkedGroupOIDPolicies -and $template.LinkedGroupOIDPolicies.Count -gt 0) {
+                $template.LinkedGroupOIDPolicies -join ', '
+            } else {
+                ''
+            }
+
             $issueText = $issueTemplate `
                 -replace '\$\(IdentityReference\)', $identityReferenceName `
-                -replace '\$\(TemplateName\)', $template.Name
+                -replace '\$\(TemplateName\)', $template.Name `
+                -replace '\$\(LinkedGroup\)', $linkedGroup
             
             $fixScript = $fixTemplate `
                 -replace '\$\(DistinguishedName\)', $template.distinguishedName

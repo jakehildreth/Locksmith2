@@ -153,7 +153,7 @@ function Initialize-LS2Scan {
         try {
             # Scan all template techniques
             Write-Verbose "Scanning certificate templates..."
-            $templateTechniques = @('ESC1', 'ESC2', 'ESC3c1', 'ESC3c2', 'ESC9', 'ESC4a', 'ESC4o')
+            $templateTechniques = @('ESC1', 'ESC2', 'ESC3c1', 'ESC3c2', 'ESC9', 'ESC4a', 'ESC4o', 'ESC13')
             foreach ($tech in $templateTechniques) {
                 Find-LS2VulnerableTemplate -Technique $tech | Out-Null
             }

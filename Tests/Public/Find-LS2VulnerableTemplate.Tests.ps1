@@ -166,5 +166,129 @@ InModuleScope 'Locksmith2' {
                 $result.Count | Should -Be 0
             }
         }
+
+        Context 'Path C — ESC13 technique-specific scan' {
+            BeforeAll {
+                function script:New-ESC13VulnerableTemplate {
+                    $t = New-MockLS2AdcsObject -Properties @{
+                        objectClass              = @('top', 'pKICertificateTemplate')
+                        SchemaClassName          = 'pKICertificateTemplate'
+                        AuthenticationEKUExist   = $true
+                        HasLinkedGroupOIDPolicy  = $true
+                        LinkedGroupOIDPolicies   = @('CN=PrivilegedGroup,CN=Users,DC=contoso,DC=com')
+                        DangerousEnrollee        = @('S-1-1-0')
+                        distinguishedName        = 'CN=ESC13Template,CN=Certificate Templates,CN=Public Key Services,CN=Services,CN=Configuration,DC=contoso,DC=com'
+                        Name                     = 'ESC13Template'
+                        Enabled                  = $true
+                        EnabledOn                = @('CONTOSO-CA\CA01')
+                    }
+                    $security = New-Object System.DirectoryServices.ActiveDirectorySecurity
+                    $sid = [System.Security.Principal.SecurityIdentifier]::new('S-1-1-0')
+                    $rights = [System.DirectoryServices.ActiveDirectoryRights]::ExtendedRight
+                    $atype = [System.Security.AccessControl.AccessControlType]::Allow
+                    $rule = [System.DirectoryServices.ActiveDirectoryAccessRule]::new($sid, $rights, $atype)
+                    $security.AddAccessRule($rule)
+                    $t.ObjectSecurity = $security
+                    return $t
+                }
+            }
+
+            BeforeEach {
+                Mock 'Convert-IdentityReferenceToSid' {
+                    [System.Security.Principal.SecurityIdentifier]::new('S-1-1-0')
+                }
+                Mock 'Convert-IdentityReferenceToNTAccount' {
+                    [System.Security.Principal.NTAccount]::new('Everyone')
+                }
+                Mock 'Test-IssueExists' { $false }
+            }
+
+            It 'should return an LS2Issue when template has AuthenticationEKU, HasLinkedGroupOIDPolicy, and DangerousEnrollee' {
+                $vulnTemplate = New-ESC13VulnerableTemplate
+                $script:AdcsObjectStore = @{ $vulnTemplate.distinguishedName = $vulnTemplate }
+
+                $result = @(Find-LS2VulnerableTemplate -Technique 'ESC13')
+
+                $result.Count | Should -Be 1
+                $result[0].GetType().Name | Should -Be 'LS2Issue'
+            }
+
+            It 'should return an issue with Technique ESC13' {
+                $vulnTemplate = New-ESC13VulnerableTemplate
+                $script:AdcsObjectStore = @{ $vulnTemplate.distinguishedName = $vulnTemplate }
+
+                $result = @(Find-LS2VulnerableTemplate -Technique 'ESC13')
+
+                $result[0].Technique | Should -Be 'ESC13'
+            }
+
+            It 'should include the linked group DN in the issue text' {
+                $vulnTemplate = New-ESC13VulnerableTemplate
+                $script:AdcsObjectStore = @{ $vulnTemplate.distinguishedName = $vulnTemplate }
+
+                $result = @(Find-LS2VulnerableTemplate -Technique 'ESC13')
+
+                $result[0].Issue | Should -Match 'CN=PrivilegedGroup,CN=Users,DC=contoso,DC=com'
+            }
+
+            It 'should not return an issue when AuthenticationEKUExist is false' {
+                $safeTemplate = New-MockLS2AdcsObject -Properties @{
+                    SchemaClassName         = 'pKICertificateTemplate'
+                    AuthenticationEKUExist  = $false
+                    HasLinkedGroupOIDPolicy = $true
+                    DangerousEnrollee       = @('S-1-1-0')
+                    distinguishedName       = 'CN=SafeTemplate,CN=Certificate Templates,CN=Public Key Services,CN=Services,CN=Configuration,DC=contoso,DC=com'
+                    Name                    = 'SafeTemplate'
+                }
+                $script:AdcsObjectStore = @{ $safeTemplate.distinguishedName = $safeTemplate }
+
+                $result = @(Find-LS2VulnerableTemplate -Technique 'ESC13')
+
+                $result.Count | Should -Be 0
+            }
+
+            It 'should not return an issue when HasLinkedGroupOIDPolicy is false' {
+                $safeTemplate = New-MockLS2AdcsObject -Properties @{
+                    SchemaClassName         = 'pKICertificateTemplate'
+                    AuthenticationEKUExist  = $true
+                    HasLinkedGroupOIDPolicy = $false
+                    DangerousEnrollee       = @('S-1-1-0')
+                    distinguishedName       = 'CN=SafeTemplate,CN=Certificate Templates,CN=Public Key Services,CN=Services,CN=Configuration,DC=contoso,DC=com'
+                    Name                    = 'SafeTemplate'
+                }
+                $script:AdcsObjectStore = @{ $safeTemplate.distinguishedName = $safeTemplate }
+
+                $result = @(Find-LS2VulnerableTemplate -Technique 'ESC13')
+
+                $result.Count | Should -Be 0
+            }
+
+            It 'should not return an issue when DangerousEnrollee is empty' {
+                $safeTemplate = New-MockLS2AdcsObject -Properties @{
+                    SchemaClassName          = 'pKICertificateTemplate'
+                    AuthenticationEKUExist   = $true
+                    HasLinkedGroupOIDPolicy  = $true
+                    LinkedGroupOIDPolicies   = @('CN=PrivilegedGroup,CN=Users,DC=contoso,DC=com')
+                    DangerousEnrollee        = @()
+                    LowPrivilegeEnrollee     = @()
+                    distinguishedName        = 'CN=SafeTemplate,CN=Certificate Templates,CN=Public Key Services,CN=Services,CN=Configuration,DC=contoso,DC=com'
+                    Name                     = 'SafeTemplate'
+                }
+                $script:AdcsObjectStore = @{ $safeTemplate.distinguishedName = $safeTemplate }
+
+                $result = @(Find-LS2VulnerableTemplate -Technique 'ESC13')
+
+                $result.Count | Should -Be 0
+            }
+
+            It 'should add the issue to script:IssueStore when not a duplicate' {
+                $vulnTemplate = New-ESC13VulnerableTemplate
+                $script:AdcsObjectStore = @{ $vulnTemplate.distinguishedName = $vulnTemplate }
+
+                Find-LS2VulnerableTemplate -Technique 'ESC13' | Out-Null
+
+                $script:IssueStore.Count | Should -BeGreaterThan 0
+            }
+        }
     }
 }
