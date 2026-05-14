@@ -314,6 +314,70 @@ InModuleScope 'Locksmith2' {
                 }
             }
         }
+
+        Context 'Path D — Auditing technique-specific scan' {
+            BeforeEach {
+                Mock 'Test-IssueExists' { $false }
+            }
+
+            It 'should return an LS2Issue when CA has AuditingIncomplete=$true' {
+                $mockCA = New-MockLS2AdcsObject -Properties @{
+                    objectClass        = @('top', 'pKIEnrollmentService')
+                    SchemaClassName    = 'pKIEnrollmentService'
+                    CAFullName         = 'CONTOSO\CA01'
+                    cn                 = 'CA01'
+                    AuditingIncomplete = $true
+                    AuditFilter        = 0
+                    distinguishedName  = 'CN=CA01,CN=Enrollment Services,CN=Public Key Services,CN=Services,CN=Configuration,DC=contoso,DC=com'
+                }
+                $script:AdcsObjectStore = @{ $mockCA.distinguishedName = $mockCA }
+
+                $result = @(Find-LS2VulnerableCA -Technique 'Auditing')
+
+                $result.Count | Should -Be 1
+                $result[0].GetType().Name | Should -Be 'LS2Issue'
+            }
+
+            It 'should return an issue with Technique Auditing' {
+                $mockCA = New-MockLS2AdcsObject -Properties @{
+                    objectClass        = @('top', 'pKIEnrollmentService')
+                    SchemaClassName    = 'pKIEnrollmentService'
+                    CAFullName         = 'CONTOSO\CA01'
+                    cn                 = 'CA01'
+                    AuditingIncomplete = $true
+                    AuditFilter        = 0
+                    distinguishedName  = 'CN=CA01,...'
+                }
+                $script:AdcsObjectStore = @{ $mockCA.distinguishedName = $mockCA }
+
+                $result = @(Find-LS2VulnerableCA -Technique 'Auditing')
+
+                $result[0].Technique | Should -Be 'Auditing'
+            }
+
+            It 'should not return an issue when AuditingIncomplete is $false' {
+                $safeCA = New-MockLS2AdcsObject -Properties @{
+                    objectClass        = @('top', 'pKIEnrollmentService')
+                    SchemaClassName    = 'pKIEnrollmentService'
+                    CAFullName         = 'CONTOSO\SafeCA'
+                    cn                 = 'SafeCA'
+                    AuditingIncomplete = $false
+                    AuditFilter        = 127
+                    distinguishedName  = 'CN=SafeCA,...'
+                }
+                $script:AdcsObjectStore = @{ $safeCA.distinguishedName = $safeCA }
+
+                $result = @(Find-LS2VulnerableCA -Technique 'Auditing')
+
+                $result.Count | Should -Be 0
+            }
+
+            It 'should return nothing when Initialize-LS2Scan returns false' {
+                Mock 'Initialize-LS2Scan' { $false }
+                $result = @(Find-LS2VulnerableCA -Technique 'Auditing')
+                $result.Count | Should -Be 0
+            }
+        }
     }
 }
 

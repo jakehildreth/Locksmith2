@@ -88,7 +88,8 @@ function Set-CAAuditFilter {
                         
                         # Set the property directly on the LS2AdcsObject (same reference as store)
                         $_.AuditFilter = $auditFilter
-                        Write-Verbose "  Updated $($_.distinguishedName) with AuditFilter data"
+                        $_.AuditingIncomplete = ($auditFilter -ne 127)
+                        Write-Verbose "  Updated $($_.distinguishedName) with AuditFilter data (AuditingIncomplete=$($_.AuditingIncomplete))"
                         
                     } else {
                         Write-Verbose "  No AuditFilter returned from Get-PSCAuditFilter"

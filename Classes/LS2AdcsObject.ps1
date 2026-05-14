@@ -67,6 +67,7 @@ class LS2AdcsObject {
     [Nullable[bool]]$SANFlagEnabled
     [object[]]$InterfaceFlags
     [Nullable[int]]$AuditFilter
+    [bool]$AuditingIncomplete
     [object[]]$DisableExtensionList
     [Nullable[bool]]$SecurityExtensionDisabled
     [object[]]$WebEnrollmentEndpoints
