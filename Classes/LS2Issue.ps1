@@ -32,6 +32,15 @@ class LS2Issue {
     [string]$Issue                  # Description of the vulnerability
     [string]$Fix                    # PowerShell script to remediate
     [string]$Revert                 # PowerShell script to undo remediation
+
+    # Risk rating (populated by Set-LS2RiskRating)
+    [Nullable[int]]$RiskValue       # Numeric risk score
+    [string]$RiskName               # Informational / Low / Medium / High / Critical
+    [string[]]$RiskScoring          # Audit trail of each modifier applied
+
+    # ESC8 endpoint metadata (populated by Find-LS2VulnerableCA)
+    [string]$EndpointURL            # Full URL of the ESC8 endpoint
+    [string]$EndpointAttackVector   # HTTP / HTTPS-NTLM / HTTPS-Kerberos
     
     # Constructor for creating issues from hashtable
     LS2Issue([hashtable]$Properties) {
@@ -65,6 +74,15 @@ class LS2Issue {
         $this.Issue = $Properties.Issue
         $this.Fix = $Properties.Fix
         $this.Revert = $Properties.Revert
+
+        # Risk rating
+        $this.RiskValue = $Properties.RiskValue
+        $this.RiskName = $Properties.RiskName
+        $this.RiskScoring = $Properties.RiskScoring
+
+        # ESC8 endpoint metadata
+        $this.EndpointURL = $Properties.EndpointURL
+        $this.EndpointAttackVector = $Properties.EndpointAttackVector
     }
     
     # Method to get a friendly identifier for the issue
