@@ -1,5 +1,5 @@
 ﻿param (
-    # A CalVer string if you need to manually override the default yyyy.M.d version string.
+    # A CalVer string if you need to manually override the default yyyy.M.dHHmm version string.
     [string]$CalVer,
     # A prerelease tag to append to the module version (e.g., 'alpha', 'beta', 'rc1').
     [string]$Prerelease,
