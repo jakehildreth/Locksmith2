@@ -127,7 +127,8 @@ function Invoke-Locksmith2 {
         [switch]$SkipPowerShellCheck,
         [switch]$SkipForestCheck,
         [switch]$ExpandGroups,
-        [switch]$Rescan
+        [switch]$Rescan,
+        [switch]$Force
     )
 
     #requires -Version 5.1
@@ -172,7 +173,12 @@ function Invoke-Locksmith2 {
         Write-Host "  Computer : $($env:USERDOMAIN.ToUpper())\$($env:COMPUTERNAME.ToUpper())"
         Write-Host "  Method   : $($ctx.Method)"
         Write-Host ''
-        $confirm = Read-Choice -Question 'Proceed with scan?' -Options @('y', 'n') -Default 'y'
+        if ($Force) {
+            $confirm = 'y'
+        }
+        else {
+            $confirm = Read-Choice -Question 'Proceed with scan?' -Options @('y', 'n') -Default 'y'
+        }
         if ($confirm -ne 'y') {
             Write-Host 'Scan cancelled.' -ForegroundColor Yellow
             return
@@ -221,7 +227,8 @@ function Invoke-Locksmith2 {
     if ($PSBoundParameters.ContainsKey('Mode')) {
         # Display issues in console using specified mode
         Show-IssueReport -Issues $allIssues -Mode $Mode
-    } else {
+    }
+    else {
         # Return LS2Issue objects to pipeline
         $allIssues
     }
