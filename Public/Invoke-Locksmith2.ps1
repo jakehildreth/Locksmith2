@@ -173,10 +173,9 @@ function Invoke-Locksmith2 {
         Write-Host "  Computer : $($env:USERDOMAIN.ToUpper())\$($env:COMPUTERNAME.ToUpper())"
         Write-Host "  Method   : $($ctx.Method)"
         Write-Host ''
-        if ($Force) {
+        if ($Force -or (`[System.Environment]::UserInteractive`) ) {
             $confirm = 'y'
-        }
-        else {
+        } else {
             $confirm = Read-Choice -Question 'Proceed with scan?' -Options @('y', 'n') -Default 'y'
         }
         if ($confirm -ne 'y') {
@@ -227,8 +226,7 @@ function Invoke-Locksmith2 {
     if ($PSBoundParameters.ContainsKey('Mode')) {
         # Display issues in console using specified mode
         Show-IssueReport -Issues $allIssues -Mode $Mode
-    }
-    else {
+    } else {
         # Return LS2Issue objects to pipeline
         $allIssues
     }
