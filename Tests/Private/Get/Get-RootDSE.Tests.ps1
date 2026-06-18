@@ -6,26 +6,10 @@ BeforeAll {
 
 Describe 'Get-RootDSE' -Tag 'Unit' {
 
-    Context 'When forest and credential are supplied and bind succeeds' {
-
-        BeforeAll {
-            $mockRootDSE = [PSCustomObject]@{
-                Name                       = 'rootDSE'
-                configurationNamingContext = [PSCustomObject]@{ Value = 'CN=Configuration,DC=contoso,DC=com' }
-                defaultNamingContext       = [PSCustomObject]@{ Value = 'DC=contoso,DC=com' }
-                rootDomainNamingContext    = [PSCustomObject]@{ Value = 'DC=contoso,DC=com' }
-                Path                       = 'LDAP://dc01.contoso.com/RootDSE'
-            }
-            Mock New-Object { return $mockRootDSE } -ParameterFilter {
-                $TypeName -eq 'DirectoryServices.DirectoryEntry' -or
-                $TypeName -eq 'System.DirectoryServices.DirectoryEntry'
-            }
-        }
+    Context 'When forest and credential are supplied and bind succeeds' -Tag 'Integration' {
 
         It 'should return an object with a Name property' {
-            $securePass = ConvertTo-SecureString 'pass' -AsPlainText -Force
-            $cred = [System.Management.Automation.PSCredential]::new('CONTOSO\user', $securePass)
-            $result = Get-RootDSE -Forest 'contoso.com' -Credential $cred
+            $result = Get-RootDSE -Forest $IntegrationForest -Credential $IntegrationCredential
             $result | Should -Not -BeNullOrEmpty
             $result.Name | Should -Be 'rootDSE'
         }

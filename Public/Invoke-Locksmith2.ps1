@@ -55,6 +55,11 @@ function Invoke-Locksmith2 {
         Forces a fresh vulnerability scan even if IssueStore is already populated.
         Clears and regenerates the IssueStore with current AD CS configuration.
 
+        .PARAMETER Force
+        Suppresses the interactive confirmation prompt before scanning.
+        Use in non-interactive or automated contexts where [System.Environment]::UserInteractive
+        would otherwise trigger a prompt.
+
         .INPUTS
         None. This function does not accept pipeline input.
 

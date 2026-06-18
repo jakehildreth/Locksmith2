@@ -79,7 +79,7 @@ Describe 'Resolve-LS2ConnectionContext' -Tag 'Unit' {
     }
 
     # ---------------------------------------------------------------------------
-    Context 'No CLI overrides — domain user session' {
+    Context 'No CLI overrides — domain user session' -Tag 'Integration' {
 
         It 'should not throw' {
             Mock Test-IsDomainUser { $true }
