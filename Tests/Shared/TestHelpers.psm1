@@ -7,7 +7,7 @@
     Provides mock factory functions for LS2AdcsObject, LS2Issue, and LS2Principal,
     and a PSScriptAnalyzer helper. Import this module in BeforeAll blocks:
 
-        Import-Module (Join-Path $PSScriptRoot '..' 'Shared' 'TestHelpers.psm1') -Force
+        Import-Module (Join-Path $ModuleRoot 'Tests\Shared\TestHelpers.psm1') -Force
 
 .NOTES
     LS2AdcsObject and LS2Principal have AD-dependent constructors. Tests bypass them

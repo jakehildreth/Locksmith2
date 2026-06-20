@@ -58,7 +58,7 @@ function Get-WebEnrollmentEndpointStatus {
             try {
                 # .NET 4.6.1+ / Core: disable SSL cert validation for self-signed certs
                 $anonHandler.ServerCertificateCustomValidationCallback = {
-                    param($sender, $cert, $chain, $sslPolicyErrors)
+                    param($httpSender, $cert, $chain, $sslPolicyErrors)
                     return $true
                 }
             } catch {
@@ -111,11 +111,11 @@ function Get-WebEnrollmentEndpointStatus {
 
         try {
             $authHandler.ServerCertificateCustomValidationCallback = {
-                param($sender, $cert, $chain, $sslPolicyErrors)
+                param($httpSender, $cert, $chain, $sslPolicyErrors)
                 return $true
             }
         } catch {
-            # ServicePointManager already set above - no-op
+            Write-Verbose 'ServerCertificateCustomValidationCallback not supported; ServicePointManager already set.'
         }
 
         $credentialCache = [System.Net.CredentialCache]::new()
