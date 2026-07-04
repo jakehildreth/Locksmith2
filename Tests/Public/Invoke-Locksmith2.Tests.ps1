@@ -25,7 +25,6 @@ InModuleScope 'Locksmith2' {
                 IdentityReference = 'Everyone'
             }
 
-            Mock 'Show-Logo' { }
             Mock 'Initialize-LS2Scan' { $true }
             Mock 'Get-FlattenedIssues' { @($script:mockIssue) }
             Mock 'Get-IssueCount' { 0 }
@@ -33,11 +32,6 @@ InModuleScope 'Locksmith2' {
             Mock 'Test-PowerShellEnvironment' { [PSCustomObject]@{} }
             Mock 'Repair-PowerShellEnvironment' { }
             Mock 'Expand-IssueByGroup' { $_ }
-        }
-
-        It 'should always call Show-Logo' {
-            Invoke-Locksmith2 | Out-Null
-            Should -Invoke 'Show-Logo' -Times 1
         }
 
         It 'should call Initialize-LS2Scan' {

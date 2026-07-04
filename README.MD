@@ -1,7 +1,6 @@
 ![The Locksmith 2 logo features the word "locksmith" followed by the number "2" in a bold, blocky pixelated font. The design uses a gradient color scheme transitioning from light lavender on the left through pink tones to coral/orange on the right, set against a dark purple background with a rectangular border. The retro-digital aesthetic gives the logo a modern yet approachable feel, suggesting a tool that makes security management accessible and straightforward. The "2" indicates this is the second version of the Locksmith tool.](Images/Locksmith2.png)
-# Locksmith 2 is a Work In Progress
 
-> Find and fix Active Directory Certificate Services (AD CS) security misconfigurations
+# An AD CS toolkit for Active Directory Admins, Defensive Security Professionals, and Filthy Red Teamers
 
 [![PowerShell Gallery](https://img.shields.io/powershellgallery/v/Locksmith2.svg)](https://www.powershellgallery.com/packages/Locksmith2)
 [![PowerShell](https://img.shields.io/badge/PowerShell-5.1+-blue.svg)](https://github.com/PowerShell/PowerShell)[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/jakehildreth/Locksmith2)
@@ -51,24 +50,15 @@ Import-Module .\Locksmith2.psd1
 
 ## Quick Start
 
+### Start in Interactive mode
+
 ```powershell
-# Interactive mode - prompts for forest and credentials
 Invoke-Locksmith2
+```
 
-# Specify credentials
-$cred = Get-Credential
-Invoke-Locksmith2 -Forest 'contoso.com' -Credential $cred
-
-# Targeted scanning for specific techniques
-Find-LS2VulnerableTemplate -Technique ESC1
-Find-LS2VulnerableCA -Technique ESC6
-
-# Analyze which principals have the most exploitable paths
-Find-LS2RiskyPrincipal -Top 10
-
-# Inspect results
-$stores = Get-LS2Stores
-$stores.IssueStore['ESC1']
+### Generate HTML Dashboard
+```powershell
+New-LS2Dashboard
 ```
 
 ## Supported ESC Techniques
