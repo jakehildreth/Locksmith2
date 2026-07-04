@@ -227,6 +227,12 @@ function Invoke-Locksmith2 {
         Write-Verbose "Expansion complete. Total issues: $($allIssues.Count)"
     }
 
+    # Compute risk ratings for all issues
+    if ($allIssues.Count -gt 0) {
+        Write-Verbose "Computing risk ratings for $($allIssues.Count) issue(s)..."
+        Set-LS2RiskRating -Issues $allIssues
+    }
+
     # Output based on whether Mode was specified
     if ($PSBoundParameters.ContainsKey('Mode')) {
         # Display issues in console using specified mode

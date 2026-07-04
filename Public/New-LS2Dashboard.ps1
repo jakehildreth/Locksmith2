@@ -105,6 +105,8 @@ function New-LS2Dashboard {
 
     $standardColumns = @(
         'Technique'
+        @{N = 'RiskName';    E = { if ($_.RiskName)          { $_.RiskName }  else { 'Unrated' } } }
+        @{N = 'RiskValue';   E = { if ($null -ne $_.RiskValue) { $_.RiskValue } else { 'N/A'    } } }
         'Forest'
         'Name'
         'DistinguishedName'
@@ -121,6 +123,7 @@ function New-LS2Dashboard {
         @{N = 'Owner';                  E = { if ($_.Owner)                  { $_.Owner }                          else { 'N/A' } } }
         @{N = 'HasNonStandardOwner';    E = { if ($null -ne $_.HasNonStandardOwner) { $_.HasNonStandardOwner }    else { 'N/A' } } }
         @{N = 'Members';                E = { if ($_.MemberCount)            { $_.MemberCount }                    else { 'N/A' } } }
+        @{N = 'RiskScoring';            E = { if ($_.RiskScoring)            { $_.RiskScoring -join '; ' }         else { 'N/A' } } }
         @{N = 'Issue';                  E = { if ($_.Issue)                  { $_.Issue   -replace "`n", "`n`n" }  else { 'N/A' } } }
         @{N = 'Fix';                    E = { if ($_.Fix)                    { $_.Fix     -replace "`n", "`n`n" }  else { 'N/A' } } }
         @{N = 'Revert';                 E = { if ($_.Revert)                 { $_.Revert  -replace "`n", "`n`n" }  else { 'N/A' } } }
@@ -165,15 +168,23 @@ function New-LS2Dashboard {
     # Resolve logo and encode as base64 data URI for self-contained HTML
     $logoSource = $null
     $moduleBase = (Get-Module -Name Locksmith2 -ErrorAction SilentlyContinue).ModuleBase
-    foreach ($candidate in @(
-        (Join-Path $moduleBase 'Images\Locksmith2.png'),
-        (Join-Path $moduleBase '..\..\..\Images\Locksmith2.png')
-    )) {
-        if (Test-Path $candidate) {
-            $logoBytes  = [System.IO.File]::ReadAllBytes((Resolve-Path $candidate).Path)
-            $logoBase64 = [System.Convert]::ToBase64String($logoBytes)
-            $logoSource = "data:image/png;base64,$logoBase64"
-            break
+    if ($null -ne $moduleBase) {
+        foreach ($candidate in @(
+            (Join-Path $moduleBase 'Images\Locksmith2.png'),
+            (Join-Path $moduleBase '..\..\..\Images\Locksmith2.png')
+        )) {
+            try {
+                if (Test-Path -LiteralPath $candidate) {
+                    $logoBytes  = [System.IO.File]::ReadAllBytes(
+                        (Get-Item -LiteralPath $candidate -ErrorAction Stop).FullName
+                    )
+                    $logoBase64 = [System.Convert]::ToBase64String($logoBytes)
+                    $logoSource = "data:image/png;base64,$logoBase64"
+                    break
+                }
+            } catch {
+                Write-Verbose "Logo load failed for '$candidate': $_"
+            }
         }
     }
 
@@ -203,6 +214,12 @@ function New-LS2Dashboard {
         New-HTMLTableCondition -Name 'ActiveDirectoryRights' -ComparisonType string -Operator like -Value '*GenericWrite*'  -BackgroundColor '#ffa726' -Color Black
         # Status
         New-HTMLTableCondition -Name 'Enabled' -Value $true -BackgroundColor '#fff9c4' -Color Black
+        # Risk rating
+        New-HTMLTableCondition -Name 'RiskName' -Value 'Critical'     -BackgroundColor '#b71c1c' -Color White
+        New-HTMLTableCondition -Name 'RiskName' -Value 'High'         -BackgroundColor '#e53935' -Color White
+        New-HTMLTableCondition -Name 'RiskName' -Value 'Medium'       -BackgroundColor '#ff9800' -Color Black
+        New-HTMLTableCondition -Name 'RiskName' -Value 'Low'          -BackgroundColor '#fdd835' -Color Black
+        New-HTMLTableCondition -Name 'RiskName' -Value 'Informational'-BackgroundColor '#e3f2fd' -Color Black
     }
 
     # Conditional formatting for principals (different schema; most severe last so they override)

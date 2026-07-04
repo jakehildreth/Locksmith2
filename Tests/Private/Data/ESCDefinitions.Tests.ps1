@@ -107,4 +107,128 @@ Describe 'ESCDefinitions data' -Tag 'Unit' {
             $script:ESCDefinitions[$_].RevertTemplate | Should -Not -BeNullOrEmpty
         }
     }
+
+    Context 'Each technique has required scoring keys' {
+        $AllTechniques = @(
+            'ESC1', 'ESC2', 'ESC3c1', 'ESC3c2',
+            'ESC4a', 'ESC4o',
+            'ESC5a', 'ESC5o',
+            'ESC6', 'ESC7a', 'ESC7m',
+            'ESC8', 'ESC9', 'ESC11', 'ESC13', 'ESC15', 'ESC16',
+            'Auditing', 'SchemaV1'
+        )
+
+        It '<_> should have a BaseScore key' -ForEach $AllTechniques {
+            $script:ESCDefinitions[$_].Keys | Should -Contain 'BaseScore'
+        }
+
+        It '<_> BaseScore should be an integer between 0 and 3' -ForEach $AllTechniques {
+            $def = $script:ESCDefinitions[$_]
+            $def.BaseScore | Should -BeOfType [int]
+            $def.BaseScore | Should -BeGreaterOrEqual 0
+            $def.BaseScore | Should -BeLessOrEqual 3
+        }
+
+        It '<_> should have a TechniqueBonus key' -ForEach $AllTechniques {
+            $script:ESCDefinitions[$_].Keys | Should -Contain 'TechniqueBonus'
+        }
+
+        It '<_> TechniqueBonus should be a non-negative integer' -ForEach $AllTechniques {
+            $def = $script:ESCDefinitions[$_]
+            $def.TechniqueBonus | Should -BeOfType [int]
+            $def.TechniqueBonus | Should -BeGreaterOrEqual 0
+        }
+
+        It '<_> should have an ApplyEnabledModifier key' -ForEach $AllTechniques {
+            $script:ESCDefinitions[$_].Keys | Should -Contain 'ApplyEnabledModifier'
+        }
+
+        It '<_> ApplyEnabledModifier should be a bool' -ForEach $AllTechniques {
+            $script:ESCDefinitions[$_].ApplyEnabledModifier | Should -BeOfType [bool]
+        }
+
+        It '<_> should have an ApplyPrincipalRisk key' -ForEach $AllTechniques {
+            $script:ESCDefinitions[$_].Keys | Should -Contain 'ApplyPrincipalRisk'
+        }
+
+        It '<_> ApplyPrincipalRisk should be a bool' -ForEach $AllTechniques {
+            $script:ESCDefinitions[$_].ApplyPrincipalRisk | Should -BeOfType [bool]
+        }
+
+        It '<_> should have an ApplyObjectClassBonus key' -ForEach $AllTechniques {
+            $script:ESCDefinitions[$_].Keys | Should -Contain 'ApplyObjectClassBonus'
+        }
+
+        It '<_> ApplyObjectClassBonus should be a bool' -ForEach $AllTechniques {
+            $script:ESCDefinitions[$_].ApplyObjectClassBonus | Should -BeOfType [bool]
+        }
+
+        It '<_> should have an ObjectClassBonuses key' -ForEach $AllTechniques {
+            $script:ESCDefinitions[$_].Keys | Should -Contain 'ObjectClassBonuses'
+        }
+
+        It '<_> ObjectClassBonuses should be a hashtable' -ForEach $AllTechniques {
+            $script:ESCDefinitions[$_].ObjectClassBonuses | Should -BeOfType [hashtable]
+        }
+
+        It '<_> should have a NtAuthBonus key' -ForEach $AllTechniques {
+            $script:ESCDefinitions[$_].Keys | Should -Contain 'NtAuthBonus'
+        }
+
+        It '<_> NtAuthBonus should be a non-negative integer' -ForEach $AllTechniques {
+            $def = $script:ESCDefinitions[$_]
+            $def.NtAuthBonus | Should -BeOfType [int]
+            $def.NtAuthBonus | Should -BeGreaterOrEqual 0
+        }
+
+        It '<_> should have an EndpointBonuses key' -ForEach $AllTechniques {
+            $script:ESCDefinitions[$_].Keys | Should -Contain 'EndpointBonuses'
+        }
+
+        It '<_> EndpointBonuses should be a hashtable' -ForEach $AllTechniques {
+            $script:ESCDefinitions[$_].EndpointBonuses | Should -BeOfType [hashtable]
+        }
+
+        It '<_> should have a CrossESCModifiers key' -ForEach $AllTechniques {
+            $script:ESCDefinitions[$_].Keys | Should -Contain 'CrossESCModifiers'
+        }
+
+        It '<_> CrossESCModifiers should be an array' -ForEach $AllTechniques {
+            # array or empty array - just check it's not a scalar non-collection
+            $val = $script:ESCDefinitions[$_].CrossESCModifiers
+            ($val -is [array]) -or ($val -is [System.Collections.IEnumerable] -and $val -isnot [string]) -or ($val.Count -eq 0) | Should -BeTrue
+        }
+    }
+
+    Context 'ESC5a and ESC5o have populated ObjectClassBonuses' {
+        It 'ESC5a ObjectClassBonuses should include pKIEnrollmentService' {
+            $script:ESCDefinitions['ESC5a'].ObjectClassBonuses.Keys | Should -Contain 'pKIEnrollmentService'
+        }
+
+        It 'ESC5a NtAuthBonus should be 2' {
+            $script:ESCDefinitions['ESC5a'].NtAuthBonus | Should -Be 2
+        }
+
+        It 'ESC5o ObjectClassBonuses should include pKIEnrollmentService' {
+            $script:ESCDefinitions['ESC5o'].ObjectClassBonuses.Keys | Should -Contain 'pKIEnrollmentService'
+        }
+
+        It 'ESC5o NtAuthBonus should be 2' {
+            $script:ESCDefinitions['ESC5o'].NtAuthBonus | Should -Be 2
+        }
+    }
+
+    Context 'ESC8 has EndpointBonuses for all three attack vectors' {
+        It 'ESC8 EndpointBonuses should contain HTTP' {
+            $script:ESCDefinitions['ESC8'].EndpointBonuses.Keys | Should -Contain 'HTTP'
+        }
+
+        It 'ESC8 EndpointBonuses should contain HTTPS-NTLM' {
+            $script:ESCDefinitions['ESC8'].EndpointBonuses.Keys | Should -Contain 'HTTPS-NTLM'
+        }
+
+        It 'ESC8 EndpointBonuses should contain HTTPS-Kerberos' {
+            $script:ESCDefinitions['ESC8'].EndpointBonuses.Keys | Should -Contain 'HTTPS-Kerberos'
+        }
+    }
 }

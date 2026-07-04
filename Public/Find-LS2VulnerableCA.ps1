@@ -338,16 +338,27 @@ function Find-LS2VulnerableCA {
                         "and request a certificate on behalf of the victim.`n`nMore info:`n  - https://posts.specterops.io/certified-pre-owned-d95910965cd2"
                 }
 
+                # Determine attack vector for scoring
+                if ($isHttp) {
+                    $endpointAttackVector = 'HTTP'
+                } elseif ($endpoint.NtlmOffered -eq $true) {
+                    $endpointAttackVector = 'HTTPS-NTLM'
+                } else {
+                    $endpointAttackVector = 'HTTPS-Kerberos'
+                }
+
                 $issue = [LS2Issue]@{
-                    Technique         = 'ESC8'
-                    Forest            = $forestName
-                    Name              = $caName
-                    DistinguishedName = $ca.distinguishedName
-                    ObjectClass       = 'pKIEnrollmentService'
-                    CAFullName        = $caFullName
-                    Issue             = $issueText
-                    Fix               = $fixText
-                    Revert            = $revertText
+                    Technique             = 'ESC8'
+                    Forest                = $forestName
+                    Name                  = $caName
+                    DistinguishedName     = $ca.distinguishedName
+                    ObjectClass           = 'pKIEnrollmentService'
+                    CAFullName            = $caFullName
+                    EndpointURL           = $url
+                    EndpointAttackVector  = $endpointAttackVector
+                    Issue                 = $issueText
+                    Fix                   = $fixText
+                    Revert                = $revertText
                 }
 
                 $dn = $ca.distinguishedName
