@@ -1,7 +1,8 @@
 #requires -Version 5.1
 BeforeAll {
     $ModuleRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
-    Import-Module (Join-Path $ModuleRoot 'Locksmith2.psd1') -Force -ErrorAction Stop
+    $ls2Manifest = if ($env:LS2_MODULE_ROOT) { Join-Path $env:LS2_MODULE_ROOT 'Locksmith2.psd1' } else { Join-Path $ModuleRoot 'Locksmith2.psd1' }
+    Import-Module $ls2Manifest -Force -ErrorAction Stop
     Import-Module (Join-Path $ModuleRoot 'Tests\Shared\TestHelpers.psm1') -Force -ErrorAction Stop
 }
 
@@ -198,6 +199,70 @@ Describe 'LS2Issue class' -Tag 'Unit' {
         It 'should return false when argument is null' -Tag 'EdgeCase' {
             $issue = New-MockLS2Issue -Overrides $script:BaseProps
             $issue.Matches($null) | Should -BeFalse
+        }
+    }
+
+    Describe 'Risk properties' {
+        It 'RiskValue should be null by default' {
+            $issue = New-MockLS2Issue
+            $issue.RiskValue | Should -BeNullOrEmpty
+        }
+
+        It 'RiskName should be null/empty by default' {
+            $issue = New-MockLS2Issue
+            $issue.RiskName | Should -BeNullOrEmpty
+        }
+
+        It 'RiskScoring should be null by default' {
+            $issue = New-MockLS2Issue
+            $issue.RiskScoring | Should -BeNullOrEmpty
+        }
+
+        It 'EndpointURL should be null/empty by default' {
+            $issue = New-MockLS2Issue
+            $issue.EndpointURL | Should -BeNullOrEmpty
+        }
+
+        It 'EndpointAttackVector should be null/empty by default' {
+            $issue = New-MockLS2Issue
+            $issue.EndpointAttackVector | Should -BeNullOrEmpty
+        }
+
+        It 'constructor sets RiskValue from hashtable' {
+            $issue = New-MockLS2Issue -Overrides @{ RiskValue = 4 }
+            $issue.RiskValue | Should -Be 4
+        }
+
+        It 'constructor sets RiskName from hashtable' {
+            $issue = New-MockLS2Issue -Overrides @{ RiskName = 'High' }
+            $issue.RiskName | Should -Be 'High'
+        }
+
+        It 'constructor sets RiskScoring from hashtable' {
+            $issue = New-MockLS2Issue -Overrides @{ RiskScoring = @('BaseScore: 3', 'Enabled: +1') }
+            $issue.RiskScoring | Should -Be @('BaseScore: 3', 'Enabled: +1')
+        }
+
+        It 'constructor sets EndpointURL from hashtable' {
+            $issue = New-MockLS2Issue -Overrides @{ EndpointURL = 'http://ca.contoso.com/certsrv/' }
+            $issue.EndpointURL | Should -Be 'http://ca.contoso.com/certsrv/'
+        }
+
+        It 'constructor sets EndpointAttackVector from hashtable' {
+            $issue = New-MockLS2Issue -Overrides @{ EndpointAttackVector = 'HTTP' }
+            $issue.EndpointAttackVector | Should -Be 'HTTP'
+        }
+
+        It 'RiskValue can be set post-construction' {
+            $issue = New-MockLS2Issue
+            $issue.RiskValue = 5
+            $issue.RiskValue | Should -Be 5
+        }
+
+        It 'RiskScoring can be appended post-construction' {
+            $issue = New-MockLS2Issue
+            $issue.RiskScoring = @('BaseScore: 0', 'TechniqueBonus: +1')
+            $issue.RiskScoring.Count | Should -Be 2
         }
     }
 }

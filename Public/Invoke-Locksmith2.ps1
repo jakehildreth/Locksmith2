@@ -6,17 +6,17 @@ function Invoke-Locksmith2 {
         .DESCRIPTION
         Invoke-Locksmith2 audits Active Directory Certificate Services (AD CS) infrastructure
         for security misconfigurations documented as ESC (Escalation) techniques. It scans:
-        
+
         - Certificate templates (ESC1, ESC2, ESC3, ESC4, ESC9)
         - Certification Authorities (ESC6, ESC7a, ESC7m, ESC11, ESC16)
         - PKI container objects (ESC5)
-        
+
         The function initializes four module-level stores:
         - PrincipalStore: Caches resolved SIDs and NTAccount principals
         - AdcsObjectStore: Stores all AD CS objects (templates, CAs, OIDs, etc.)
         - DomainStore: Caches domain information
         - IssueStore: Collects discovered vulnerabilities by technique
-        
+
         Results are returned as structured LS2Issue objects containing vulnerability details,
         affected principals, and PowerShell remediation scripts.
 
@@ -55,6 +55,11 @@ function Invoke-Locksmith2 {
         Forces a fresh vulnerability scan even if IssueStore is already populated.
         Clears and regenerates the IssueStore with current AD CS configuration.
 
+        .PARAMETER Force
+        Suppresses the interactive confirmation prompt before scanning.
+        Use in non-interactive or automated contexts where [System.Environment]::UserInteractive
+        would otherwise trigger a prompt.
+
         .INPUTS
         None. This function does not accept pipeline input.
 
@@ -68,33 +73,33 @@ function Invoke-Locksmith2 {
 
         .EXAMPLE
         Invoke-Locksmith2
-        
+
         Runs interactive audit and returns LS2Issue objects to the pipeline.
 
         .EXAMPLE
         $cred = Get-Credential CONTOSO\admin
         Invoke-Locksmith2 -Forest 'dc01.contoso.com' -Credential $cred
-        
+
         Audits contoso.com forest and returns LS2Issue objects to the pipeline.
 
         .EXAMPLE
         Invoke-Locksmith2 -Forest 'contoso.com' -Credential $cred -SkipPowerShellCheck
-        
+
         Runs audit skipping PowerShell environment validation.
 
         .EXAMPLE
         Invoke-Locksmith2 -Mode 0
-        
+
         Runs audit and displays results in table format (default behavior).
 
         .EXAMPLE
         Invoke-Locksmith2 -Mode 1
-        
+
         Runs audit and displays results in list format with fix scripts.
 
         .EXAMPLE
         Invoke-Locksmith2 -ExpandGroups
-        
+
         Runs audit and expands group issues into individual per-member issues.
 
         .LINK
@@ -173,7 +178,7 @@ function Invoke-Locksmith2 {
         Write-Host "  Computer : $($env:USERDOMAIN.ToUpper())\$($env:COMPUTERNAME.ToUpper())"
         Write-Host "  Method   : $($ctx.Method)"
         Write-Host ''
-        if ($Force -or (`[System.Environment]::UserInteractive`) ) {
+        if ($Force -or ([System.Environment]::UserInteractive) ) {
             $confirm = 'y'
         } else {
             $confirm = Read-Choice -Question 'Proceed with scan?' -Options @('y', 'n') -Default 'y'
@@ -194,12 +199,12 @@ function Invoke-Locksmith2 {
     }
 
     $initResult = Initialize-LS2Scan @initParams
-        
+
     if (-not $initResult) {
         Write-Error "Failed to initialize scan. Verify credentials and forest connectivity."
         return
     }
-        
+
     Write-Verbose "`nScan complete. Issue summary:"
     $techniques = @(
         'ESC1', 'ESC2', 'ESC3c1', 'ESC3c2', 'ESC4a', 'ESC4o',
@@ -214,14 +219,20 @@ function Invoke-Locksmith2 {
 
     # Get all flattened issues
     $allIssues = Get-FlattenedIssues
-        
+
     # Expand groups if requested
     if ($ExpandGroups) {
         Write-Verbose "Expanding group memberships into individual issues..."
         $allIssues = $allIssues | ForEach-Object { Expand-IssueByGroup $_ }
         Write-Verbose "Expansion complete. Total issues: $($allIssues.Count)"
     }
-        
+
+    # Compute risk ratings for all issues
+    if ($allIssues.Count -gt 0) {
+        Write-Verbose "Computing risk ratings for $($allIssues.Count) issue(s)..."
+        Set-LS2RiskRating -Issues $allIssues
+    }
+
     # Output based on whether Mode was specified
     if ($PSBoundParameters.ContainsKey('Mode')) {
         # Display issues in console using specified mode

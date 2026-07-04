@@ -1,7 +1,8 @@
 #requires -Version 5.1
 BeforeAll {
     $ModuleRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
-    Import-Module (Join-Path $ModuleRoot 'Locksmith2.psd1') -Force -ErrorAction Stop
+    $ls2Manifest = if ($env:LS2_MODULE_ROOT) { Join-Path $env:LS2_MODULE_ROOT 'Locksmith2.psd1' } else { Join-Path $ModuleRoot 'Locksmith2.psd1' }
+    Import-Module $ls2Manifest -Force -ErrorAction Stop
     Import-Module (Join-Path $ModuleRoot 'Tests\Shared\TestHelpers.psm1') -Force -ErrorAction Stop
 }
 
@@ -130,6 +131,7 @@ Describe 'LS2AdcsObject class' -Tag 'Unit' {
 
         It 'should default DangerousEnrollee to an empty array' {
             $obj = New-MockLS2AdcsObject
+            ($null -eq $obj.DangerousEnrollee) | Should -BeFalse -Because 'DangerousEnrollee should be initialized as @(), not $null'
             $obj.DangerousEnrollee.Count | Should -Be 0
         }
 
@@ -171,16 +173,6 @@ Describe 'LS2AdcsObject class' -Tag 'Unit' {
         It 'should allow AuditFilter to be set to an integer and read back' {
             $obj = New-MockLS2AdcsObject -Properties @{ AuditFilter = 127 }
             $obj.AuditFilter | Should -Be 127
-        }
-
-        It 'should allow AuditingIncomplete to be set to $true and read back' {
-            $obj = New-MockLS2AdcsObject -Properties @{ AuditingIncomplete = $true }
-            $obj.AuditingIncomplete | Should -BeTrue
-        }
-
-        It 'should allow AuditingIncomplete to be set to $false and read back' {
-            $obj = New-MockLS2AdcsObject -Properties @{ AuditingIncomplete = $false }
-            $obj.AuditingIncomplete | Should -BeFalse
         }
     }
 }

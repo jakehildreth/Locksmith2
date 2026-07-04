@@ -26,7 +26,7 @@ public class VTConsole {
 "@ -ErrorAction SilentlyContinue
         [VTConsole]::EnableVT()
     } catch {
-        # VT processing may already be enabled or not available
+        Write-Verbose 'VT processing may already be enabled or not available.'
     }
 }
 

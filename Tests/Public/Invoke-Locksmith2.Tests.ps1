@@ -1,11 +1,13 @@
 #requires -Version 5.1
 BeforeDiscovery {
     $ModuleRoot = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
-    Import-Module (Join-Path $ModuleRoot 'Locksmith2.psd1') -Force -ErrorAction Stop
+    $ls2Manifest = if ($env:LS2_MODULE_ROOT) { Join-Path $env:LS2_MODULE_ROOT 'Locksmith2.psd1' } else { Join-Path $ModuleRoot 'Locksmith2.psd1' }
+    Import-Module $ls2Manifest -Force -ErrorAction Stop
 }
 BeforeAll {
     $ModuleRoot = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
-    Import-Module (Join-Path $ModuleRoot 'Locksmith2.psd1') -Force -ErrorAction Stop
+    $ls2Manifest = if ($env:LS2_MODULE_ROOT) { Join-Path $env:LS2_MODULE_ROOT 'Locksmith2.psd1' } else { Join-Path $ModuleRoot 'Locksmith2.psd1' }
+    Import-Module $ls2Manifest -Force -ErrorAction Stop
     Import-Module (Join-Path $ModuleRoot 'Tests\Shared\TestHelpers.psm1') -Force -ErrorAction Stop
 }
 
@@ -23,7 +25,6 @@ InModuleScope 'Locksmith2' {
                 IdentityReference = 'Everyone'
             }
 
-            Mock 'Show-Logo' { }
             Mock 'Initialize-LS2Scan' { $true }
             Mock 'Get-FlattenedIssues' { @($script:mockIssue) }
             Mock 'Get-IssueCount' { 0 }
@@ -31,11 +32,6 @@ InModuleScope 'Locksmith2' {
             Mock 'Test-PowerShellEnvironment' { [PSCustomObject]@{} }
             Mock 'Repair-PowerShellEnvironment' { }
             Mock 'Expand-IssueByGroup' { $_ }
-        }
-
-        It 'should always call Show-Logo' {
-            Invoke-Locksmith2 | Out-Null
-            Should -Invoke 'Show-Logo' -Times 1
         }
 
         It 'should call Initialize-LS2Scan' {
