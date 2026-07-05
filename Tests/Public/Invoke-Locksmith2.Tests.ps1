@@ -152,5 +152,109 @@ InModuleScope 'Locksmith2' {
             Should -Invoke 'Initialize-LS2Scan' -Times 0
             Should -Invoke 'Show-PrivilegeContext' -Times 0
         }
+
+        Context 'When -Scans is specified' {
+            It 'should default -Scans to All and forward all techniques to Initialize-LS2Scan' {
+                Invoke-Locksmith2 | Out-Null
+                Should -Invoke 'Initialize-LS2Scan' -Times 1 -ParameterFilter {
+                    $Scans -contains 'ESC1' -and
+                    $Scans -contains 'ESC3c1' -and
+                    $Scans -contains 'ESC3c2' -and
+                    $Scans -contains 'ESC4a' -and
+                    $Scans -contains 'ESC4o' -and
+                    $Scans -contains 'ESC5a' -and
+                    $Scans -contains 'ESC5o' -and
+                    $Scans -contains 'ESC6' -and
+                    $Scans -contains 'ESC7a' -and
+                    $Scans -contains 'ESC7m' -and
+                    $Scans -contains 'ESC8' -and
+                    $Scans -contains 'ESC9' -and
+                    $Scans -contains 'ESC11' -and
+                    $Scans -contains 'ESC13' -and
+                    $Scans -contains 'ESC15' -and
+                    $Scans -contains 'ESC16' -and
+                    $Scans -contains 'Auditing' -and
+                    $Scans -contains 'SchemaV1'
+                }
+            }
+
+            It 'should forward only ESC1 to Initialize-LS2Scan when -Scans ESC1 is specified' {
+                Invoke-Locksmith2 -Scans 'ESC1' | Out-Null
+                Should -Invoke 'Initialize-LS2Scan' -Times 1 -ParameterFilter {
+                    $Scans.Count -eq 1 -and $Scans[0] -eq 'ESC1'
+                }
+            }
+
+            It 'should expand ESC3 to ESC3c1 and ESC3c2 when forwarded to Initialize-LS2Scan' {
+                Invoke-Locksmith2 -Scans 'ESC3' | Out-Null
+                Should -Invoke 'Initialize-LS2Scan' -Times 1 -ParameterFilter {
+                    $Scans.Count -eq 2 -and
+                    $Scans -contains 'ESC3c1' -and
+                    $Scans -contains 'ESC3c2'
+                }
+            }
+
+            It 'should expand ESC4 to ESC4a and ESC4o when forwarded to Initialize-LS2Scan' {
+                Invoke-Locksmith2 -Scans 'ESC4' | Out-Null
+                Should -Invoke 'Initialize-LS2Scan' -Times 1 -ParameterFilter {
+                    $Scans.Count -eq 2 -and
+                    $Scans -contains 'ESC4a' -and
+                    $Scans -contains 'ESC4o'
+                }
+            }
+
+            It 'should expand ESC5 to ESC5a and ESC5o when forwarded to Initialize-LS2Scan' {
+                Invoke-Locksmith2 -Scans 'ESC5' | Out-Null
+                Should -Invoke 'Initialize-LS2Scan' -Times 1 -ParameterFilter {
+                    $Scans.Count -eq 2 -and
+                    $Scans -contains 'ESC5a' -and
+                    $Scans -contains 'ESC5o'
+                }
+            }
+
+            It 'should expand ESC7 to ESC7a and ESC7m when forwarded to Initialize-LS2Scan' {
+                Invoke-Locksmith2 -Scans 'ESC7' | Out-Null
+                Should -Invoke 'Initialize-LS2Scan' -Times 1 -ParameterFilter {
+                    $Scans.Count -eq 2 -and
+                    $Scans -contains 'ESC7a' -and
+                    $Scans -contains 'ESC7m'
+                }
+            }
+
+            It 'should map EKUwu to ESC15 when forwarded to Initialize-LS2Scan' {
+                Invoke-Locksmith2 -Scans 'EKUwu' | Out-Null
+                Should -Invoke 'Initialize-LS2Scan' -Times 1 -ParameterFilter {
+                    $Scans.Count -eq 1 -and $Scans[0] -eq 'ESC15'
+                }
+            }
+
+            It 'should accept multiple -Scans values and resolve them' {
+                Invoke-Locksmith2 -Scans 'ESC1', 'ESC3' | Out-Null
+                Should -Invoke 'Initialize-LS2Scan' -Times 1 -ParameterFilter {
+                    $Scans.Count -eq 3 -and
+                    $Scans -contains 'ESC1' -and
+                    $Scans -contains 'ESC3c1' -and
+                    $Scans -contains 'ESC3c2'
+                }
+            }
+
+            It 'should call Get-IssueCount only for the requested techniques' {
+                Mock 'Get-IssueCount' { 0 }
+                Invoke-Locksmith2 -Scans 'ESC1' | Out-Null
+                Should -Invoke 'Get-IssueCount' -Times 1 -ParameterFilter { $Technique -eq 'ESC1' }
+            }
+
+            It 'should filter returned issues to the requested techniques' {
+                $script:mockIssue2 = [LS2Issue]@{
+                    Technique = 'ESC6'; Forest = 'contoso.com'; Name = 'TestCA'
+                    DistinguishedName = 'CN=TestCA,...'; ObjectClass = 'pKIEnrollmentService'
+                    IdentityReference = 'Everyone'
+                }
+                Mock 'Get-FlattenedIssues' { @($script:mockIssue, $script:mockIssue2) }
+                $result = @(Invoke-Locksmith2 -Scans 'ESC1')
+                $result.Count | Should -Be 1
+                $result[0].Technique | Should -Be 'ESC1'
+            }
+        }
     }
 }
