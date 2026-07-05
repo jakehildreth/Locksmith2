@@ -80,8 +80,13 @@ function Show-PrivilegeContext {
         Write-Verbose $transientMessage
     }
 
-    $isDA = Test-IsDA
-    $isEA = Test-IsEA
+    if ($RootDSE -and $Context.Credential) {
+        $isDA = Test-IsDA -Credential $Context.Credential -RootDSE $RootDSE
+        $isEA = Test-IsEA -Credential $Context.Credential -RootDSE $RootDSE
+    } else {
+        $isDA = Test-IsDA
+        $isEA = Test-IsEA
+    }
     $isLocalAdmin = Test-IsLocalAdmin -WarningAction SilentlyContinue
 
     $isBA = $false

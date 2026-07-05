@@ -1,10 +1,10 @@
 function Test-IsBA {
     <#
         .SYNOPSIS
-        Tests if a principal is a member of the BUILTIN\Administrators group.
+        Tests if the current user (or supplied credential user) is a member of the BUILTIN\Administrators group.
 
         .DESCRIPTION
-        Checks if the specified principal (or current user if not specified) is a member of
+        Checks if the current user, or the user specified by -Credential, is a member of
         the BUILTIN\Administrators group (S-1-5-32-544) by querying Active Directory and
         checking both direct and nested group membership using the tokenGroups attribute.
 
@@ -12,14 +12,14 @@ function Test-IsBA {
         exists on every domain controller and member computer. This function checks membership
         across all domains in the forest to support multi-domain environments.
 
+        When -Credential is supplied, the credential user is resolved to a SID and checked
+        against Active Directory. This supports non-domain joined machines where the current
+        process token does not reflect the credential user's privileges.
+
         The function performs efficient membership checks by:
         1. First checking direct membership in the Administrators group
         2. Then using the tokenGroups constructed attribute for nested membership detection
         3. Searching across all domains in the forest for comprehensive coverage
-
-        .PARAMETER IdentityReference
-        The IdentityReference (SID or NTAccount) to check for Administrators membership.
-        If not specified, checks the current user.
 
         .PARAMETER Credential
         PSCredential for authenticating to Active Directory. Optional; when omitted,
@@ -29,8 +29,7 @@ function Test-IsBA {
         A DirectoryEntry object for the RootDSE. Used to determine forest domains for LDAP queries.
 
         .INPUTS
-        System.Security.Principal.IdentityReference
-        You can pipe IdentityReference objects to this function.
+        None. This function does not accept pipeline input.
 
         .OUTPUTS
         System.Boolean
@@ -38,21 +37,15 @@ function Test-IsBA {
         Returns $false otherwise.
 
         .EXAMPLE
-        Test-IsBA -IdentityReference $sid -Credential $cred -RootDSE $rootDSE
-        Checks if the specified SID is a member of BUILTIN\Administrators in any domain.
+        Test-IsBA -Credential $cred -RootDSE $rootDSE
+        Checks if the credential user is a member of BUILTIN\Administrators.
 
         .EXAMPLE
-        $ace.IdentityReference | Test-IsBA -Credential $cred -RootDSE $rootDSE
-        Checks if an ACE identity is a member of BUILTIN\Administrators.
+        Test-IsBA -RootDSE $rootDSE
+        Checks if the current user is a member of BUILTIN\Administrators.
 
         .EXAMPLE
-        if (Test-IsBA -IdentityReference $userSid -Credential $cred -RootDSE $rootDSE) {
-            Write-Host "User has Administrator privileges"
-        }
-        Conditionally executes code based on Administrators group membership.
-
-        .EXAMPLE
-        Test-IsBA -IdentityReference $sid -Credential $cred -RootDSE $rootDSE -Verbose
+        Test-IsBA -Credential $cred -RootDSE $rootDSE -Verbose
         Checks membership with verbose output showing whether membership is direct or nested.
 
         .NOTES
@@ -75,10 +68,6 @@ function Test-IsBA {
     [CmdletBinding()]
     [OutputType([bool])]
     param (
-        [Parameter(ValueFromPipeline)]
-        [System.Security.Principal.IdentityReference]
-        $IdentityReference,
-
         [Parameter()]
         [System.Management.Automation.PSCredential]
         $Credential,
@@ -92,21 +81,22 @@ function Test-IsBA {
 
     process {
         try {
-            # If no identity specified, use current user
-            if (-not $IdentityReference) {
+            # Determine which identity to check.
+            if ($Credential) {
+                $ntAccount = New-Object System.Security.Principal.NTAccount($Credential.UserName)
+                $IdentityReference = $ntAccount | Convert-IdentityReferenceToSid
+                if (-not $IdentityReference) {
+                    Write-Warning "Could not resolve credential user to SID: $($Credential.UserName)"
+                    return $false
+                }
+                Write-Verbose "Checking credential user: $($Credential.UserName) ($($IdentityReference.Value))"
+            } else {
                 $identity = [System.Security.Principal.WindowsIdentity]::GetCurrent()
                 $IdentityReference = $identity.User
-                Write-Verbose "No identity specified, checking current user: $($IdentityReference.Value)"
+                Write-Verbose "No credential specified, checking current user: $($IdentityReference.Value)"
             }
 
-            # Convert to SID - Convert-IdentityReferenceToSid handles all the complexity
-            $sid = $IdentityReference | Convert-IdentityReferenceToSid
-            if (-not $sid) {
-                Write-Warning "Could not resolve identity to SID: $IdentityReference"
-                return $false
-            }
-
-            Write-Verbose "Checking if SID $($sid.Value) is member of domain Administrators groups"
+            Write-Verbose "Checking if SID $($IdentityReference.Value) is member of domain Administrators groups"
 
             # Extract server from RootDSE
             if ($RootDSE.Path -match 'LDAP://([^/]+)') {
@@ -174,7 +164,7 @@ function Test-IsBA {
                                 $memberSidBytes = $memberEntry.Properties['objectSid'][0]
                                 $memberSid = New-Object System.Security.Principal.SecurityIdentifier($memberSidBytes, 0)
 
-                                if ($memberSid.Value -eq $sid.Value) {
+                                if ($memberSid.Value -eq $IdentityReference.Value) {
                                     $isDirectMember = $true
                                     $memberEntry.Dispose()
                                     break
@@ -187,7 +177,7 @@ function Test-IsBA {
                         # Search for the user/group object by SID
                         $userSearcher = New-Object System.DirectoryServices.DirectorySearcher
                         $userSearcher.SearchRoot = $domainEntry
-                        $userSearcher.Filter = "(objectSid=$($sid.Value))"
+                        $userSearcher.Filter = "(objectSid=$($IdentityReference.Value))"
                         $userSearcher.PropertiesToLoad.AddRange(@('distinguishedName')) | Out-Null
                         $userSearcher.SearchScope = [System.DirectoryServices.SearchScope]::Subtree
 
@@ -205,9 +195,9 @@ function Test-IsBA {
 
                                     if ($tokenGroupSid.Value -eq $adminGroupSid.Value) {
                                         if ($isDirectMember) {
-                                            Write-Verbose "SID $($sid.Value) is a DIRECT member of Administrators in $domainDN"
+                                            Write-Verbose "SID $($IdentityReference.Value) is a DIRECT member of Administrators in $domainDN"
                                         } else {
-                                            Write-Verbose "SID $($sid.Value) is a NESTED member of Administrators in $domainDN"
+                                            Write-Verbose "SID $($IdentityReference.Value) is a NESTED member of Administrators in $domainDN"
                                         }
 
                                         # Cleanup
@@ -222,14 +212,14 @@ function Test-IsBA {
                                         return $true
                                     }
                                 }
-                                Write-Verbose "SID $($sid.Value) is NOT a member of Administrators in $domainDN"
+                                Write-Verbose "SID $($IdentityReference.Value) is NOT a member of Administrators in $domainDN"
                             } else {
-                                Write-Verbose "tokenGroups attribute is empty for SID $($sid.Value) in $domainDN"
+                                Write-Verbose "tokenGroups attribute is empty for SID $($IdentityReference.Value) in $domainDN"
                             }
 
                             $userEntry.Dispose()
                         } else {
-                            Write-Verbose "Could not find user object for SID $($sid.Value) in $domainDN"
+                            Write-Verbose "Could not find user object for SID $($IdentityReference.Value) in $domainDN"
                         }
 
                         $userSearcher.Dispose()
@@ -245,7 +235,7 @@ function Test-IsBA {
             $partitionsSearcher.Dispose()
             $partitionsEntry.Dispose()
 
-            Write-Verbose "SID $($sid.Value) is NOT a member of domain Administrators in any domain"
+            Write-Verbose "SID $($IdentityReference.Value) is NOT a member of domain Administrators in any domain"
             return $false
 
         } catch {
@@ -253,7 +243,7 @@ function Test-IsBA {
                 $_.Exception,
                 'AdministratorsCheckFailed',
                 [System.Management.Automation.ErrorCategory]::InvalidOperation,
-                $IdentityReference
+                $Credential
             )
             $PSCmdlet.WriteError($errorRecord)
             return $false
