@@ -11,7 +11,7 @@ BeforeAll {
 }
 
 InModuleScope 'Locksmith2' {
-    Describe 'Show-LS2ConnectionContext' -Tag 'Unit' {
+    Describe 'Show-ConnectionContext' -Tag 'Unit' {
         BeforeEach {
             Mock 'Write-Host' { }
             Mock 'Write-Verbose' { }
@@ -20,18 +20,18 @@ InModuleScope 'Locksmith2' {
 
         Context 'Parameter contract' {
             It 'should require -Context' {
-                $attr = (Get-Command 'Show-LS2ConnectionContext').Parameters['Context'].Attributes |
+                $attr = (Get-Command 'Show-ConnectionContext').Parameters['Context'].Attributes |
                     Where-Object { $_ -is [System.Management.Automation.ParameterAttribute] }
                 $attr.Mandatory | Should -Contain $true
             }
 
             It 'should type -Context as a hashtable' {
-                (Get-Command 'Show-LS2ConnectionContext').Parameters['Context'].ParameterType.FullName |
+                (Get-Command 'Show-ConnectionContext').Parameters['Context'].ParameterType.FullName |
                     Should -Be 'System.Collections.Hashtable'
             }
 
             It 'should accept -Force as a switch' {
-                (Get-Command 'Show-LS2ConnectionContext').Parameters['Force'].ParameterType.FullName |
+                (Get-Command 'Show-ConnectionContext').Parameters['Force'].ParameterType.FullName |
                     Should -Be 'System.Management.Automation.SwitchParameter'
             }
         }
@@ -39,14 +39,14 @@ InModuleScope 'Locksmith2' {
         Context 'When displaying the connection context' {
             It 'should print the forest' {
                 $ctx = @{ Forest = 'contoso.com'; Credential = $null; Method = 'DomainUser' }
-                Show-LS2ConnectionContext -Context $ctx -Force
+                Show-ConnectionContext -Context $ctx -Force
                 Should -Invoke 'Write-Host' -ParameterFilter { $Object -eq '  Forest   : contoso.com' }
             }
 
             It 'should print the user when no credential is supplied' {
                 Mock 'Test-IsInteractiveSession' { $true }
                 $ctx = @{ Forest = 'contoso.com'; Credential = $null; Method = 'DomainUser' }
-                Show-LS2ConnectionContext -Context $ctx -Force
+                Show-ConnectionContext -Context $ctx -Force
                 Should -Invoke 'Write-Host' -ParameterFilter { $Object -like '*User     :*' }
             }
 
@@ -54,19 +54,19 @@ InModuleScope 'Locksmith2' {
                 $cred = [System.Management.Automation.PSCredential]::new(
                     'CONTOSO\admin', (ConvertTo-SecureString 'x' -AsPlainText -Force))
                 $ctx = @{ Forest = 'contoso.com'; Credential = $cred; Method = 'ExplicitCredential' }
-                Show-LS2ConnectionContext -Context $ctx -Force
+                Show-ConnectionContext -Context $ctx -Force
                 Should -Invoke 'Write-Host' -ParameterFilter { $Object -like '*CONTOSO\admin*' }
             }
 
             It 'should print the computer' {
                 $ctx = @{ Forest = 'contoso.com'; Credential = $null; Method = 'DomainUser' }
-                Show-LS2ConnectionContext -Context $ctx -Force
+                Show-ConnectionContext -Context $ctx -Force
                 Should -Invoke 'Write-Host' -ParameterFilter { $Object -like '*Computer :*' }
             }
 
             It 'should print the method' {
                 $ctx = @{ Forest = 'contoso.com'; Credential = $null; Method = 'DomainUser' }
-                Show-LS2ConnectionContext -Context $ctx -Force
+                Show-ConnectionContext -Context $ctx -Force
                 Should -Invoke 'Write-Host' -ParameterFilter { $Object -eq '  Method   : DomainUser' }
             }
         }
@@ -75,21 +75,21 @@ InModuleScope 'Locksmith2' {
             It 'should prompt when -Force is not specified' {
                 Mock 'Test-IsInteractiveSession' { $true }
                 $ctx = @{ Forest = 'contoso.com'; Credential = $null; Method = 'DomainUser' }
-                Show-LS2ConnectionContext -Context $ctx
+                Show-ConnectionContext -Context $ctx
                 Should -Invoke 'Read-Choice' -Times 1
             }
 
             It 'should not prompt when -Force is specified' {
                 Mock 'Test-IsInteractiveSession' { $true }
                 $ctx = @{ Forest = 'contoso.com'; Credential = $null; Method = 'DomainUser' }
-                Show-LS2ConnectionContext -Context $ctx -Force
+                Show-ConnectionContext -Context $ctx -Force
                 Should -Invoke 'Read-Choice' -Times 0
             }
 
             It 'should not prompt when not interactive' {
                 Mock 'Test-IsInteractiveSession' { $false }
                 $ctx = @{ Forest = 'contoso.com'; Credential = $null; Method = 'DomainUser' }
-                Show-LS2ConnectionContext -Context $ctx
+                Show-ConnectionContext -Context $ctx
                 Should -Invoke 'Read-Choice' -Times 0
             }
 
@@ -97,7 +97,7 @@ InModuleScope 'Locksmith2' {
                 Mock 'Test-IsInteractiveSession' { $true }
                 Mock 'Read-Choice' { 'n' }
                 $ctx = @{ Forest = 'contoso.com'; Credential = $null; Method = 'DomainUser' }
-                $result = Show-LS2ConnectionContext -Context $ctx
+                $result = Show-ConnectionContext -Context $ctx
                 $result | Should -BeFalse
             }
 
@@ -105,13 +105,13 @@ InModuleScope 'Locksmith2' {
                 Mock 'Test-IsInteractiveSession' { $true }
                 Mock 'Read-Choice' { 'y' }
                 $ctx = @{ Forest = 'contoso.com'; Credential = $null; Method = 'DomainUser' }
-                $result = Show-LS2ConnectionContext -Context $ctx
+                $result = Show-ConnectionContext -Context $ctx
                 $result | Should -BeTrue
             }
 
             It 'should return $true when -Force is specified' {
                 $ctx = @{ Forest = 'contoso.com'; Credential = $null; Method = 'DomainUser' }
-                $result = Show-LS2ConnectionContext -Context $ctx -Force
+                $result = Show-ConnectionContext -Context $ctx -Force
                 $result | Should -BeTrue
             }
         }

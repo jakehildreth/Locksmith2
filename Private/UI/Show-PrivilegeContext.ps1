@@ -1,4 +1,4 @@
-function Show-LS2PrivilegeContext {
+function Show-PrivilegeContext {
     <#
         .SYNOPSIS
         Displays the current principal's privileges in the target forest.
@@ -24,7 +24,7 @@ function Show-LS2PrivilegeContext {
 
         .EXAMPLE
         $ctx = @{ Forest = 'contoso.com'; Credential = $null; Method = 'DomainUser' }
-        Show-LS2PrivilegeContext -Context $ctx
+        Show-PrivilegeContext -Context $ctx
 
         Displays the current principal's privilege status. Builtin Administrator
         status is shown as Unknown because no credential was supplied.
@@ -33,7 +33,7 @@ function Show-LS2PrivilegeContext {
         $cred = Get-Credential -Message 'Domain admin credential'
         $rootDSE = Get-RootDSE -Forest 'contoso.com' -Credential $cred
         $ctx = @{ Forest = 'contoso.com'; Credential = $cred; Method = 'ExplicitCredential' }
-        Show-LS2PrivilegeContext -Context $ctx -RootDSE $rootDSE
+        Show-PrivilegeContext -Context $ctx -RootDSE $rootDSE
 
         Displays the current principal's privilege status, including Builtin
         Administrator membership in the target forest.

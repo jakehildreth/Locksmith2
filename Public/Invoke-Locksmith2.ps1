@@ -60,6 +60,9 @@ function Invoke-Locksmith2 {
         Use in non-interactive or automated contexts where [System.Environment]::UserInteractive
         would otherwise trigger a prompt.
 
+        .ALIAS
+        Invoke-LS2, Locksmith2, Start-Locksmith2, Start-LS2
+
         .INPUTS
         None. This function does not accept pipeline input.
 
@@ -131,6 +134,7 @@ function Invoke-Locksmith2 {
           complete audit filter data and for automatic execution of fix/revert scripts.
     #>
     [CmdletBinding()]
+    [Alias('Invoke-LS2', 'Locksmith2', 'Start-Locksmith2', 'Start-LS2')]
     param (
         [string]$Forest,
         [System.Management.Automation.PSCredential]$Credential,
@@ -176,7 +180,7 @@ function Invoke-Locksmith2 {
 
     Write-Verbose "Connection context resolved: Forest=$($ctx.Forest), Method=$($ctx.Method)"
 
-    $shouldProceed = Show-LS2ConnectionContext -Context $ctx -Force:$Force
+    $shouldProceed = Show-ConnectionContext -Context $ctx -Force:$Force
     if (-not $shouldProceed) {
         return
     }
@@ -196,7 +200,7 @@ function Invoke-Locksmith2 {
         return
     }
 
-    $shouldProceed = Show-LS2PrivilegeContext -Context $ctx -RootDSE $script:RootDSE -Force:$Force
+    $shouldProceed = Show-PrivilegeContext -Context $ctx -RootDSE $script:RootDSE -Force:$Force
     if (-not $shouldProceed) {
         return
     }

@@ -11,7 +11,7 @@ BeforeAll {
 }
 
 InModuleScope 'Locksmith2' {
-    Describe 'Show-LS2PrivilegeContext' -Tag 'Unit' {
+    Describe 'Show-PrivilegeContext' -Tag 'Unit' {
         BeforeEach {
             Mock 'Write-Host' { }
             Mock 'Write-Verbose' { }
@@ -26,48 +26,48 @@ InModuleScope 'Locksmith2' {
 
         Context 'Parameter contract' {
             It 'should require -Context' {
-                $attr = (Get-Command 'Show-LS2PrivilegeContext').Parameters['Context'].Attributes |
+                $attr = (Get-Command 'Show-PrivilegeContext').Parameters['Context'].Attributes |
                     Where-Object { $_ -is [System.Management.Automation.ParameterAttribute] }
                 $attr.Mandatory | Should -Contain $true
             }
 
             It 'should type -Context as a hashtable' {
-                (Get-Command 'Show-LS2PrivilegeContext').Parameters['Context'].ParameterType.FullName |
+                (Get-Command 'Show-PrivilegeContext').Parameters['Context'].ParameterType.FullName |
                     Should -Be 'System.Collections.Hashtable'
             }
 
             It 'should accept -Force as a switch' {
-                (Get-Command 'Show-LS2PrivilegeContext').Parameters['Force'].ParameterType.FullName |
+                (Get-Command 'Show-PrivilegeContext').Parameters['Force'].ParameterType.FullName |
                     Should -Be 'System.Management.Automation.SwitchParameter'
             }
 
             It 'should declare a [bool] output type' {
-                (Get-Command 'Show-LS2PrivilegeContext').OutputType.Name | Should -Match 'Boolean'
+                (Get-Command 'Show-PrivilegeContext').OutputType.Name | Should -Match 'Boolean'
             }
         }
 
         Context 'When displaying privilege status' {
             It 'should print DA status' {
                 $ctx = @{ Forest = 'contoso.com'; Credential = $null; Method = 'DomainUser' }
-                Show-LS2PrivilegeContext -Context $ctx
+                Show-PrivilegeContext -Context $ctx
                 Should -Invoke 'Write-Host' -ParameterFilter { $Object -like '*Domain Admin*' }
             }
 
             It 'should print EA status' {
                 $ctx = @{ Forest = 'contoso.com'; Credential = $null; Method = 'DomainUser' }
-                Show-LS2PrivilegeContext -Context $ctx
+                Show-PrivilegeContext -Context $ctx
                 Should -Invoke 'Write-Host' -ParameterFilter { $Object -like '*Enterprise Admin*' }
             }
 
             It 'should print BA status' {
                 $ctx = @{ Forest = 'contoso.com'; Credential = $null; Method = 'DomainUser' }
-                Show-LS2PrivilegeContext -Context $ctx
+                Show-PrivilegeContext -Context $ctx
                 Should -Invoke 'Write-Host' -ParameterFilter { $Object -like '*Builtin Admin*' }
             }
 
             It 'should print local admin status' {
                 $ctx = @{ Forest = 'contoso.com'; Credential = $null; Method = 'DomainUser' }
-                Show-LS2PrivilegeContext -Context $ctx
+                Show-PrivilegeContext -Context $ctx
                 Should -Invoke 'Write-Host' -ParameterFilter { $Object -like '*Local Admin*' }
             }
 
@@ -76,21 +76,21 @@ InModuleScope 'Locksmith2' {
                     'CONTOSO\admin', (ConvertTo-SecureString 'x' -AsPlainText -Force))
                 $ctx = @{ Forest = 'contoso.com'; Credential = $cred; Method = 'ExplicitCredential' }
                 $rootDSE = [System.DirectoryServices.DirectoryEntry]::new()
-                Show-LS2PrivilegeContext -Context $ctx -RootDSE $rootDSE
+                Show-PrivilegeContext -Context $ctx -RootDSE $rootDSE
                 Should -Invoke 'Test-IsBA' -ParameterFilter { $Credential -eq $cred -and $RootDSE -eq $rootDSE }
             }
 
             It 'should call Test-IsBA with a null credential when none is supplied' {
                 $ctx = @{ Forest = 'contoso.com'; Credential = $null; Method = 'DomainUser' }
                 $rootDSE = [System.DirectoryServices.DirectoryEntry]::new()
-                Show-LS2PrivilegeContext -Context $ctx -RootDSE $rootDSE
+                Show-PrivilegeContext -Context $ctx -RootDSE $rootDSE
                 Should -Invoke 'Test-IsBA' -ParameterFilter { $Credential -eq $null -and $RootDSE -eq $rootDSE }
             }
 
             It 'should print a transient checking message' {
                 Mock 'Test-IsInteractiveSession' { $true }
                 $ctx = @{ Forest = 'contoso.com'; Credential = $null; Method = 'DomainUser' }
-                Show-LS2PrivilegeContext -Context $ctx
+                Show-PrivilegeContext -Context $ctx
                 Should -Invoke 'Write-Host' -ParameterFilter { $Object -like '*Checking*privileges*contoso.com*' }
             }
         }
@@ -99,21 +99,21 @@ InModuleScope 'Locksmith2' {
             It 'should prompt when interactive and -Force is not specified' {
                 Mock 'Test-IsInteractiveSession' { $true }
                 $ctx = @{ Forest = 'contoso.com'; Credential = $null; Method = 'DomainUser' }
-                Show-LS2PrivilegeContext -Context $ctx
+                Show-PrivilegeContext -Context $ctx
                 Should -Invoke 'Read-Choice' -Times 1
             }
 
             It 'should not prompt when -Force is specified' {
                 Mock 'Test-IsInteractiveSession' { $true }
                 $ctx = @{ Forest = 'contoso.com'; Credential = $null; Method = 'DomainUser' }
-                Show-LS2PrivilegeContext -Context $ctx -Force
+                Show-PrivilegeContext -Context $ctx -Force
                 Should -Invoke 'Read-Choice' -Times 0
             }
 
             It 'should not prompt when not interactive' {
                 Mock 'Test-IsInteractiveSession' { $false }
                 $ctx = @{ Forest = 'contoso.com'; Credential = $null; Method = 'DomainUser' }
-                Show-LS2PrivilegeContext -Context $ctx
+                Show-PrivilegeContext -Context $ctx
                 Should -Invoke 'Read-Choice' -Times 0
             }
 
@@ -121,7 +121,7 @@ InModuleScope 'Locksmith2' {
                 Mock 'Test-IsInteractiveSession' { $true }
                 Mock 'Read-Choice' { 'n' }
                 $ctx = @{ Forest = 'contoso.com'; Credential = $null; Method = 'DomainUser' }
-                $result = Show-LS2PrivilegeContext -Context $ctx
+                $result = Show-PrivilegeContext -Context $ctx
                 $result | Should -BeFalse
             }
 
@@ -129,14 +129,14 @@ InModuleScope 'Locksmith2' {
                 Mock 'Test-IsInteractiveSession' { $true }
                 Mock 'Read-Choice' { 'y' }
                 $ctx = @{ Forest = 'contoso.com'; Credential = $null; Method = 'DomainUser' }
-                $result = Show-LS2PrivilegeContext -Context $ctx
+                $result = Show-PrivilegeContext -Context $ctx
                 $result | Should -BeTrue
             }
 
             It 'should return $true when -Force is specified' {
                 Mock 'Test-IsInteractiveSession' { $true }
                 $ctx = @{ Forest = 'contoso.com'; Credential = $null; Method = 'DomainUser' }
-                $result = Show-LS2PrivilegeContext -Context $ctx -Force
+                $result = Show-PrivilegeContext -Context $ctx -Force
                 $result | Should -BeTrue
             }
         }
@@ -145,14 +145,14 @@ InModuleScope 'Locksmith2' {
             It 'should indicate DA privileges' {
                 Mock 'Test-IsDA' { $true }
                 $ctx = @{ Forest = 'contoso.com'; Credential = $null; Method = 'DomainUser' }
-                Show-LS2PrivilegeContext -Context $ctx
+                Show-PrivilegeContext -Context $ctx
                 Should -Invoke 'Write-Host' -ParameterFilter { $Object -like '*Yes*' -and $Object -like '*Domain Admin*' }
             }
 
             It 'should indicate EA privileges' {
                 Mock 'Test-IsEA' { $true }
                 $ctx = @{ Forest = 'contoso.com'; Credential = $null; Method = 'DomainUser' }
-                Show-LS2PrivilegeContext -Context $ctx
+                Show-PrivilegeContext -Context $ctx
                 Should -Invoke 'Write-Host' -ParameterFilter { $Object -like '*Yes*' -and $Object -like '*Enterprise Admin*' }
             }
 
@@ -162,7 +162,7 @@ InModuleScope 'Locksmith2' {
                 Mock 'Test-IsBA' { $true }
                 $rootDSE = [System.DirectoryServices.DirectoryEntry]::new()
                 $ctx = @{ Forest = 'contoso.com'; Credential = $cred; Method = 'ExplicitCredential' }
-                Show-LS2PrivilegeContext -Context $ctx -RootDSE $rootDSE
+                Show-PrivilegeContext -Context $ctx -RootDSE $rootDSE
                 Should -Invoke 'Write-Host' -ParameterFilter { $Object -like '*Builtin Admin*' }
                 Should -Invoke 'Write-Host' -ParameterFilter { $Object -like '*Yes*' }
             }
@@ -170,7 +170,7 @@ InModuleScope 'Locksmith2' {
             It 'should indicate local admin privileges' {
                 Mock 'Test-IsLocalAdmin' { $true }
                 $ctx = @{ Forest = 'contoso.com'; Credential = $null; Method = 'DomainUser' }
-                Show-LS2PrivilegeContext -Context $ctx
+                Show-PrivilegeContext -Context $ctx
                 Should -Invoke 'Write-Host' -ParameterFilter { $Object -like '*Yes*' -and $Object -like '*Local Admin*' }
             }
         }
@@ -189,7 +189,7 @@ InModuleScope 'Locksmith2' {
                 ); $false }
                 $ctx = @{ Forest = 'contoso.com'; Credential = $cred; Method = 'ExplicitCredential' }
                 $rootDSE = [System.DirectoryServices.DirectoryEntry]::new()
-                Show-LS2PrivilegeContext -Context $ctx -RootDSE $rootDSE -ErrorAction SilentlyContinue
+                Show-PrivilegeContext -Context $ctx -RootDSE $rootDSE -ErrorAction SilentlyContinue
                 Should -Invoke 'Write-Host' -ParameterFilter { $Object -like '*Builtin Admin*' -and $Object -like '*Unknown*' }
                 Should -Invoke 'Write-Warning' -Times 1
             }
@@ -205,7 +205,7 @@ InModuleScope 'Locksmith2' {
                 ); $false }
                 $ctx = @{ Forest = 'contoso.com'; Credential = $null; Method = 'DomainUser' }
                 $rootDSE = [System.DirectoryServices.DirectoryEntry]::new()
-                Show-LS2PrivilegeContext -Context $ctx -RootDSE $rootDSE -ErrorAction SilentlyContinue
+                Show-PrivilegeContext -Context $ctx -RootDSE $rootDSE -ErrorAction SilentlyContinue
                 Should -Invoke 'Write-Host' -ParameterFilter { $Object -like '*Builtin Admin*' -and $Object -like '*Unknown*' }
                 Should -Invoke 'Write-Warning' -Times 1
             }
@@ -215,21 +215,21 @@ InModuleScope 'Locksmith2' {
             It 'should not print the privilege context block' {
                 Mock 'Test-IsInteractiveSession' { $false }
                 $ctx = @{ Forest = 'contoso.com'; Credential = $null; Method = 'DomainUser' }
-                Show-LS2PrivilegeContext -Context $ctx
+                Show-PrivilegeContext -Context $ctx
                 Should -Invoke 'Write-Host' -Times 0
             }
 
             It 'should still write verbose privilege lines' {
                 Mock 'Test-IsInteractiveSession' { $false }
                 $ctx = @{ Forest = 'contoso.com'; Credential = $null; Method = 'DomainUser' }
-                Show-LS2PrivilegeContext -Context $ctx
+                Show-PrivilegeContext -Context $ctx
                 Should -Invoke 'Write-Verbose' -Times 1 -Exactly:$false
             }
 
             It 'should return $true without prompting' {
                 Mock 'Test-IsInteractiveSession' { $false }
                 $ctx = @{ Forest = 'contoso.com'; Credential = $null; Method = 'DomainUser' }
-                $result = Show-LS2PrivilegeContext -Context $ctx
+                $result = Show-PrivilegeContext -Context $ctx
                 $result | Should -BeTrue
             }
         }
