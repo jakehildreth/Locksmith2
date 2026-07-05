@@ -32,6 +32,11 @@
         Forces a fresh vulnerability scan even if IssueStore is already populated.
         Clears the IssueStore and rescans all AD CS configurations.
 
+        .PARAMETER Scans
+        Array of granular technique names to run. If not specified, all supported
+        techniques are scanned. This parameter is typically supplied by Invoke-Locksmith2
+        after resolving coarse names like 'ESC3' to 'ESC3c1', 'ESC3c2'.
+
         .OUTPUTS
         System.Boolean
         Returns $true if initialization succeeded, $false if it failed.
@@ -58,7 +63,10 @@
         [PSCredential]$Credential,
 
         [Parameter()]
-        [switch]$Rescan
+        [switch]$Rescan,
+
+        [Parameter()]
+        [string[]]$Scans
     )
 
     #requires -Version 5.1
@@ -105,6 +113,44 @@
         Write-Verbose "Rescan specified. Clearing AdcsObjectStore and IssueStore..."
         $script:AdcsObjectStore = @{}
         $script:IssueStore = @{}
+    }
+
+    # Resolve coarse LS1-style names and aliases to granular LS2 technique names
+    $scanMap = @{
+        'ESC3'  = @('ESC3c1', 'ESC3c2')
+        'ESC4'  = @('ESC4a', 'ESC4o')
+        'ESC5'  = @('ESC5a', 'ESC5o')
+        'ESC7'  = @('ESC7a', 'ESC7m')
+        'EKUwu' = @('ESC15')
+    }
+
+    if ($Scans) {
+        $resolvedScans = @(
+            foreach ($scan in $Scans) {
+                if ($scanMap.ContainsKey($scan)) {
+                    $scanMap[$scan]
+                } else {
+                    $scan
+                }
+            }
+        ) | Select-Object -Unique
+    } else {
+        $resolvedScans = $Scans
+    }
+
+    # Determine which techniques to scan; default to the full supported set
+    $allTemplateTechniques = @('ESC1', 'ESC2', 'ESC3c1', 'ESC3c2', 'ESC9', 'ESC4a', 'ESC4o', 'ESC13', 'ESC15', 'SchemaV1')
+    $allCATechniques       = @('ESC6', 'ESC7a', 'ESC7m', 'ESC8', 'ESC11', 'ESC16', 'Auditing')
+    $allObjectTechniques   = @('ESC5a', 'ESC5o')
+
+    if ($resolvedScans) {
+        $templateTechniques = @($allTemplateTechniques | Where-Object { $_ -in $resolvedScans })
+        $caTechniques       = @($allCATechniques | Where-Object { $_ -in $resolvedScans })
+        $objectTechniques   = @($allObjectTechniques | Where-Object { $_ -in $resolvedScans })
+    } else {
+        $templateTechniques = $allTemplateTechniques
+        $caTechniques       = $allCATechniques
+        $objectTechniques   = $allObjectTechniques
     }
 
     $progressActivity = 'Locksmith2 AD CS Scan'
@@ -160,28 +206,31 @@
             $script:InitializingStores = $true
 
             try {
-                # Scan all template techniques
-                Write-Progress -Activity $progressActivity -Status 'Scanning certificate templates...' -PercentComplete 55
-                Write-Verbose "Scanning certificate templates..."
-                $templateTechniques = @('ESC1', 'ESC2', 'ESC3c1', 'ESC3c2', 'ESC9', 'ESC4a', 'ESC4o', 'ESC13', 'ESC15', 'SchemaV1')
-                foreach ($tech in $templateTechniques) {
-                    Find-LS2VulnerableTemplate -Technique $tech | Out-Null
+                # Scan requested template techniques
+                if ($templateTechniques.Count -gt 0) {
+                    Write-Progress -Activity $progressActivity -Status 'Scanning certificate templates...' -PercentComplete 55
+                    Write-Verbose "Scanning certificate templates: $($templateTechniques -join ', ')"
+                    foreach ($tech in $templateTechniques) {
+                        Find-LS2VulnerableTemplate -Technique $tech | Out-Null
+                    }
                 }
 
-                # Scan all CA techniques
-                Write-Progress -Activity $progressActivity -Status 'Scanning certification authorities...' -PercentComplete 75
-                Write-Verbose "Scanning certification authorities..."
-                $caTechniques = @('ESC6', 'ESC7a', 'ESC7m', 'ESC8', 'ESC11', 'ESC16', 'Auditing')
-                foreach ($tech in $caTechniques) {
-                    Find-LS2VulnerableCA -Technique $tech | Out-Null
+                # Scan requested CA techniques
+                if ($caTechniques.Count -gt 0) {
+                    Write-Progress -Activity $progressActivity -Status 'Scanning certification authorities...' -PercentComplete 75
+                    Write-Verbose "Scanning certification authorities: $($caTechniques -join ', ')"
+                    foreach ($tech in $caTechniques) {
+                        Find-LS2VulnerableCA -Technique $tech | Out-Null
+                    }
                 }
 
-                # Scan all object techniques
-                Write-Progress -Activity $progressActivity -Status 'Scanning infrastructure objects...' -PercentComplete 90
-                Write-Verbose "Scanning infrastructure objects..."
-                $objectTechniques = @('ESC5a', 'ESC5o')
-                foreach ($tech in $objectTechniques) {
-                    Find-LS2VulnerableObject -Technique $tech | Out-Null
+                # Scan requested object techniques
+                if ($objectTechniques.Count -gt 0) {
+                    Write-Progress -Activity $progressActivity -Status 'Scanning infrastructure objects...' -PercentComplete 90
+                    Write-Verbose "Scanning infrastructure objects: $($objectTechniques -join ', ')"
+                    foreach ($tech in $objectTechniques) {
+                        Find-LS2VulnerableObject -Technique $tech | Out-Null
+                    }
                 }
 
                 Write-Progress -Activity $progressActivity -Status 'Scan complete.' -PercentComplete 100

@@ -60,8 +60,11 @@
         Use in non-interactive or automated contexts where [System.Environment]::UserInteractive
         would otherwise trigger a prompt.
 
-        .ALIAS
-        Invoke-LS2, Locksmith2, Start-Locksmith2, Start-LS2
+        .PARAMETER Scans
+        Specifies which ESC techniques to scan for. Defaults to 'All'.
+        Accepts coarse LS1-style names (ESC3, ESC4, ESC5, ESC7) which expand to the
+        corresponding LS2 sub-techniques, as well as granular LS2 names (ESC3c1, ESC4a, etc.).
+        'EKUwu' is accepted as an alias for 'ESC15'.
 
         .INPUTS
         None. This function does not accept pipeline input.
@@ -105,6 +108,21 @@
 
         Runs audit and expands group issues into individual per-member issues.
 
+        .EXAMPLE
+        Invoke-Locksmith2 -Scans 'ESC1', 'ESC2'
+
+        Runs only the ESC1 and ESC2 template scans.
+
+        .EXAMPLE
+        Invoke-Locksmith2 -Scans 'ESC3'
+
+        Runs both ESC3 Condition 1 and Condition 2 scans.
+
+        .EXAMPLE
+        Invoke-Locksmith2 -Scans 'EKUwu'
+
+        Runs the ESC15/EKUwu scan.
+
         .LINK
         https://github.com/jakehildreth/Locksmith2
 
@@ -145,7 +163,10 @@
         [switch]$SkipForestCheck,
         [switch]$ExpandGroups,
         [switch]$Rescan,
-        [switch]$Force
+        [switch]$Force,
+        [Parameter()]
+        [ValidateSet('All', 'Auditing', 'ESC1', 'ESC2', 'ESC3', 'ESC3c1', 'ESC3c2', 'ESC4', 'ESC4a', 'ESC4o', 'ESC5', 'ESC5a', 'ESC5o', 'ESC6', 'ESC7', 'ESC7a', 'ESC7m', 'ESC8', 'ESC9', 'ESC11', 'ESC13', 'ESC15', 'EKUwu', 'ESC16', 'SchemaV1')]
+        [string[]]$Scans = 'All'
     )
 
     #requires -Version 5.1
@@ -185,9 +206,39 @@
         return
     }
 
+    # Resolve requested scan names to granular LS2 technique names
+    $scanMap = @{
+        'ESC3'  = @('ESC3c1', 'ESC3c2')
+        'ESC4'  = @('ESC4a', 'ESC4o')
+        'ESC5'  = @('ESC5a', 'ESC5o')
+        'ESC7'  = @('ESC7a', 'ESC7m')
+        'EKUwu' = @('ESC15')
+    }
+
+    $techniques = @(
+        'ESC1', 'ESC2', 'ESC3c1', 'ESC3c2', 'ESC4a', 'ESC4o',
+        'ESC5a', 'ESC5o', 'ESC6', 'ESC7a', 'ESC7m', 'ESC8', 'ESC9', 'ESC11', 'ESC13', 'ESC15', 'ESC16',
+        'Auditing', 'SchemaV1'
+    )
+
+    if ($Scans -contains 'All') {
+        $resolvedScans = $techniques
+    } else {
+        $resolvedScans = @(
+            foreach ($scan in $Scans) {
+                if ($scanMap.ContainsKey($scan)) {
+                    $scanMap[$scan]
+                } else {
+                    $scan
+                }
+            }
+        ) | Select-Object -Unique
+    }
+
     $initParams = @{
         Forest     = $ctx.Forest
         Credential = $ctx.Credential
+        Scans      = $resolvedScans
     }
     if ($Rescan) {
         $initParams['Rescan'] = $true
@@ -206,19 +257,14 @@
     }
 
     Write-Verbose "`nScan complete. Issue summary:"
-    $techniques = @(
-        'ESC1', 'ESC2', 'ESC3c1', 'ESC3c2', 'ESC4a', 'ESC4o',
-        'ESC5a', 'ESC5o', 'ESC6', 'ESC7a', 'ESC7m', 'ESC8', 'ESC9', 'ESC11', 'ESC13', 'ESC15', 'ESC16',
-        'Auditing', 'SchemaV1'
-    )
 
-    foreach ($technique in $techniques) {
+    foreach ($technique in $resolvedScans) {
         $issueCount = Get-IssueCount -Technique $technique
         Write-Verbose "  $($technique): $issueCount issue(s)"
     }
 
-    # Get all flattened issues
-    $allIssues = Get-FlattenedIssues
+    # Get flattened issues, limited to the requested scans
+    $allIssues = @(Get-FlattenedIssues | Where-Object { $_.Technique -in $resolvedScans })
 
     # Expand groups if requested
     if ($ExpandGroups) {

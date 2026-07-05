@@ -99,5 +99,64 @@ Describe 'Initialize-LS2Scan' -Tag 'Unit' {
                 $result | Should -BeOfType [bool]
             }
         }
+
+        Context 'When -Scans is specified' {
+            BeforeEach {
+                $script:AdcsObjectStore['CN=Fake,DC=contoso,DC=com'] = New-MockLS2AdcsObject
+                Mock 'Set-LS2Forest' { }
+                Mock 'Set-LS2Credential' { }
+                Mock 'Get-RootDSE' { $null }
+                Mock 'Initialize-DomainStore' { }
+                Mock 'Initialize-PrincipalDefinitions' { }
+                Mock 'Initialize-AdcsObjectStore' { }
+                Mock 'Find-LS2VulnerableTemplate' { }
+                Mock 'Find-LS2VulnerableCA' { }
+                Mock 'Find-LS2VulnerableObject' { }
+            }
+
+            It 'should call Find-LS2VulnerableTemplate for ESC1 when -Scans ESC1 is specified' {
+                Initialize-LS2Scan -Scans 'ESC1' | Out-Null
+                Should -Invoke 'Find-LS2VulnerableTemplate' -Times 1 -ParameterFilter { $Technique -eq 'ESC1' }
+                Should -Invoke 'Find-LS2VulnerableCA' -Times 0
+                Should -Invoke 'Find-LS2VulnerableObject' -Times 0
+            }
+
+            It 'should expand ESC3 to ESC3c1 and ESC3c2' {
+                Initialize-LS2Scan -Scans 'ESC3' | Out-Null
+                Should -Invoke 'Find-LS2VulnerableTemplate' -Times 1 -ParameterFilter { $Technique -eq 'ESC3c1' }
+                Should -Invoke 'Find-LS2VulnerableTemplate' -Times 1 -ParameterFilter { $Technique -eq 'ESC3c2' }
+            }
+
+            It 'should expand ESC4 to ESC4a and ESC4o' {
+                Initialize-LS2Scan -Scans 'ESC4' | Out-Null
+                Should -Invoke 'Find-LS2VulnerableTemplate' -Times 1 -ParameterFilter { $Technique -eq 'ESC4a' }
+                Should -Invoke 'Find-LS2VulnerableTemplate' -Times 1 -ParameterFilter { $Technique -eq 'ESC4o' }
+            }
+
+            It 'should expand ESC5 to ESC5a and ESC5o' {
+                Initialize-LS2Scan -Scans 'ESC5' | Out-Null
+                Should -Invoke 'Find-LS2VulnerableObject' -Times 1 -ParameterFilter { $Technique -eq 'ESC5a' }
+                Should -Invoke 'Find-LS2VulnerableObject' -Times 1 -ParameterFilter { $Technique -eq 'ESC5o' }
+            }
+
+            It 'should expand ESC7 to ESC7a and ESC7m' {
+                Initialize-LS2Scan -Scans 'ESC7' | Out-Null
+                Should -Invoke 'Find-LS2VulnerableCA' -Times 1 -ParameterFilter { $Technique -eq 'ESC7a' }
+                Should -Invoke 'Find-LS2VulnerableCA' -Times 1 -ParameterFilter { $Technique -eq 'ESC7m' }
+            }
+
+            It 'should run the full technique list when -Scans is omitted' {
+                Initialize-LS2Scan | Out-Null
+                Should -Invoke 'Find-LS2VulnerableTemplate' -Times -1
+                Should -Invoke 'Find-LS2VulnerableCA' -Times -1
+                Should -Invoke 'Find-LS2VulnerableObject' -Times -1
+            }
+
+            It 'should not call Find-LS2VulnerableCA for template-only scans' {
+                Initialize-LS2Scan -Scans 'ESC1', 'ESC2' | Out-Null
+                Should -Invoke 'Find-LS2VulnerableCA' -Times 0
+                Should -Invoke 'Find-LS2VulnerableObject' -Times 0
+            }
+        }
     }
 }
