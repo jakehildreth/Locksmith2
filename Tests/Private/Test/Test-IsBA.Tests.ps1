@@ -7,7 +7,7 @@ BeforeAll {
     # function alone does not bring these into scope, so define them here at the
     # same scope and let Pester's Mock intercept them in individual tests.
     function Convert-IdentityReferenceToSid { param([Parameter(ValueFromPipeline)]$InputObject) }
-    function New-AuthenticatedDirectoryEntry { param([string]$Path) }
+    function New-AuthenticatedDirectoryEntry { param([string]$Path, [System.Management.Automation.PSCredential]$Credential) }
 
     # Returns the ParameterAttribute instances for a given parameter.
     function Get-ParamAttr {
@@ -21,8 +21,8 @@ Describe 'Test-IsBA' -Tag 'Unit' {
 
     Context 'Parameter contract' {
 
-        It 'should require -Credential' {
-            (Get-ParamAttr -Command 'Test-IsBA' -Name 'Credential').Mandatory | Should -Contain $true
+        It 'should not require -Credential' {
+            (Get-ParamAttr -Command 'Test-IsBA' -Name 'Credential').Mandatory | Should -Not -Contain $true
         }
 
         It 'should require -RootDSE' {

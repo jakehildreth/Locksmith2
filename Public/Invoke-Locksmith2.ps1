@@ -121,6 +121,14 @@ function Invoke-Locksmith2 {
         Author: Jake Hildreth (@jakehildreth)
         Requires PowerShell 5.1 or later
         Requires appropriate AD permissions to read Public Key Services container
+
+        Privilege degradation matrix:
+        - Local Administrator: Required to repair the local PowerShell environment
+          and to run some certutil-based remediation steps.
+        - Domain User / Computer Account: Sufficient to read the Public Key Services
+          container and detect most ESC conditions.
+        - Domain Admin / Enterprise Admin / Builtin Administrator: Required for
+          complete audit filter data and for automatic execution of fix/revert scripts.
     #>
     [CmdletBinding()]
     param (
@@ -168,26 +176,9 @@ function Invoke-Locksmith2 {
 
     Write-Verbose "Connection context resolved: Forest=$($ctx.Forest), Method=$($ctx.Method)"
 
-    if (Test-IsInteractiveSession) {
-        $rawUser = if ($ctx.Credential) { $ctx.Credential.UserName } else { [System.Security.Principal.WindowsIdentity]::GetCurrent().Name }
-        $userDisplay = if ($rawUser -match '^([^\\]+)\\(.+)$') { "$($Matches[1].ToUpper())\$($Matches[2])" } else { $rawUser }
-        Write-Host ''
-        Write-Host 'Connection Context' -ForegroundColor Cyan
-        Write-Host "  Forest   : $($ctx.Forest)"
-        Write-Host "  User     : $userDisplay"
-        Write-Host "  Computer : $($env:USERDOMAIN.ToUpper())\$($env:COMPUTERNAME.ToUpper())"
-        Write-Host "  Method   : $($ctx.Method)"
-        Write-Host ''
-        if ($Force -or ([System.Environment]::UserInteractive) ) {
-            $confirm = 'y'
-        } else {
-            $confirm = Read-Choice -Question 'Proceed with scan?' -Options @('y', 'n') -Default 'y'
-        }
-        if ($confirm -ne 'y') {
-            Write-Host 'Scan cancelled.' -ForegroundColor Yellow
-            return
-        }
-        Write-Host ''
+    $shouldProceed = Show-LS2ConnectionContext -Context $ctx -Force:$Force
+    if (-not $shouldProceed) {
+        return
     }
 
     $initParams = @{
@@ -202,6 +193,11 @@ function Invoke-Locksmith2 {
 
     if (-not $initResult) {
         Write-Error "Failed to initialize scan. Verify credentials and forest connectivity."
+        return
+    }
+
+    $shouldProceed = Show-LS2PrivilegeContext -Context $ctx -RootDSE $script:RootDSE -Force:$Force
+    if (-not $shouldProceed) {
         return
     }
 
