@@ -196,7 +196,10 @@ function Invoke-Locksmith2 {
         return
     }
 
-    Show-LS2PrivilegeContext -Context $ctx -RootDSE $script:RootDSE
+    $shouldProceed = Show-LS2PrivilegeContext -Context $ctx -RootDSE $script:RootDSE -Force:$Force
+    if (-not $shouldProceed) {
+        return
+    }
 
     Write-Verbose "`nScan complete. Issue summary:"
     $techniques = @(

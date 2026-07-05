@@ -15,8 +15,12 @@ function Show-LS2PrivilegeContext {
         DirectoryEntry for the target forest RootDSE. Required for the Builtin
         Administrator check.
 
+        .PARAMETER Force
+        Suppresses the interactive confirmation prompt after displaying privileges.
+
         .OUTPUTS
-        None. Outputs directly to the console and verbose stream.
+        System.Boolean
+        Returns $true if the scan should proceed, $false if the user cancelled.
 
         .EXAMPLE
         $ctx = @{ Forest = 'contoso.com'; Credential = $null; Method = 'DomainUser' }
@@ -39,15 +43,42 @@ function Show-LS2PrivilegeContext {
         and Test-IsLocalAdmin for the actual privilege checks.
     #>
     [CmdletBinding()]
+    [OutputType([bool])]
     param (
         [Parameter(Mandatory)]
         [hashtable]$Context,
 
         [Parameter()]
-        [System.DirectoryServices.DirectoryEntry]$RootDSE
+        [System.DirectoryServices.DirectoryEntry]$RootDSE,
+
+        [Parameter()]
+        [switch]$Force
     )
 
     #requires -Version 5.1
+
+    $rawUser = if ($Context.Credential) {
+        $Context.Credential.UserName
+    } else {
+        [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
+    }
+
+    $userDisplay = if ($rawUser -match '^([^\\]+)\\(.+)$') {
+        "$($Matches[1].ToUpper())\$($Matches[2])"
+    } else {
+        $rawUser
+    }
+
+    $transientMessage = "Checking $userDisplay's privileges in the $($Context.Forest) forest..."
+    $canEditBuffer = $Host.Name -notin @('Windows PowerShell ISE Host', 'ConsoleHost') -and
+        $Host.UI.RawUI -and
+        -not [string]::IsNullOrEmpty($env:TERM)
+
+    if ((Test-IsInteractiveSession) -and -not $Force) {
+        Write-Host $transientMessage -NoNewline
+    } else {
+        Write-Verbose $transientMessage
+    }
 
     $isDA = Test-IsDA
     $isEA = Test-IsEA
@@ -72,7 +103,14 @@ function Show-LS2PrivilegeContext {
     $eaStatus = if ($isEA) { 'Yes' } else { 'No' }
     $localAdminStatus = if ($isLocalAdmin) { 'Yes' } else { 'No' }
 
-    if (Test-IsInteractiveSession) {
+    if ((Test-IsInteractiveSession) -and -not $Force) {
+        if ($canEditBuffer) {
+            $clearLine = "`r$(' ' * $transientMessage.Length)`r"
+            Write-Host $clearLine -NoNewline
+        } else {
+            Write-Host ''
+        }
+
         Write-Host ''
         Write-Host 'Privilege Context' -ForegroundColor Cyan
         Write-Host "  Domain Admin      : $daStatus"
@@ -88,6 +126,12 @@ function Show-LS2PrivilegeContext {
             Write-Host '    - Some CA security settings may require local admin or CA admin rights to read.'
             Write-Host ''
         }
+
+        $confirm = Read-Choice -Question 'Proceed with scan?' -Options @('y', 'n') -Default 'y'
+        if ($confirm -ne 'y') {
+            Write-Host 'Scan cancelled.' -ForegroundColor Yellow
+            return $false
+        }
     }
 
     Write-Verbose "Privilege context: DA=$daStatus, EA=$eaStatus, BA=$baStatus, LocalAdmin=$localAdminStatus"
@@ -95,4 +139,6 @@ function Show-LS2PrivilegeContext {
     if (-not ($isDA -or $isEA -or $isBA)) {
         Write-Verbose 'Running without elevated AD rights. Audit filter and remediation data may be incomplete.'
     }
+
+    return $true
 }

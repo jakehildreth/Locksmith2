@@ -30,7 +30,7 @@ InModuleScope 'Locksmith2' {
             Mock 'Get-IssueCount' { 0 }
             Mock 'Show-IssueReport' { }
             Mock 'Show-LS2ConnectionContext' { $true }
-            Mock 'Show-LS2PrivilegeContext' { }
+            Mock 'Show-LS2PrivilegeContext' { $true }
             Mock 'Test-PowerShellEnvironment' { [PSCustomObject]@{} }
             Mock 'Repair-PowerShellEnvironment' { }
             Mock 'Expand-IssueByGroup' { $_ }
@@ -121,6 +121,13 @@ InModuleScope 'Locksmith2' {
             Should -Invoke 'Show-LS2PrivilegeContext' -Times 1 -ParameterFilter {
                 $RootDSE -ne $null
             }
+        }
+
+        It 'should return early when Show-LS2PrivilegeContext returns false' {
+            Mock 'Show-LS2PrivilegeContext' { $false }
+            $script:RootDSE = [System.DirectoryServices.DirectoryEntry]::new()
+            Invoke-Locksmith2 | Out-Null
+            Should -Invoke 'Show-LS2PrivilegeContext' -Times 1
         }
 
         It 'should return early when Show-LS2ConnectionContext returns false' {

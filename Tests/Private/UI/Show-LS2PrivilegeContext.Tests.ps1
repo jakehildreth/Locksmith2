@@ -16,6 +16,7 @@ InModuleScope 'Locksmith2' {
             Mock 'Write-Host' { }
             Mock 'Write-Verbose' { }
             Mock 'Write-Warning' { }
+            Mock 'Read-Choice' { 'y' }
 
             Mock 'Test-IsDA' { $false }
             Mock 'Test-IsEA' { $false }
@@ -33,6 +34,15 @@ InModuleScope 'Locksmith2' {
             It 'should type -Context as a hashtable' {
                 (Get-Command 'Show-LS2PrivilegeContext').Parameters['Context'].ParameterType.FullName |
                     Should -Be 'System.Collections.Hashtable'
+            }
+
+            It 'should accept -Force as a switch' {
+                (Get-Command 'Show-LS2PrivilegeContext').Parameters['Force'].ParameterType.FullName |
+                    Should -Be 'System.Management.Automation.SwitchParameter'
+            }
+
+            It 'should declare a [bool] output type' {
+                (Get-Command 'Show-LS2PrivilegeContext').OutputType.Name | Should -Match 'Boolean'
             }
         }
 
@@ -75,6 +85,59 @@ InModuleScope 'Locksmith2' {
                 $rootDSE = [System.DirectoryServices.DirectoryEntry]::new()
                 Show-LS2PrivilegeContext -Context $ctx -RootDSE $rootDSE
                 Should -Invoke 'Test-IsBA' -ParameterFilter { $Credential -eq $null -and $RootDSE -eq $rootDSE }
+            }
+
+            It 'should print a transient checking message' {
+                Mock 'Test-IsInteractiveSession' { $true }
+                $ctx = @{ Forest = 'contoso.com'; Credential = $null; Method = 'DomainUser' }
+                Show-LS2PrivilegeContext -Context $ctx
+                Should -Invoke 'Write-Host' -ParameterFilter { $Object -like '*Checking*privileges*contoso.com*' }
+            }
+        }
+
+        Context 'When prompting for approval' {
+            It 'should prompt when interactive and -Force is not specified' {
+                Mock 'Test-IsInteractiveSession' { $true }
+                $ctx = @{ Forest = 'contoso.com'; Credential = $null; Method = 'DomainUser' }
+                Show-LS2PrivilegeContext -Context $ctx
+                Should -Invoke 'Read-Choice' -Times 1
+            }
+
+            It 'should not prompt when -Force is specified' {
+                Mock 'Test-IsInteractiveSession' { $true }
+                $ctx = @{ Forest = 'contoso.com'; Credential = $null; Method = 'DomainUser' }
+                Show-LS2PrivilegeContext -Context $ctx -Force
+                Should -Invoke 'Read-Choice' -Times 0
+            }
+
+            It 'should not prompt when not interactive' {
+                Mock 'Test-IsInteractiveSession' { $false }
+                $ctx = @{ Forest = 'contoso.com'; Credential = $null; Method = 'DomainUser' }
+                Show-LS2PrivilegeContext -Context $ctx
+                Should -Invoke 'Read-Choice' -Times 0
+            }
+
+            It 'should return $false when the user declines' {
+                Mock 'Test-IsInteractiveSession' { $true }
+                Mock 'Read-Choice' { 'n' }
+                $ctx = @{ Forest = 'contoso.com'; Credential = $null; Method = 'DomainUser' }
+                $result = Show-LS2PrivilegeContext -Context $ctx
+                $result | Should -BeFalse
+            }
+
+            It 'should return $true when the user confirms' {
+                Mock 'Test-IsInteractiveSession' { $true }
+                Mock 'Read-Choice' { 'y' }
+                $ctx = @{ Forest = 'contoso.com'; Credential = $null; Method = 'DomainUser' }
+                $result = Show-LS2PrivilegeContext -Context $ctx
+                $result | Should -BeTrue
+            }
+
+            It 'should return $true when -Force is specified' {
+                Mock 'Test-IsInteractiveSession' { $true }
+                $ctx = @{ Forest = 'contoso.com'; Credential = $null; Method = 'DomainUser' }
+                $result = Show-LS2PrivilegeContext -Context $ctx -Force
+                $result | Should -BeTrue
             }
         }
 
@@ -162,6 +225,14 @@ InModuleScope 'Locksmith2' {
                 Show-LS2PrivilegeContext -Context $ctx
                 Should -Invoke 'Write-Verbose' -Times 1 -Exactly:$false
             }
+
+            It 'should return $true without prompting' {
+                Mock 'Test-IsInteractiveSession' { $false }
+                $ctx = @{ Forest = 'contoso.com'; Credential = $null; Method = 'DomainUser' }
+                $result = Show-LS2PrivilegeContext -Context $ctx
+                $result | Should -BeTrue
+            }
         }
+
     }
 }
