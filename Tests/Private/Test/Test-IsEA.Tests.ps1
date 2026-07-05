@@ -19,7 +19,7 @@ Describe 'Test-IsEA' -Tag 'Unit' {
         }
     }
 
-    Context 'When the Windows identity API is unavailable' -Skip:($IsWindows) {
+    Context 'When the Windows identity API is unavailable' -Skip:($env:OS -eq 'Windows_NT') {
 
         It 'should fail safe to $false' {
             Test-IsEA -ErrorAction SilentlyContinue | Should -BeFalse
@@ -32,7 +32,7 @@ Describe 'Test-IsEA' -Tag 'Unit' {
         }
     }
 
-    Context 'When running on Windows' -Tag 'Integration' -Skip:(-not $IsWindows) {
+    Context 'When running on Windows' -Tag 'Integration' -Skip:($env:OS -ne 'Windows_NT') {
 
         It 'should agree with the token for well-known RID 519' {
             $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
