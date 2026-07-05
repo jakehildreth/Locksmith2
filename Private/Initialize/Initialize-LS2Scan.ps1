@@ -6,17 +6,17 @@ function Initialize-LS2Scan {
         .DESCRIPTION
         This internal helper function handles the initialization requirements for all Find-LS2* functions.
         It performs two critical checks:
-        
+
         1. AdcsObjectStore Population:
            - Checks if AdcsObjectStore is populated with AD CS objects
            - If empty, initializes Forest/Credential context and queries LDAP
            - Populates DomainStore, PrincipalStore, and AdcsObjectStore
-        
+
         2. IssueStore Population:
            - Checks if IssueStore contains vulnerability data
            - If empty, runs a complete vulnerability scan across all techniques
            - Scans templates (ESC1-ESC4, ESC9), CAs (ESC6, ESC7a/m, ESC11, ESC16), and objects (ESC5a/o)
-        
+
         After this function completes successfully, both stores are guaranteed to be populated
         and ready for vulnerability queries.
 
@@ -39,7 +39,7 @@ function Initialize-LS2Scan {
         .NOTES
         This is an internal function used by Find-LS2VulnerableTemplate, Find-LS2VulnerableCA,
         Find-LS2VulnerableObject, and Find-LS2RiskyPrincipal to ensure consistent initialization.
-        
+
         The full vulnerability scan only runs once per session. Subsequent calls to any Find-LS2*
         function will use the cached IssueStore data.
 
@@ -53,7 +53,7 @@ function Initialize-LS2Scan {
     param(
         [Parameter()]
         [string]$Forest,
-        
+
         [Parameter()]
         [PSCredential]$Credential,
 
