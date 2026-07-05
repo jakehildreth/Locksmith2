@@ -176,7 +176,7 @@ function Invoke-Locksmith2 {
 
     Write-Verbose "Connection context resolved: Forest=$($ctx.Forest), Method=$($ctx.Method)"
 
-    $shouldProceed = Show-LS2ConnectionContext -Context $ctx -Force:$Force
+    $shouldProceed = Show-ConnectionContext -Context $ctx -Force:$Force
     if (-not $shouldProceed) {
         return
     }
@@ -196,7 +196,7 @@ function Invoke-Locksmith2 {
         return
     }
 
-    $shouldProceed = Show-LS2PrivilegeContext -Context $ctx -RootDSE $script:RootDSE -Force:$Force
+    $shouldProceed = Show-PrivilegeContext -Context $ctx -RootDSE $script:RootDSE -Force:$Force
     if (-not $shouldProceed) {
         return
     }

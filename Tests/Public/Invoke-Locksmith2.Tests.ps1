@@ -29,8 +29,8 @@ InModuleScope 'Locksmith2' {
             Mock 'Get-FlattenedIssues' { @($script:mockIssue) }
             Mock 'Get-IssueCount' { 0 }
             Mock 'Show-IssueReport' { }
-            Mock 'Show-LS2ConnectionContext' { $true }
-            Mock 'Show-LS2PrivilegeContext' { $true }
+            Mock 'Show-ConnectionContext' { $true }
+            Mock 'Show-PrivilegeContext' { $true }
             Mock 'Test-PowerShellEnvironment' { [PSCustomObject]@{} }
             Mock 'Repair-PowerShellEnvironment' { }
             Mock 'Expand-IssueByGroup' { $_ }
@@ -95,46 +95,46 @@ InModuleScope 'Locksmith2' {
             Should -Invoke 'Expand-IssueByGroup' -Times 1
         }
 
-        It 'should call Show-LS2ConnectionContext with the resolved context' {
+        It 'should call Show-ConnectionContext with the resolved context' {
             Invoke-Locksmith2 -Forest 'contoso.com' | Out-Null
-            Should -Invoke 'Show-LS2ConnectionContext' -Times 1 -ParameterFilter {
+            Should -Invoke 'Show-ConnectionContext' -Times 1 -ParameterFilter {
                 $Context.Forest -eq 'contoso.com'
             }
         }
 
-        It 'should not call Show-LS2PrivilegeContext when Initialize-LS2Scan returns false' {
+        It 'should not call Show-PrivilegeContext when Initialize-LS2Scan returns false' {
             Mock 'Initialize-LS2Scan' { $false }
             Mock 'Write-Error' { }
             Invoke-Locksmith2 | Out-Null
-            Should -Invoke 'Show-LS2PrivilegeContext' -Times 0
+            Should -Invoke 'Show-PrivilegeContext' -Times 0
         }
 
-        It 'should call Show-LS2PrivilegeContext after Initialize-LS2Scan succeeds' {
+        It 'should call Show-PrivilegeContext after Initialize-LS2Scan succeeds' {
             $script:RootDSE = [System.DirectoryServices.DirectoryEntry]::new()
             Invoke-Locksmith2 | Out-Null
-            Should -Invoke 'Show-LS2PrivilegeContext' -Times 1
+            Should -Invoke 'Show-PrivilegeContext' -Times 1
         }
 
-        It 'should pass RootDSE to Show-LS2PrivilegeContext' {
+        It 'should pass RootDSE to Show-PrivilegeContext' {
             $script:RootDSE = [System.DirectoryServices.DirectoryEntry]::new()
             Invoke-Locksmith2 | Out-Null
-            Should -Invoke 'Show-LS2PrivilegeContext' -Times 1 -ParameterFilter {
+            Should -Invoke 'Show-PrivilegeContext' -Times 1 -ParameterFilter {
                 $RootDSE -ne $null
             }
         }
 
-        It 'should return early when Show-LS2PrivilegeContext returns false' {
-            Mock 'Show-LS2PrivilegeContext' { $false }
+        It 'should return early when Show-PrivilegeContext returns false' {
+            Mock 'Show-PrivilegeContext' { $false }
             $script:RootDSE = [System.DirectoryServices.DirectoryEntry]::new()
             Invoke-Locksmith2 | Out-Null
-            Should -Invoke 'Show-LS2PrivilegeContext' -Times 1
+            Should -Invoke 'Show-PrivilegeContext' -Times 1
         }
 
-        It 'should return early when Show-LS2ConnectionContext returns false' {
-            Mock 'Show-LS2ConnectionContext' { $false }
+        It 'should return early when Show-ConnectionContext returns false' {
+            Mock 'Show-ConnectionContext' { $false }
             Invoke-Locksmith2 | Out-Null
             Should -Invoke 'Initialize-LS2Scan' -Times 0
-            Should -Invoke 'Show-LS2PrivilegeContext' -Times 0
+            Should -Invoke 'Show-PrivilegeContext' -Times 0
         }
     }
 }

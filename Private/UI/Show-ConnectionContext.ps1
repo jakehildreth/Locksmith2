@@ -1,4 +1,4 @@
-function Show-LS2ConnectionContext {
+function Show-ConnectionContext {
     <#
         .SYNOPSIS
         Displays the resolved connection context and prompts for confirmation.
@@ -20,13 +20,13 @@ function Show-LS2ConnectionContext {
 
         .EXAMPLE
         $ctx = @{ Forest = 'contoso.com'; Credential = $null; Method = 'DomainUser' }
-        Show-LS2ConnectionContext -Context $ctx
+        Show-ConnectionContext -Context $ctx
 
         Displays the connection context and prompts the user to proceed.
 
         .EXAMPLE
         $ctx = @{ Forest = 'contoso.com'; Credential = $cred; Method = 'ExplicitCredential' }
-        Show-LS2ConnectionContext -Context $ctx -Force
+        Show-ConnectionContext -Context $ctx -Force
 
         Displays the connection context and skips the confirmation prompt.
 
