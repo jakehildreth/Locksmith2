@@ -1,4 +1,4 @@
-function Get-PrincipalRiskBonus {
+﻿function Get-PrincipalRiskBonus {
     <#
     .SYNOPSIS
         Computes the principal risk bonus score for a given SID and class.

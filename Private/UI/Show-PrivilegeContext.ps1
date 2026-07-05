@@ -1,4 +1,4 @@
-function Show-PrivilegeContext {
+﻿function Show-PrivilegeContext {
     <#
         .SYNOPSIS
         Displays the current principal's privileges in the target forest.

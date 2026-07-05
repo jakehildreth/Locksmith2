@@ -1,4 +1,4 @@
-function Set-CACertificateManager {
+﻿function Set-CACertificateManager {
     <#
         .SYNOPSIS
         Adds Certificate Manager role configuration to AD CS Certification Authority objects.

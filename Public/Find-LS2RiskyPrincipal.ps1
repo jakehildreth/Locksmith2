@@ -1,4 +1,4 @@
-function Find-LS2RiskyPrincipal {
+﻿function Find-LS2RiskyPrincipal {
     <#
         .SYNOPSIS
         Analyzes principal-centric risk by aggregating vulnerabilities each principal can exploit.

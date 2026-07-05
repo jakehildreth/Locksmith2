@@ -1,4 +1,4 @@
-function Resolve-Principal {
+﻿function Resolve-Principal {
     <#
         .SYNOPSIS
         Resolves an IdentityReference to a complete principal object and caches it in the PrincipalStore.

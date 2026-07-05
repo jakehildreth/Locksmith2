@@ -1,4 +1,4 @@
-function Set-AuthenticationEKUExist {
+﻿function Set-AuthenticationEKUExist {
     <#
         .SYNOPSIS
         Adds an AuthenticationEKUExist property to AD CS certificate template objects.

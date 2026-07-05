@@ -1,4 +1,4 @@
-#requires -Version 5.1
+﻿#requires -Version 5.1
 # Integration tests — require a live AD CS environment.
 # Set $env:LS2_TEST_FOREST to enable all integration tests.
 # Set $env:LS2_TEST_CA_HOST to target a specific CA host (e.g., 'ca1.contoso.com').

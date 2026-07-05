@@ -1,4 +1,4 @@
-function Find-LS2VulnerableTemplate {
+﻿function Find-LS2VulnerableTemplate {
     <#
     .SYNOPSIS
         Identifies vulnerable AD CS templates based on ESC technique definitions.

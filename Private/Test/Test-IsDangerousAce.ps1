@@ -1,4 +1,4 @@
-function Test-IsDangerousAce {
+﻿function Test-IsDangerousAce {
     <#
         .SYNOPSIS
         Tests if an Active Directory access control entry grants dangerous permissions on AD CS objects.

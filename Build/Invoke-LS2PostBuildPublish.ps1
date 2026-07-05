@@ -1,4 +1,4 @@
-function Invoke-LS2PostBuildPublish {
+﻿function Invoke-LS2PostBuildPublish {
     <#
     .SYNOPSIS
     Vendors PSWriteHTML and PSCertutil into the unpacked artefact and optionally publishes to PSGallery.

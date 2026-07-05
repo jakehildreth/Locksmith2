@@ -1,4 +1,4 @@
-function Get-IssueCount {
+﻿function Get-IssueCount {
     <#
     .SYNOPSIS
         Counts issues for a specific ESC technique from the IssueStore.

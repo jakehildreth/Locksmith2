@@ -1,4 +1,4 @@
-function Set-RequiresEnrollmentAgentSignature {
+﻿function Set-RequiresEnrollmentAgentSignature {
     <#
         .SYNOPSIS
         Adds a RequiresEnrollmentAgentSignature property to AD CS certificate template objects.

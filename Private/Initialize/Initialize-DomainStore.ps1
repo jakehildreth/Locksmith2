@@ -1,4 +1,4 @@
-function Initialize-DomainStore {
+﻿function Initialize-DomainStore {
     <#
         .SYNOPSIS
         Populates the module-level DomainStore with all domains in the forest.

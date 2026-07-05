@@ -1,4 +1,4 @@
-function Test-IsBA {
+﻿function Test-IsBA {
     <#
         .SYNOPSIS
         Tests if a principal is a member of the BUILTIN\Administrators group.

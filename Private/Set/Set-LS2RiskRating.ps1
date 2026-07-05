@@ -1,4 +1,4 @@
-function Set-LS2RiskRating {
+﻿function Set-LS2RiskRating {
     <#
     .SYNOPSIS
         Computes and assigns risk ratings to a collection of LS2Issue objects.

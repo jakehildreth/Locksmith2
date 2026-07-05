@@ -1,4 +1,4 @@
-function Convert-IdentityReferenceToNTAccount {
+﻿function Convert-IdentityReferenceToNTAccount {
     <#
         .SYNOPSIS
         Converts a SecurityIdentifier (SID) to an IdentityReference (NTAccount).

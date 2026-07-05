@@ -1,4 +1,4 @@
-#requires -Version 5.1
+﻿#requires -Version 5.1
 BeforeAll {
     $ModuleRoot   = Split-Path -Parent $PSScriptRoot
     $ManifestPath = Join-Path $ModuleRoot 'Locksmith2.psd1'

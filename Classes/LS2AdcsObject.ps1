@@ -1,4 +1,4 @@
-class LS2AdcsObject {
+﻿class LS2AdcsObject {
     # Common properties for all AD CS objects
     [string]$distinguishedName
     [string[]]$objectClass

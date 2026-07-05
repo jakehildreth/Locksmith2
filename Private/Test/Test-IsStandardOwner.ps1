@@ -1,4 +1,4 @@
-function Test-IsStandardOwner {
+﻿function Test-IsStandardOwner {
     <#
     .SYNOPSIS
         Tests whether an owner SID matches standard PKI ownership patterns.

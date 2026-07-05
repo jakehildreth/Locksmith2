@@ -1,4 +1,4 @@
-function Show-ConnectionDiagnostics {
+﻿function Show-ConnectionDiagnostics {
     <#
         .SYNOPSIS
         Displays detailed connection diagnostics for Active Directory LDAP connectivity.

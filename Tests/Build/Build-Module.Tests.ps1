@@ -1,4 +1,4 @@
-BeforeAll {
+﻿BeforeAll {
     . "$PSScriptRoot\..\..\Build\Invoke-LS2PostBuildPublish.ps1"
 
     # Build the fake vendor tree that Get-ChildItem probes for version discovery.

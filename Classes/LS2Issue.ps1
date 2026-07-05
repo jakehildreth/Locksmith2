@@ -1,4 +1,4 @@
-class LS2Issue {
+﻿class LS2Issue {
     # Core issue identification
     [string]$Technique              # ESC1, ESC2, ESC6, etc.
     [string]$Forest                 # Forest where issue was found

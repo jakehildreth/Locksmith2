@@ -1,4 +1,4 @@
-function Set-CAAdministrator {
+﻿function Set-CAAdministrator {
     <#
         .SYNOPSIS
         Adds CA Administrator role configuration to AD CS Certification Authority objects.

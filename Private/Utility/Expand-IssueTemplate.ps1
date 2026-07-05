@@ -1,4 +1,4 @@
-function Expand-IssueTemplate {
+﻿function Expand-IssueTemplate {
     <#
     .SYNOPSIS
         Expands Issue, Fix, and Revert templates with variable substitution.

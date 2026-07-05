@@ -1,4 +1,4 @@
-#requires -Version 5.1
+﻿#requires -Version 5.1
 BeforeDiscovery {
     $ModuleRoot = Split-Path $PSScriptRoot -Parent
     $SettingsPath = Join-Path $ModuleRoot 'PSScriptAnalyzerSettings.psd1'

@@ -1,4 +1,4 @@
-#requires -Version 5.1
+﻿#requires -Version 5.1
 # Tests that every technique in ESCDefinitions is wired up in all the places it needs to be,
 # and that no ValidateSet member is orphaned from ESCDefinitions.
 # Reads source files directly - no module import required.

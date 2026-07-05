@@ -1,4 +1,4 @@
-function Initialize-PrincipalDefinitions {
+﻿function Initialize-PrincipalDefinitions {
     <#
         .SYNOPSIS
         Loads and customizes principal definitions for the current forest.

@@ -1,4 +1,4 @@
-function Initialize-LS2Scan {
+﻿function Initialize-LS2Scan {
     <#
         .SYNOPSIS
         Ensures AdcsObjectStore and IssueStore are populated before vulnerability queries.

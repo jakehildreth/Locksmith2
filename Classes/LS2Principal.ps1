@@ -1,4 +1,4 @@
-class LS2Principal {
+﻿class LS2Principal {
     [string]$distinguishedName
     [string]$objectSid
     [string]$sAMAccountName
