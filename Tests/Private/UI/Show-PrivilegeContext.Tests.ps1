@@ -87,6 +87,36 @@ InModuleScope 'Locksmith2' {
                 Should -Invoke 'Test-IsBA' -ParameterFilter { $Credential -eq $null -and $RootDSE -eq $rootDSE }
             }
 
+            It 'should call Test-IsDA with the credential and RootDSE when one is supplied' {
+                $cred = [System.Management.Automation.PSCredential]::new(
+                    'CONTOSO\admin', (ConvertTo-SecureString 'x' -AsPlainText -Force))
+                $ctx = @{ Forest = 'contoso.com'; Credential = $cred; Method = 'ExplicitCredential' }
+                $rootDSE = [System.DirectoryServices.DirectoryEntry]::new()
+                Show-PrivilegeContext -Context $ctx -RootDSE $rootDSE
+                Should -Invoke 'Test-IsDA' -ParameterFilter { $Credential -eq $cred -and $RootDSE -eq $rootDSE }
+            }
+
+            It 'should call Test-IsDA without credential or RootDSE when none is supplied' {
+                $ctx = @{ Forest = 'contoso.com'; Credential = $null; Method = 'DomainUser' }
+                Show-PrivilegeContext -Context $ctx
+                Should -Invoke 'Test-IsDA' -ParameterFilter { $Credential -eq $null -and $RootDSE -eq $null }
+            }
+
+            It 'should call Test-IsEA with the credential and RootDSE when one is supplied' {
+                $cred = [System.Management.Automation.PSCredential]::new(
+                    'CONTOSO\admin', (ConvertTo-SecureString 'x' -AsPlainText -Force))
+                $ctx = @{ Forest = 'contoso.com'; Credential = $cred; Method = 'ExplicitCredential' }
+                $rootDSE = [System.DirectoryServices.DirectoryEntry]::new()
+                Show-PrivilegeContext -Context $ctx -RootDSE $rootDSE
+                Should -Invoke 'Test-IsEA' -ParameterFilter { $Credential -eq $cred -and $RootDSE -eq $rootDSE }
+            }
+
+            It 'should call Test-IsEA without credential or RootDSE when none is supplied' {
+                $ctx = @{ Forest = 'contoso.com'; Credential = $null; Method = 'DomainUser' }
+                Show-PrivilegeContext -Context $ctx
+                Should -Invoke 'Test-IsEA' -ParameterFilter { $Credential -eq $null -and $RootDSE -eq $null }
+            }
+
             It 'should print a transient checking message' {
                 Mock 'Test-IsInteractiveSession' { $true }
                 $ctx = @{ Forest = 'contoso.com'; Credential = $null; Method = 'DomainUser' }
