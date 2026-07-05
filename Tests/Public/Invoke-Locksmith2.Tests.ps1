@@ -41,6 +41,22 @@ InModuleScope 'Locksmith2' {
             Should -Invoke 'Initialize-LS2Scan' -Times 1
         }
 
+        It 'should expose Invoke-LS2 alias' {
+            (Get-Alias Invoke-LS2).ResolvedCommandName | Should -Be 'Invoke-Locksmith2'
+        }
+
+        It 'should expose Locksmith2 alias' {
+            (Get-Alias Locksmith2).ResolvedCommandName | Should -Be 'Invoke-Locksmith2'
+        }
+
+        It 'should expose Start-Locksmith2 alias' {
+            (Get-Alias Start-Locksmith2).ResolvedCommandName | Should -Be 'Invoke-Locksmith2'
+        }
+
+        It 'should expose Start-LS2 alias' {
+            (Get-Alias Start-LS2).ResolvedCommandName | Should -Be 'Invoke-Locksmith2'
+        }
+
         It 'should call Test-PowerShellEnvironment when -SkipPowerShellCheck is not specified' {
             Invoke-Locksmith2 | Out-Null
             Should -Invoke 'Test-PowerShellEnvironment' -Times 1
