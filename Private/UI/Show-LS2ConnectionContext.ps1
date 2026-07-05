@@ -67,11 +67,7 @@ function Show-LS2ConnectionContext {
 
     Write-Verbose "Connection context: Forest=$($Context.Forest), Method=$($Context.Method), User=$userDisplay"
 
-    if (Test-IsInteractiveSession) {
-        if ($Force -or [System.Environment]::UserInteractive) {
-            return $true
-        }
-
+    if ((Test-IsInteractiveSession) -and -not $Force) {
         $confirm = Read-Choice -Question 'Proceed with scan?' -Options @('y', 'n') -Default 'y'
         if ($confirm -ne 'y') {
             Write-Host 'Scan cancelled.' -ForegroundColor Yellow

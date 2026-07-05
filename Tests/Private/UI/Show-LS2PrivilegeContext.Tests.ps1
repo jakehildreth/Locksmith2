@@ -149,6 +149,13 @@ InModuleScope 'Locksmith2' {
         }
 
         Context 'When running non-interactively' {
+            It 'should not print the privilege context block' {
+                Mock 'Test-IsInteractiveSession' { $false }
+                $ctx = @{ Forest = 'contoso.com'; Credential = $null; Method = 'DomainUser' }
+                Show-LS2PrivilegeContext -Context $ctx
+                Should -Invoke 'Write-Host' -Times 0
+            }
+
             It 'should still write verbose privilege lines' {
                 Mock 'Test-IsInteractiveSession' { $false }
                 $ctx = @{ Forest = 'contoso.com'; Credential = $null; Method = 'DomainUser' }
