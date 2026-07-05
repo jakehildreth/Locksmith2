@@ -1,4 +1,4 @@
-function Set-NoSecurityExtension {
+﻿function Set-NoSecurityExtension {
     <#
         .SYNOPSIS
         Adds a NoSecurityExtension property to AD CS certificate template objects.

@@ -1,4 +1,4 @@
-function New-GCSearcher {
+﻿function New-GCSearcher {
     <#
         .SYNOPSIS
         Creates a configured DirectorySearcher for Global Catalog queries.

@@ -1,4 +1,4 @@
-function Get-WebEnrollmentEndpointStatus {
+﻿function Get-WebEnrollmentEndpointStatus {
     <#
     .SYNOPSIS
         Probes a single web enrollment URL and returns its authentication posture.

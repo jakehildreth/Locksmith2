@@ -1,4 +1,4 @@
-function Set-LowPrivilegeCAAdministrator {
+﻿function Set-LowPrivilegeCAAdministrator {
     <#
         .SYNOPSIS
         Adds LowPrivilegeCAAdministrator properties to CA objects based on CA Administrator assignments.

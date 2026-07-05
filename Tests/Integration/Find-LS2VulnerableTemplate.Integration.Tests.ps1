@@ -1,4 +1,4 @@
-#requires -Version 5.1
+﻿#requires -Version 5.1
 # Integration tests — require a live AD CS environment.
 # Set $env:LS2_TEST_FOREST to a fully qualified domain/forest name to enable.
 # These tests are tagged 'Integration' and skipped automatically in CI when the env var is absent.

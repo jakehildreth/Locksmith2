@@ -1,4 +1,4 @@
-function Set-LinkedGroupOIDPolicy {
+﻿function Set-LinkedGroupOIDPolicy {
     <#
         .SYNOPSIS
         Adds HasLinkedGroupOIDPolicy and LinkedGroupOIDPolicies properties to AD CS certificate

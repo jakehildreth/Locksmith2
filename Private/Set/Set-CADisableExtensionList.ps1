@@ -1,4 +1,4 @@
-function Set-CADisableExtensionList {
+﻿function Set-CADisableExtensionList {
     <#
     .SYNOPSIS
         Queries and stores the Disable Extension List configuration for each Certification Authority.

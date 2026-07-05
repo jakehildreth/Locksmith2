@@ -1,4 +1,4 @@
-function Invoke-Locksmith2 {
+﻿function Invoke-Locksmith2 {
     <#
         .SYNOPSIS
         Performs comprehensive AD CS security audit scanning for known ESC vulnerabilities.

@@ -1,0 +1,41 @@
+#!/usr/bin/env pwsh
+# Requires PowerShell 5.1 or later.
+# This hook re-encodes staged PowerShell files to UTF-8 with BOM before commit.
+
+$ErrorActionPreference = 'Stop'
+
+# Determine repository root from the hook's location.
+$hookPath = $MyInvocation.MyCommand.Path
+if (-not $hookPath) {
+    Write-Error 'Unable to determine hook path.'
+    exit 1
+}
+
+$repoRoot = Split-Path (Split-Path (Split-Path $hookPath -Parent) -Parent) -Parent
+$buildModule = Join-Path $repoRoot 'Build\Set-PSFileEncoding.ps1'
+
+if (-not (Test-Path $buildModule)) {
+    Write-Error "Build helper not found: $buildModule"
+    exit 1
+}
+
+. $buildModule
+
+# Get staged PowerShell files.
+$stagedFiles = git -C $repoRoot diff --cached --name-only --diff-filter=ACM |
+    Where-Object { $_ -match '\.(ps1|psm1|psd1)$' }
+
+if (-not $stagedFiles) {
+    exit 0
+}
+
+$resolvedPaths = $stagedFiles | ForEach-Object { Join-Path $repoRoot $_ }
+Set-PSFileEncoding -Path $resolvedPaths
+
+# Re-stage any files that were re-encoded.
+$stagedFiles | ForEach-Object {
+    $fullPath = Join-Path $repoRoot $_
+    git -C $repoRoot add -- $fullPath
+}
+
+exit 0

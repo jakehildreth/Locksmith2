@@ -1,4 +1,4 @@
-function Set-LowPrivilegeCACertificateManager {
+﻿function Set-LowPrivilegeCACertificateManager {
     <#
         .SYNOPSIS
         Adds LowPrivilegeCACertificateManager properties to CA objects based on Certificate Manager assignments.

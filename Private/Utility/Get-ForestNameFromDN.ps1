@@ -1,4 +1,4 @@
-function Get-ForestNameFromDN {
+﻿function Get-ForestNameFromDN {
     <#
     .SYNOPSIS
         Extracts the forest/domain name from a Distinguished Name.

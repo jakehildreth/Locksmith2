@@ -1,4 +1,4 @@
-function Get-AdcsObject {
+﻿function Get-AdcsObject {
     <#
         .SYNOPSIS
         Retrieves all objects from the Public Key Services Container in Active Directory.

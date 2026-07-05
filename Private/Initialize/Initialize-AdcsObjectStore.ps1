@@ -1,4 +1,4 @@
-function Initialize-AdcsObjectStore {
+﻿function Initialize-AdcsObjectStore {
     <#
         .SYNOPSIS
         Populates the module-level AdcsObjectStore with all AD CS objects.

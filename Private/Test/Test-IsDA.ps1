@@ -1,4 +1,4 @@
-function Test-IsDA {
+﻿function Test-IsDA {
     <#
         .SYNOPSIS
         Tests if the current user (or supplied credential user) is a member of Domain Admins.

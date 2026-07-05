@@ -1,4 +1,4 @@
-function Add-ToIssueStore {
+﻿function Add-ToIssueStore {
     <#
     .SYNOPSIS
         Adds an issue to the IssueStore with automatic structure initialization.

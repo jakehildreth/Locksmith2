@@ -1,4 +1,4 @@
-#requires -Version 5.1
+﻿#requires -Version 5.1
 $config = New-PesterConfiguration
 $config.Run.Path = './Tests'
 $config.Run.Exit = $true

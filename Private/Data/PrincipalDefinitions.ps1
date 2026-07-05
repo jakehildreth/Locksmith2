@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
 Security Principal Definitions for AD CS Security Auditing
 

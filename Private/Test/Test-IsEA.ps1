@@ -1,4 +1,4 @@
-function Test-IsEA {
+﻿function Test-IsEA {
     <#
         .SYNOPSIS
         Tests if the current user (or supplied credential user) is a member of Enterprise Admins.

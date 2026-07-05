@@ -1,4 +1,4 @@
-function Set-CAWebEnrollmentEndpoints {
+﻿function Set-CAWebEnrollmentEndpoints {
     <#
     .SYNOPSIS
         Probes web enrollment endpoints on each CA and stores results on the CA object.

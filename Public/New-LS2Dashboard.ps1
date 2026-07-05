@@ -1,4 +1,4 @@
-function New-LS2Dashboard {
+﻿function New-LS2Dashboard {
     <#
     .SYNOPSIS
     Generates an interactive HTML dashboard for Locksmith2 scan results.

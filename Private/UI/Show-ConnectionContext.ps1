@@ -1,4 +1,4 @@
-function Show-ConnectionContext {
+﻿function Show-ConnectionContext {
     <#
         .SYNOPSIS
         Displays the resolved connection context and prompts for confirmation.

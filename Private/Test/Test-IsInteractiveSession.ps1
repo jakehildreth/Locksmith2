@@ -1,4 +1,4 @@
-function Test-IsInteractiveSession {
+﻿function Test-IsInteractiveSession {
     <#
         .SYNOPSIS
         Tests if the current PowerShell session is interactive (a human is at the keyboard).

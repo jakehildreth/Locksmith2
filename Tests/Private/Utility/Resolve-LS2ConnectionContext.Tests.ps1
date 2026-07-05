@@ -1,4 +1,4 @@
-#requires -Version 5.1
+﻿#requires -Version 5.1
 BeforeAll {
     $PrivateRoot = Split-Path (Split-Path (Split-Path $PSScriptRoot))
 

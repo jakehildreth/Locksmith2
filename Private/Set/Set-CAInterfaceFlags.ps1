@@ -1,4 +1,4 @@
-function Set-CAInterfaceFlags {
+﻿function Set-CAInterfaceFlags {
     <#
         .SYNOPSIS
         Adds InterfaceFlags configuration properties to AD CS Certification Authority objects.

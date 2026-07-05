@@ -1,4 +1,4 @@
-function Test-IsBA {
+﻿function Test-IsBA {
     <#
         .SYNOPSIS
         Tests if the current user (or supplied credential user) is a member of the BUILTIN\Administrators group.

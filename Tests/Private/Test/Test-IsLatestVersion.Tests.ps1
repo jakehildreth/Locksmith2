@@ -1,4 +1,4 @@
-#requires -Version 5.1
+﻿#requires -Version 5.1
 BeforeAll {
     $SourcePath = Join-Path (Split-Path (Split-Path (Split-Path $PSScriptRoot))) 'Private\Test\Test-IsLatestVersion.ps1'
     . ([scriptblock]::Create((Get-Content -Path $SourcePath -Raw)))

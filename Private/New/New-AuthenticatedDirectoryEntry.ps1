@@ -1,4 +1,4 @@
-function New-AuthenticatedDirectoryEntry {
+﻿function New-AuthenticatedDirectoryEntry {
     <#
         .SYNOPSIS
         Creates an authenticated DirectoryEntry object using module credentials.

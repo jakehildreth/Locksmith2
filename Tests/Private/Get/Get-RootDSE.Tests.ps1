@@ -1,4 +1,4 @@
-#requires -Version 5.1
+﻿#requires -Version 5.1
 BeforeAll {
     $PrivateGetRoot = Join-Path (Split-Path (Split-Path (Split-Path $PSScriptRoot))) 'Private\Get'
     . (Join-Path $PrivateGetRoot 'Get-RootDSE.ps1')

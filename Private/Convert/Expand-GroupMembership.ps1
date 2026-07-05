@@ -1,4 +1,4 @@
-function Expand-GroupMembership {
+﻿function Expand-GroupMembership {
     <#
         .SYNOPSIS
         Expands group memberships to return direct member SIDs.
