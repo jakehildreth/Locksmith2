@@ -38,4 +38,32 @@ $stagedFiles | ForEach-Object {
     git -C $repoRoot add -- $fullPath
 }
 
+# Auto-remove trailing whitespace from staged text files.
+$textFiles = git -C $repoRoot diff --cached --name-only --diff-filter=ACM |
+    Where-Object { $_ -notmatch '\.(png|jpg|jpeg|gif|ico|svg|zip|dll|exe|pdf)$' }
+
+$fixedFiles = @()
+foreach ($file in $textFiles) {
+    $fullPath = Join-Path $repoRoot $file
+    if (-not (Test-Path -LiteralPath $fullPath)) { continue }
+
+    $originalBytes = [System.IO.File]::ReadAllBytes($fullPath)
+    $encoding = [System.Text.UTF8Encoding]::new($true)
+    $content = $encoding.GetString($originalBytes)
+
+    $cleaned = $content -replace "[ \t]+\r?\n", "$([Environment]::NewLine)"
+    if ($cleaned -ne $content) {
+        [System.IO.File]::WriteAllText($fullPath, $cleaned, $encoding)
+        $fixedFiles += $file
+    }
+}
+
+if ($fixedFiles) {
+    $fixedFiles | ForEach-Object {
+        $fullPath = Join-Path $repoRoot $_
+        git -C $repoRoot add -- $fullPath
+    }
+    Write-Host "Removed trailing whitespace from: $($fixedFiles -join ', ')"
+}
+
 exit 0

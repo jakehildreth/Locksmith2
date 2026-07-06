@@ -2,64 +2,64 @@
     <#
     .SYNOPSIS
     Generates an interactive HTML dashboard for Locksmith2 scan results.
-    
+
     .DESCRIPTION
     Creates a comprehensive HTML dashboard with left navigation menu showing:
     - All issues with expanded principals
     - Issues filtered by type (Template, CA, Object)
     - Risky principals analysis.
-    
+
     .PARAMETER FilePath
     Path where the HTML dashboard will be saved.
     Default: Locksmith2-Dashboard.html in the current working directory.
-    
+
     .PARAMETER Show
     Opens the dashboard in the default browser after generation.
     Defaults to $true when no parameters are specified.
-    
+
     .PARAMETER ExpandGroups
     Expands group principals into individual member issues.
-    
+
     .PARAMETER Online
     Uses online CDN resources instead of embedding CSS/JS.
     Results in smaller file size but requires internet connection to view.
-    
+
     .INPUTS
     None. This function does not accept pipeline input.
-    
+
     .OUTPUTS
     None. Generates an HTML file at the specified path.
-    
+
     .EXAMPLE
     Invoke-Locksmith2
     New-LS2Dashboard -FilePath C:\Reports\locksmith-dashboard.html -Show
-    
+
     Runs a scan and generates an interactive dashboard.
-    
+
     .EXAMPLE
     New-LS2Dashboard -ExpandGroups -Show
-    
+
     Generates dashboard with group memberships expanded to individual principals.
-    
+
     .EXAMPLE
     New-LS2Dashboard -FilePath C:\Reports\report.html -Online
-    
+
     Generates a smaller dashboard file using online CDN resources.
-    
+
     .NOTES
     Author: Jake Hildreth (@jakehildreth)
     Requires: PSWriteHTML module (https://github.com/EvotecIT/PSWriteHTML)
     Requires: PowerShell 5.1 or later
-    
+
     The dashboard reads from the current IssueStore. Run Invoke-Locksmith2 or
     Find-LS2Vulnerable* functions first to populate the store with scan data.
-    
+
     .LINK
     Invoke-Locksmith2
-    
+
     .LINK
     Find-LS2RiskyPrincipal
-    
+
     .LINK
     Get-FlattenedIssues
     #>
@@ -67,17 +67,17 @@
     param(
         [Parameter()]
         [string]$FilePath,
-        
+
         [Parameter()]
         [bool]$Show = $true,
-        
+
         [Parameter()]
         [switch]$ExpandGroups,
-        
+
         [Parameter()]
         [switch]$Online
     )
-    
+
     #requires -Version 5.1
 
     if (-not $FilePath) {
@@ -164,7 +164,7 @@
     $forestName   = if ($script:Forest) { $script:Forest } else { 'Unknown Forest' }
     $generatedAt  = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
     $scanUser     = if ($script:Credential) { $script:Credential.UserName } else { [System.Security.Principal.WindowsIdentity]::GetCurrent().Name }
-    $scanComputer = "$env:USERDOMAIN\$env:COMPUTERNAME"
+    $scanComputer = "$env:USERDOMAIN\$env:COMPUTERNAME"                
     # Resolve logo and encode as base64 data URI for self-contained HTML
     $logoSource = $null
     $moduleBase = (Get-Module -Name Locksmith2 -ErrorAction SilentlyContinue).ModuleBase
