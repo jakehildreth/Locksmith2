@@ -165,6 +165,25 @@
     $generatedAt  = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
     $scanUser     = if ($script:Credential) { $script:Credential.UserName } else { [System.Security.Principal.WindowsIdentity]::GetCurrent().Name }
     $scanComputer = "$env:USERDOMAIN\$env:COMPUTERNAME"
+
+    # Summary metrics for the dashboard header cards
+    $totalIssues      = @($allIssues).Count
+    $issueRiskNames   = foreach ($issue in $allIssues) {
+        if ($issue.RiskName) { $issue.RiskName } else { 'Unrated' }
+    }
+    $riskGroups       = $issueRiskNames | Group-Object -NoElement
+    $riskCountMap     = @{}
+    foreach ($group in $riskGroups) {
+        $riskCountMap[$group.Name] = $group.Count
+    }
+
+    $criticalCount     = if ($riskCountMap.ContainsKey('Critical'))     { $riskCountMap['Critical'] }     else { 0 }
+    $highCount         = if ($riskCountMap.ContainsKey('High'))         { $riskCountMap['High'] }         else { 0 }
+    $mediumCount       = if ($riskCountMap.ContainsKey('Medium'))       { $riskCountMap['Medium'] }       else { 0 }
+    $lowCount          = if ($riskCountMap.ContainsKey('Low'))          { $riskCountMap['Low'] }          else { 0 }
+    $informationalCount = if ($riskCountMap.ContainsKey('Informational')) { $riskCountMap['Informational'] } else { 0 }
+    $unratedCount      = if ($riskCountMap.ContainsKey('Unrated'))      { $riskCountMap['Unrated'] }      else { 0 }
+
     # Resolve logo and encode as base64 data URI for self-contained HTML
     $logoSource = $null
     $moduleBase = (Get-Module -Name Locksmith2 -ErrorAction SilentlyContinue).ModuleBase
@@ -229,6 +248,19 @@
         New-HTMLTableCondition -Name 'IssueCount' -ComparisonType number -Operator gt -Value 10 -BackgroundColor '#ef5350' -Color White
     }
 
+    # Renders one summary card. Called inside New-HTMLSection.
+    $summaryCard = {
+        param(
+            [string]$Label,
+            [string]$Value,
+            [string]$Color
+        )
+        New-HTMLPanel {
+            New-HTMLText -Text $Label -FontSize 12 -Color '#888' -Alignment center
+            New-HTMLText -Text $Value -FontSize 32 -FontWeight bold -Color $Color -Alignment center
+        }
+    }
+
     $tableButtons = @('copyHtml5', 'excelHtml5', 'csvHtml5', 'pdfHtml5', 'searchBuilder', 'searchPanes')
 
     New-HTML -TitleText "Locksmith 2 Dashboard - $forestName - $generatedAt" -Online:$Online -FilePath $FilePath -Show:$Show {
@@ -261,6 +293,18 @@
                     New-HTMLHorizontalLine
                     New-HTMLText -Text "$(@($principalsTable).Count) principals  --  $($def.Subtitle)" -Color '#666' -FontSize 13 -FontStyle italic
                 } else {
+                    if ($tabName -eq 'All Issues' -and $totalIssues -gt 0) {
+                        New-HTMLSection -HeaderText 'Scan Summary' -Content {
+                            & $summaryCard -Label 'Total Issues' -Value $totalIssues -Color '#333'
+                            & $summaryCard -Label 'Critical' -Value $criticalCount -Color '#b71c1c'
+                            & $summaryCard -Label 'High' -Value $highCount -Color '#e53935'
+                            & $summaryCard -Label 'Medium' -Value $mediumCount -Color '#ff9800'
+                            & $summaryCard -Label 'Low' -Value $lowCount -Color '#fdd835'
+                            & $summaryCard -Label 'Informational' -Value $informationalCount -Color '#1976d2'
+                        }
+                        New-HTMLHorizontalLine
+                    }
+
                     New-HTMLTable -DataTable $def.Table `
                         -Filtering `
                         -PagingLength 25 `
