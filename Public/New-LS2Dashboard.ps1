@@ -133,14 +133,14 @@
     # Techniques = $null  -> no filter (All Issues).
     # IsPrincipals = $true -> use the principals table and formatting instead of issue table.
     $tabDefs = [ordered]@{
-        'All Issues'        = @{ Icon = 'exclamation-triangle'; IconColor = 'Red';    Techniques = $null;                                                          Subtitle = 'All discovered AD CS vulnerabilities with principals expanded';                                             Title = 'All AD CS Security Issues';           SortColumn = 'Technique' }
-        'Templates'         = @{ Icon = 'file-contract';        IconColor = 'Orange'; Techniques = @('ESC1','ESC2','ESC3c1','ESC3c2','ESC4a','ESC4o','ESC9');      Subtitle = 'Misconfigured templates allowing SAN abuse, weak enrollment restrictions, or enrollment agent exploitation'; Title = 'Template Vulnerabilities';            SortColumn = 'Technique' }
-        'CAs'               = @{ Icon = 'certificate';          IconColor = 'Yellow'; Techniques = @('ESC6','ESC7a','ESC7m','ESC8','ESC11','ESC16');               Subtitle = 'Insecure CA configurations and dangerous role assignments (ESC6, ESC7, ESC8, ESC11, ESC16)';             Title = 'CA Configuration Issues';             SortColumn = 'Name'      }
-        'Objects'           = @{ Icon = 'folder';               IconColor = 'Blue';   Techniques = @('ESC5a','ESC5o');                                             Subtitle = 'Dangerous permissions on PKI infrastructure objects (ESC5)';                                               Title = 'Infrastructure Object Issues';        SortColumn = 'Name'      }
+        'All Issues'        = @{ Icon = 'exclamation-triangle'; IconColor = 'Red';    Techniques = $null;                                                          Subtitle = 'All discovered AD CS vulnerabilities with principals expanded';                                             Title = 'All AD CS Security Issues';           SortColumn = 'Technique'; SummaryLabel = 'Issue' }
+        'Templates'         = @{ Icon = 'file-contract';        IconColor = 'Orange'; Techniques = @('ESC1','ESC2','ESC3c1','ESC3c2','ESC4a','ESC4o','ESC9');      Subtitle = 'Misconfigured templates allowing SAN abuse, weak enrollment restrictions, or enrollment agent exploitation'; Title = 'Template Vulnerabilities';            SortColumn = 'Technique'; SummaryLabel = 'Template Issue' }
+        'CAs'               = @{ Icon = 'certificate';          IconColor = 'Yellow'; Techniques = @('ESC6','ESC7a','ESC7m','ESC8','ESC11','ESC16');               Subtitle = 'Insecure CA configurations and dangerous role assignments (ESC6, ESC7, ESC8, ESC11, ESC16)';             Title = 'CA Configuration Issues';             SortColumn = 'Name';      SummaryLabel = 'CA Issue' }
+        'Objects'           = @{ Icon = 'folder';               IconColor = 'Blue';   Techniques = @('ESC5a','ESC5o');                                             Subtitle = 'Dangerous permissions on PKI infrastructure objects (ESC5)';                                               Title = 'Infrastructure Object Issues';        SortColumn = 'Name';      SummaryLabel = 'Object Issue' }
         'Risky Principals'  = @{ Icon = 'user-shield';          IconColor = 'Purple'; IsPrincipals = $true;                                                        Subtitle = 'Ranked by number of exploitable AD CS vulnerabilities' }
-        'Dangerous Configurations' = @{ Icon = 'cog';                  IconColor = 'Red';    Techniques = @('ESC1','ESC2','ESC3c1','ESC3c2','ESC6','ESC8','ESC9','ESC11','ESC16'); Subtitle = 'Insecure template/CA configurations enabling certificate abuse (ESC1, ESC2, ESC6, ESC8, ESC9, ESC11, ESC16)'; Title = 'Configuration-Based Vulnerabilities'; SortColumn = 'Technique' }
-        'Access Control'    = @{ Icon = 'key';                  IconColor = 'Green';  Techniques = @('ESC4a','ESC5a');                                             Subtitle = 'Excessive write/modify permissions on templates and PKI objects (ESC4a, ESC5a)';                            Title = 'Write/Modify Permission Issues';       SortColumn = 'ActiveDirectoryRights' }
-        'Ownership'         = @{ Icon = 'crown';                IconColor = 'Gold';   Techniques = @('ESC4o','ESC5o');                                             Subtitle = 'Non-standard owners with full control over templates or PKI objects (ESC4o, ESC5o)';                      Title = 'Dangerous Ownership Configurations';   SortColumn = 'Owner'     }
+        'Dangerous Configurations' = @{ Icon = 'cog';                  IconColor = 'Red';    Techniques = @('ESC1','ESC2','ESC3c1','ESC3c2','ESC6','ESC8','ESC9','ESC11','ESC16'); Subtitle = 'Insecure template/CA configurations enabling certificate abuse (ESC1, ESC2, ESC6, ESC8, ESC9, ESC11, ESC16)'; Title = 'Configuration-Based Vulnerabilities'; SortColumn = 'Technique'; SummaryLabel = 'Configuration Issue' }
+        'Access Control'    = @{ Icon = 'key';                  IconColor = 'Green';  Techniques = @('ESC4a','ESC5a');                                             Subtitle = 'Excessive write/modify permissions on templates and PKI objects (ESC4a, ESC5a)';                            Title = 'Write/Modify Permission Issues';       SortColumn = 'ActiveDirectoryRights'; SummaryLabel = 'Access Control Issue' }
+        'Ownership'         = @{ Icon = 'crown';                IconColor = 'Gold';   Techniques = @('ESC4o','ESC5o');                                             Subtitle = 'Non-standard owners with full control over templates or PKI objects (ESC4o, ESC5o)';                      Title = 'Dangerous Ownership Configurations';   SortColumn = 'Owner';     SummaryLabel = 'Ownership Issue' }
     }
 
     # Build filtered + projected table for each issue tab
@@ -164,7 +164,8 @@
     $forestName   = if ($script:Forest) { $script:Forest } else { 'Unknown Forest' }
     $generatedAt  = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
     $scanUser     = if ($script:Credential) { $script:Credential.UserName } else { [System.Security.Principal.WindowsIdentity]::GetCurrent().Name }
-    $scanComputer = "$env:USERDOMAIN\$env:COMPUTERNAME"                
+    $scanComputer = "$env:USERDOMAIN\$env:COMPUTERNAME"
+
     # Resolve logo and encode as base64 data URI for self-contained HTML
     $logoSource = $null
     $moduleBase = (Get-Module -Name Locksmith2 -ErrorAction SilentlyContinue).ModuleBase
@@ -229,6 +230,19 @@
         New-HTMLTableCondition -Name 'IssueCount' -ComparisonType number -Operator gt -Value 10 -BackgroundColor '#ef5350' -Color White
     }
 
+    # Renders one summary card. Called inside New-HTMLSection.
+    $summaryCard = {
+        param(
+            [string]$Label,
+            [string]$Value,
+            [string]$Color
+        )
+        New-HTMLPanel {
+            New-HTMLText -Text $Label -FontSize 12 -Color '#888' -Alignment center
+            New-HTMLText -Text $Value -FontSize 32 -FontWeight bold -Color $Color -Alignment center
+        }
+    }
+
     $tableButtons = @('copyHtml5', 'excelHtml5', 'csvHtml5', 'pdfHtml5', 'searchBuilder', 'searchPanes')
 
     New-HTML -TitleText "Locksmith 2 Dashboard - $forestName - $generatedAt" -Online:$Online -FilePath $FilePath -Show:$Show {
@@ -261,6 +275,34 @@
                     New-HTMLHorizontalLine
                     New-HTMLText -Text "$(@($principalsTable).Count) principals  --  $($def.Subtitle)" -Color '#666' -FontSize 13 -FontStyle italic
                 } else {
+                    if ($def.Issues.Count -gt 0) {
+                        $tabRiskNames = foreach ($issue in $def.Issues) {
+                            if ($issue.RiskName) { $issue.RiskName } else { 'Unrated' }
+                        }
+                        $tabRiskGroups = $tabRiskNames | Group-Object -NoElement
+                        $tabRiskCountMap = @{}
+                        foreach ($group in $tabRiskGroups) {
+                            $tabRiskCountMap[$group.Name] = $group.Count
+                        }
+
+                        $tabTotal      = $def.Issues.Count
+                        $tabCritical   = if ($tabRiskCountMap.ContainsKey('Critical'))     { $tabRiskCountMap['Critical'] }     else { 0 }
+                        $tabHigh       = if ($tabRiskCountMap.ContainsKey('High'))         { $tabRiskCountMap['High'] }         else { 0 }
+                        $tabMedium     = if ($tabRiskCountMap.ContainsKey('Medium'))       { $tabRiskCountMap['Medium'] }       else { 0 }
+                        $tabLow        = if ($tabRiskCountMap.ContainsKey('Low'))          { $tabRiskCountMap['Low'] }          else { 0 }
+                        $tabInfo       = if ($tabRiskCountMap.ContainsKey('Informational')) { $tabRiskCountMap['Informational'] } else { 0 }
+
+                        New-HTMLSection -HeaderText 'Scan Summary' -Content {
+                            & $summaryCard -Label "Total $($def.SummaryLabel)s" -Value $tabTotal -Color '#333'
+                            & $summaryCard -Label 'Critical' -Value $tabCritical -Color '#b71c1c'
+                            & $summaryCard -Label 'High' -Value $tabHigh -Color '#e53935'
+                            & $summaryCard -Label 'Medium' -Value $tabMedium -Color '#ff9800'
+                            & $summaryCard -Label 'Low' -Value $tabLow -Color '#fdd835'
+                            & $summaryCard -Label 'Informational' -Value $tabInfo -Color '#1976d2'
+                        }
+                        New-HTMLHorizontalLine
+                    }
+
                     New-HTMLTable -DataTable $def.Table `
                         -Filtering `
                         -PagingLength 25 `
