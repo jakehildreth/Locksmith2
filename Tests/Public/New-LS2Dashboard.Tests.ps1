@@ -155,6 +155,30 @@ InModuleScope 'Locksmith2' {
                 $html = Get-Content -Path $testFile -Raw
                 $html | Should -Match '\.summary-section:has\(\.summary-card-active\) \.summary-card:not\(\.summary-card-active\)'
             }
+
+            It 'should default all non-empty issue tabs to RiskValue descending' {
+                New-LS2Dashboard -FilePath $testFile -Show:$false
+                $html = Get-Content -Path $testFile -Raw
+                $issueTableMatches = $html | Select-String -Pattern '\$\(''#IssuesTable-[A-Za-z0-9-]+''\)\.DataTable\(' -AllMatches
+                $issueTableMatches.Matches.Count | Should -BeGreaterThan 0
+                foreach ($match in $issueTableMatches.Matches) {
+                    $startIndex = $match.Index
+                    $endIndex = $html.IndexOf(');', $startIndex)
+                    $initBlock = $html.Substring($startIndex, $endIndex - $startIndex)
+                    # Empty tables omit the order array; only assert on tables that have data.
+                    if ($initBlock -match '"order":\s*\[\s*\d+\s*,\s*"(?:desc|asc)"\s*\]') {
+                        $initBlock | Should -Match '"order":\s*\[\s*2\s*,\s*"desc"\s*\]'
+                    }
+                }
+            }
+
+            It 'should default Risky Principals tab to IssueCount descending' {
+                New-LS2Dashboard -FilePath $testFile -Show:$false
+                $html = Get-Content -Path $testFile -Raw
+                $principalsMatch = $html | Select-String -Pattern 'Principals by Risk Score[\s\S]*?"order":\s*\[\s*(\d+)\s*,\s*"(desc|asc)"\s*\]' -AllMatches
+                $principalsMatch.Matches.Count | Should -BeGreaterThan 0
+                $principalsMatch.Matches[0].Groups[2].Value | Should -Be 'desc'
+            }
         }
     }
 }
