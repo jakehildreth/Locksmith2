@@ -137,10 +137,17 @@ InModuleScope 'Locksmith2' {
                 $html | Should -Match '\.draw\(\)'
             }
 
-            It 'should clear the filter when Total card or active card is clicked' {
+            It 'should clear the filter when Total card is clicked or no severity cards are active' {
                 New-LS2Dashboard -FilePath $testFile -Show:$false
                 $html = Get-Content -Path $testFile -Raw
                 $html | Should -Match "column\(1\)\.search\(''\)\.draw\(\)"
+            }
+
+            It 'should build a regex union pattern for multiple selected severities' {
+                New-LS2Dashboard -FilePath $testFile -Show:$false
+                $html = Get-Content -Path $testFile -Raw
+                $html | Should -Match 'activeFilters\.map'
+                $html | Should -Match "join\('\|'\)"
             }
 
             It 'should apply a faded style class to non-selected cards' {

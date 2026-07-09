@@ -331,13 +331,22 @@ document.addEventListener('DOMContentLoaded', function() {
         var dt = (window.jQuery && jQuery.fn.DataTable) ? jQuery(table).DataTable() : null;
         if (!dt) return;
         var filter = card.getAttribute('data-filter') || '';
-        var active = card.classList.contains('summary-card-active');
-        section.querySelectorAll('.summary-card').forEach(function(c) { c.classList.remove('summary-card-active'); });
-        if (active || filter === '') {
+        if (filter === '') {
+            section.querySelectorAll('.summary-card').forEach(function(c) { c.classList.remove('summary-card-active'); });
+            dt.column(1).search('').draw();
+            return;
+        }
+        card.classList.toggle('summary-card-active');
+        var activeFilters = [];
+        section.querySelectorAll('.summary-card.summary-card-active').forEach(function(c) {
+            var f = c.getAttribute('data-filter');
+            if (f) { activeFilters.push(f); }
+        });
+        if (activeFilters.length === 0) {
             dt.column(1).search('').draw();
         } else {
-            dt.column(1).search(filter).draw();
-            card.classList.add('summary-card-active');
+            var pattern = activeFilters.map(function(f) { return '^' + f.replace(/[-[\]{}()*+?.,\\\\^$|#\s]/g, '\\\\$&') + '$'; }).join('|');
+            dt.column(1).search(pattern, true, false).draw();
         }
     });
 });
