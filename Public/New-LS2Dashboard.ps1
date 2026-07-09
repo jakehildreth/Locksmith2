@@ -361,7 +361,8 @@ document.addEventListener('DOMContentLoaded', function() {
                         -PagingLength 25 `
                         -Buttons $tableButtons `
                         -Title $def.Title `
-                        -DefaultSortColumn $def.SortColumn {& $issueFormatting}
+                        -DefaultSortColumn 'RiskValue' `
+                        -DefaultSortOrder Descending {& $issueFormatting}
                     New-HTMLHorizontalLine
                     New-HTMLText -Text "$($def.Issues.Count) issues  --  $($def.Subtitle)" -Color '#666' -FontSize 13 -FontStyle italic
                 }
