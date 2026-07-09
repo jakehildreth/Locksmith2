@@ -231,15 +231,22 @@
     }
 
     # Renders one summary card. Called inside New-HTMLSection.
+    # Cards are clickable: they filter the tab's DataTable by RiskName. Clicking the
+    # active card again clears the filter. Non-selected cards are faded via CSS class.
     $summaryCard = {
         param(
             [string]$Label,
             [string]$Value,
-            [string]$Color
+            [string]$Color,
+            [string]$TableId,
+            [string]$FilterValue,
+            [string]$CardClass = 'summary-card'
         )
-        New-HTMLPanel {
-            New-HTMLText -Text $Label -FontSize 12 -Color '#888' -Alignment center
-            New-HTMLText -Text $Value -FontSize 32 -FontWeight bold -Color $Color -Alignment center
+        New-HTMLTag -Tag 'div' -Attributes @{ class = "$CardClass summary-card-clickable"; 'data-filter' = $FilterValue; 'data-table-id' = $TableId } {
+            New-HTMLPanel {
+                New-HTMLText -Text $Label -FontSize 12 -Color '#888' -Alignment center
+                New-HTMLText -Text $Value -FontSize 32 -FontWeight bold -Color $Color -Alignment center
+            }
         }
     }
 
@@ -250,7 +257,16 @@
         # Persistent header — logo + collection context. New-HTMLHeader renders outside the tab
         # container and does not create a tab-content slot (unlike New-HTMLSection/Panel at this level).
         New-HTMLHeader {
-            Add-HTMLStyle -Content 'header { text-align: center; padding: 12px 0; } header img { max-width: 50%; height: auto; display: inline-block; }'
+            Add-HTMLStyle -Content @'
+header { text-align: center; padding: 12px 0; }
+header img { max-width: 50%; height: auto; display: inline-block; }
+.summary-section { display: flex; flex-wrap: wrap; gap: 12px; width: 100%; }
+.summary-card { display: flex; flex: 1 1 0; min-width: 140px; cursor: pointer; transition: opacity 0.2s ease-in-out, transform 0.1s ease-in-out; }
+.summary-card > .flexPanel { width: 100%; }
+.summary-card:hover { opacity: 1 !important; transform: translateY(-2px); }
+.summary-card-active > .flexPanel { outline: 2px solid #333; }
+.summary-section:has(.summary-card-active) .summary-card:not(.summary-card-active) { opacity: 0.45; }
+'@
             if ($logoSource) {
                 New-HTMLImage -Source $logoSource -Width '50%' -AlternativeText 'Locksmith 2'
             }
@@ -263,6 +279,7 @@
 
         foreach ($tabName in $tabDefs.Keys) {
             $def = $tabDefs[$tabName]
+            $tableId = if ($def.IsPrincipals) { $null } else { 'IssuesTable-' + ($tabName -replace '\s+', '-' -replace '[^A-Za-z0-9-]', '') }
             New-HTMLTab -Name $tabName -IconSolid $def.Icon -IconColor $def.IconColor {
                 if ($def.IsPrincipals) {
                     New-HTMLTable -DataTable $principalsTable `
@@ -293,22 +310,59 @@
                         $tabInfo       = if ($tabRiskCountMap.ContainsKey('Informational')) { $tabRiskCountMap['Informational'] } else { 0 }
 
                         New-HTMLSection -HeaderText 'Scan Summary' -Content {
-                            & $summaryCard -Label "Total $($def.SummaryLabel)s" -Value $tabTotal -Color '#333'
-                            & $summaryCard -Label 'Critical' -Value $tabCritical -Color '#b71c1c'
-                            & $summaryCard -Label 'High' -Value $tabHigh -Color '#e53935'
-                            & $summaryCard -Label 'Medium' -Value $tabMedium -Color '#ff9800'
-                            & $summaryCard -Label 'Low' -Value $tabLow -Color '#fdd835'
-                            & $summaryCard -Label 'Informational' -Value $tabInfo -Color '#1976d2'
+                            New-HTMLTag -Tag 'div' -Attributes @{ class = 'summary-section'; 'data-table-id' = $tableId } {
+                                & $summaryCard -Label "Total $($def.SummaryLabel)s" -Value $tabTotal -Color '#333' -TableId $tableId -FilterValue ''
+                                & $summaryCard -Label 'Critical' -Value $tabCritical -Color '#b71c1c' -TableId $tableId -FilterValue 'Critical'
+                                & $summaryCard -Label 'High' -Value $tabHigh -Color '#e53935' -TableId $tableId -FilterValue 'High'
+                                & $summaryCard -Label 'Medium' -Value $tabMedium -Color '#ff9800' -TableId $tableId -FilterValue 'Medium'
+                                & $summaryCard -Label 'Low' -Value $tabLow -Color '#fdd835' -TableId $tableId -FilterValue 'Low'
+                                & $summaryCard -Label 'Informational' -Value $tabInfo -Color '#1976d2' -TableId $tableId -FilterValue 'Informational'
+                            }
+                            Add-HTMLScript -Content "
+document.addEventListener('DOMContentLoaded', function() {
+    var section = document.querySelector('.summary-section[data-table-id=\'$tableId\']');
+    if (!section) return;
+    section.addEventListener('click', function(e) {
+        var card = e.target.closest('.summary-card');
+        if (!card) return;
+        var tableId = section.getAttribute('data-table-id');
+        var table = document.getElementById(tableId);
+        if (!table) return;
+        var dt = (window.jQuery && jQuery.fn.DataTable) ? jQuery(table).DataTable() : null;
+        if (!dt) return;
+        var filter = card.getAttribute('data-filter') || '';
+        if (filter === '') {
+            section.querySelectorAll('.summary-card').forEach(function(c) { c.classList.remove('summary-card-active'); });
+            dt.column(1).search('').draw();
+            return;
+        }
+        card.classList.toggle('summary-card-active');
+        var activeFilters = [];
+        section.querySelectorAll('.summary-card.summary-card-active').forEach(function(c) {
+            var f = c.getAttribute('data-filter');
+            if (f) { activeFilters.push(f); }
+        });
+        if (activeFilters.length === 0) {
+            dt.column(1).search('').draw();
+        } else {
+            var pattern = activeFilters.map(function(f) { return '^' + f.replace(/[-[\]{}()*+?.,\\\\^$|#\s]/g, '\\\\$&') + '$'; }).join('|');
+            dt.column(1).search(pattern, true, false).draw();
+        }
+    });
+});
+"
                         }
                         New-HTMLHorizontalLine
                     }
 
                     New-HTMLTable -DataTable $def.Table `
+                        -DataTableID $tableId `
                         -Filtering `
                         -PagingLength 25 `
                         -Buttons $tableButtons `
                         -Title $def.Title `
-                        -DefaultSortColumn $def.SortColumn {& $issueFormatting}
+                        -DefaultSortColumn 'RiskValue' `
+                        -DefaultSortOrder Descending {& $issueFormatting}
                     New-HTMLHorizontalLine
                     New-HTMLText -Text "$($def.Issues.Count) issues  --  $($def.Subtitle)" -Color '#666' -FontSize 13 -FontStyle italic
                 }
