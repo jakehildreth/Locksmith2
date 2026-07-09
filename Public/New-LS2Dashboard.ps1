@@ -133,14 +133,14 @@
     # Techniques = $null  -> no filter (All Issues).
     # IsPrincipals = $true -> use the principals table and formatting instead of issue table.
     $tabDefs = [ordered]@{
-        'All Issues'        = @{ Icon = 'exclamation-triangle'; IconColor = 'Red';    Techniques = $null;                                                          Subtitle = 'All discovered AD CS vulnerabilities with principals expanded';                                             Title = 'All AD CS Security Issues';           SortColumn = 'Technique'; SummaryLabel = 'Issue' }
-        'Templates'         = @{ Icon = 'file-contract';        IconColor = 'Orange'; Techniques = @('ESC1','ESC2','ESC3c1','ESC3c2','ESC4a','ESC4o','ESC9');      Subtitle = 'Misconfigured templates allowing SAN abuse, weak enrollment restrictions, or enrollment agent exploitation'; Title = 'Template Vulnerabilities';            SortColumn = 'Technique'; SummaryLabel = 'Template Issue' }
-        'CAs'               = @{ Icon = 'certificate';          IconColor = 'Yellow'; Techniques = @('ESC6','ESC7a','ESC7m','ESC8','ESC11','ESC16');               Subtitle = 'Insecure CA configurations and dangerous role assignments (ESC6, ESC7, ESC8, ESC11, ESC16)';             Title = 'CA Configuration Issues';             SortColumn = 'Name';      SummaryLabel = 'CA Issue' }
-        'Objects'           = @{ Icon = 'folder';               IconColor = 'Blue';   Techniques = @('ESC5a','ESC5o');                                             Subtitle = 'Dangerous permissions on PKI infrastructure objects (ESC5)';                                               Title = 'Infrastructure Object Issues';        SortColumn = 'Name';      SummaryLabel = 'Object Issue' }
-        'Risky Principals'  = @{ Icon = 'user-shield';          IconColor = 'Purple'; IsPrincipals = $true;                                                        Subtitle = 'Ranked by number of exploitable AD CS vulnerabilities' }
-        'Dangerous Configurations' = @{ Icon = 'cog';                  IconColor = 'Red';    Techniques = @('ESC1','ESC2','ESC3c1','ESC3c2','ESC6','ESC8','ESC9','ESC11','ESC16'); Subtitle = 'Insecure template/CA configurations enabling certificate abuse (ESC1, ESC2, ESC6, ESC8, ESC9, ESC11, ESC16)'; Title = 'Configuration-Based Vulnerabilities'; SortColumn = 'Technique'; SummaryLabel = 'Configuration Issue' }
-        'Access Control'    = @{ Icon = 'key';                  IconColor = 'Green';  Techniques = @('ESC4a','ESC5a');                                             Subtitle = 'Excessive write/modify permissions on templates and PKI objects (ESC4a, ESC5a)';                            Title = 'Write/Modify Permission Issues';       SortColumn = 'ActiveDirectoryRights'; SummaryLabel = 'Access Control Issue' }
-        'Ownership'         = @{ Icon = 'crown';                IconColor = 'Gold';   Techniques = @('ESC4o','ESC5o');                                             Subtitle = 'Non-standard owners with full control over templates or PKI objects (ESC4o, ESC5o)';                      Title = 'Dangerous Ownership Configurations';   SortColumn = 'Owner';     SummaryLabel = 'Ownership Issue' }
+        'All Issues'        = @{ Icon = 'exclamation-triangle'; IconColor = 'Red';    Techniques = $null;                                                          Subtitle = 'All discovered AD CS vulnerabilities with principals expanded';                                             Title = 'All AD CS Security Issues';           SortColumn = 'RiskValue'; SortOrder = 'Descending'; SummaryLabel = 'Issue' }
+        'Templates'         = @{ Icon = 'file-contract';        IconColor = 'Orange'; Techniques = @('ESC1','ESC2','ESC3c1','ESC3c2','ESC4a','ESC4o','ESC9');      Subtitle = 'Misconfigured templates allowing SAN abuse, weak enrollment restrictions, or enrollment agent exploitation'; Title = 'Template Vulnerabilities';            SortColumn = 'RiskValue'; SortOrder = 'Descending'; SummaryLabel = 'Template Issue' }
+        'CAs'               = @{ Icon = 'certificate';          IconColor = 'Yellow'; Techniques = @('ESC6','ESC7a','ESC7m','ESC8','ESC11','ESC16');               Subtitle = 'Insecure CA configurations and dangerous role assignments (ESC6, ESC7, ESC8, ESC11, ESC16)';             Title = 'CA Configuration Issues';             SortColumn = 'RiskValue'; SortOrder = 'Descending'; SummaryLabel = 'CA Issue' }
+        'Objects'           = @{ Icon = 'folder';               IconColor = 'Blue';   Techniques = @('ESC5a','ESC5o');                                             Subtitle = 'Dangerous permissions on PKI infrastructure objects (ESC5)';                                               Title = 'Infrastructure Object Issues';        SortColumn = 'RiskValue'; SortOrder = 'Descending'; SummaryLabel = 'Object Issue' }
+        'Risky Principals'  = @{ Icon = 'user-shield';          IconColor = 'Purple'; IsPrincipals = $true;                                                        Subtitle = 'Ranked by number of exploitable AD CS vulnerabilities';                                                                                                              SortColumn = 'IssueCount'; SortOrder = 'Descending' }
+        'Dangerous Configurations' = @{ Icon = 'cog';                  IconColor = 'Red';    Techniques = @('ESC1','ESC2','ESC3c1','ESC3c2','ESC6','ESC8','ESC9','ESC11','ESC16'); Subtitle = 'Insecure template/CA configurations enabling certificate abuse (ESC1, ESC2, ESC6, ESC8, ESC9, ESC11, ESC16)'; Title = 'Configuration-Based Vulnerabilities'; SortColumn = 'RiskValue'; SortOrder = 'Descending'; SummaryLabel = 'Configuration Issue' }
+        'Access Control'    = @{ Icon = 'key';                  IconColor = 'Green';  Techniques = @('ESC4a','ESC5a');                                             Subtitle = 'Excessive write/modify permissions on templates and PKI objects (ESC4a, ESC5a)';                            Title = 'Write/Modify Permission Issues';       SortColumn = 'RiskValue'; SortOrder = 'Descending'; SummaryLabel = 'Access Control Issue' }
+        'Ownership'         = @{ Icon = 'crown';                IconColor = 'Gold';   Techniques = @('ESC4o','ESC5o');                                             Subtitle = 'Non-standard owners with full control over templates or PKI objects (ESC4o, ESC5o)';                      Title = 'Dangerous Ownership Configurations';   SortColumn = 'RiskValue'; SortOrder = 'Descending'; SummaryLabel = 'Ownership Issue' }
     }
 
     # Build filtered + projected table for each issue tab
@@ -287,8 +287,8 @@ header img { max-width: 50%; height: auto; display: inline-block; }
                         -PagingLength 25 `
                         -Buttons $tableButtons `
                         -Title 'Principals by Risk Score' `
-                        -DefaultSortColumn 'IssueCount' `
-                        -DefaultSortOrder Descending {& $principalFormatting}
+                        -DefaultSortColumn $def.SortColumn `
+                        -DefaultSortOrder $def.SortOrder {& $principalFormatting}
                     New-HTMLHorizontalLine
                     New-HTMLText -Text "$(@($principalsTable).Count) principals  --  $($def.Subtitle)" -Color '#666' -FontSize 13 -FontStyle italic
                 } else {
@@ -361,8 +361,8 @@ document.addEventListener('DOMContentLoaded', function() {
                         -PagingLength 25 `
                         -Buttons $tableButtons `
                         -Title $def.Title `
-                        -DefaultSortColumn 'RiskValue' `
-                        -DefaultSortOrder Descending {& $issueFormatting}
+                        -DefaultSortColumn $def.SortColumn `
+                        -DefaultSortOrder $def.SortOrder {& $issueFormatting}
                     New-HTMLHorizontalLine
                     New-HTMLText -Text "$($def.Issues.Count) issues  --  $($def.Subtitle)" -Color '#666' -FontSize 13 -FontStyle italic
                 }
