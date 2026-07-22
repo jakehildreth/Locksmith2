@@ -1,11 +1,21 @@
-﻿param (
+param (
     # A CalVer string if you need to manually override the default yyyy.M.dHHmm version string.
     [string]$CalVer,
     # A prerelease tag to append to the module version (e.g., 'alpha', 'beta', 'rc1').
     [string]$Prerelease,
     [switch]$PublishToPSGallery,
     [string]$PSGalleryAPIPath,
-    [string]$PSGalleryAPIKey
+    [string]$PSGalleryAPIKey,
+    # When present, creates a GitHub release and attaches the vendored artefact as a zip asset.
+    [switch]$PublishToGitHub,
+    # GitHub personal access token for creating releases. Used in CI via a secret environment variable.
+    [string]$GitHubAPIKey,
+    # Path to a file containing the GitHub personal access token. Used for local developer workflows.
+    [string]$GitHubAPIPath,
+    # GitHub owner (user or organization) for release publishing. Defaults to 'jakehildreth'.
+    [string]$GitHubOwner = 'jakehildreth',
+    # GitHub repository name for release publishing. Defaults to 'Locksmith2'.
+    [string]$GitHubRepository = 'Locksmith2'
 )
 
 # The VS Code PowerShell Extension pre-loads PSScriptAnalyzer into the host
@@ -23,6 +33,11 @@ if ($Host.Name -eq 'Visual Studio Code Host' -or
     if ($PublishToPSGallery) { $passThrough += '-PublishToPSGallery' }
     if ($PSGalleryAPIPath) { $passThrough += '-PSGalleryAPIPath'; $passThrough += $PSGalleryAPIPath }
     if ($PSGalleryAPIKey) { $passThrough += '-PSGalleryAPIKey'; $passThrough += $PSGalleryAPIKey }
+    if ($PublishToGitHub) { $passThrough += '-PublishToGitHub' }
+    if ($GitHubAPIKey) { $passThrough += '-GitHubAPIKey'; $passThrough += $GitHubAPIKey }
+    if ($GitHubAPIPath) { $passThrough += '-GitHubAPIPath'; $passThrough += $GitHubAPIPath }
+    if ($PSBoundParameters.ContainsKey('GitHubOwner')) { $passThrough += '-GitHubOwner'; $passThrough += $GitHubOwner }
+    if ($PSBoundParameters.ContainsKey('GitHubRepository')) { $passThrough += '-GitHubRepository'; $passThrough += $GitHubRepository }
     & pwsh @passThrough
     exit $LASTEXITCODE
 }
@@ -82,9 +97,11 @@ Build-Module -ModuleName 'Locksmith2' {
         'Microsoft.PowerShell.Archive',
         'Microsoft.PowerShell.Management',
         'Microsoft.PowerShell.Security',
-        'PowerShellGet',
-        'CimCmdlets'
+        'PowerShellGet'
     )
+    # CimCmdlets is intentionally omitted from ExternalModule. It is Windows-only and
+    # auto-loads on Windows when Get-CimInstance is called. Listing it here breaks the
+    # build on macOS/Linux where the module does not exist.
 
     # Add approved modules, that can be used as a dependency, but only when specific function from those modules is used
     # And on that time only that function and dependant functions will be copied over
@@ -106,7 +123,7 @@ Build-Module -ModuleName 'Locksmith2' {
     #     'Select-Unique'
     # ) 
 
-    New-ConfigurationModuleSkip -IgnoreModuleName 'PSWriteHtml', 'PSCertutil'
+    New-ConfigurationModuleSkip -IgnoreModuleName 'PSWriteHtml', 'PSCertutil' -IgnoreFunctionName 'Get-CimInstance'
 
     $ConfigurationFormat = [ordered] @{
         RemoveComments                              = $false
@@ -157,8 +174,6 @@ Build-Module -ModuleName 'Locksmith2' {
     New-ConfigurationBuild -Enable:$true -SignModule:$false -DeleteTargetModuleBeforeBuild -MergeModuleOnBuild -MergeFunctionsFromApprovedModules -DoNotAttemptToFixRelativePaths -UseWildcardForFunctions
 
     New-ConfigurationArtefact -Type Unpacked -Enable -Path "$PSScriptRoot\..\Artefacts\Unpacked" #-RequiredModulesPath "$PSScriptRoot\..\Artefacts\Modules"
-    New-ConfigurationArtefact -Type Packed -Enable -Path "$PSScriptRoot\..\Artefacts\Packed" -IncludeTagName
-
 }
 
 # NOTE: Publishing is intentionally NOT configured inside Build-Module {}.
@@ -172,10 +187,16 @@ Build-Module -ModuleName 'Locksmith2' {
 . "$PSScriptRoot\Invoke-LS2PostBuildPublish.ps1"
 
 $postBuildParams = @{
-    ArtefactRoot      = Join-Path $PSScriptRoot '..\Artefacts\Unpacked\Locksmith2'
+    ArtefactRoot       = Join-Path $PSScriptRoot '..\Artefacts\Unpacked\Locksmith2'
     PublishToPSGallery = $PublishToPSGallery
+    PublishToGitHub    = $PublishToGitHub
 }
 if ($PSGalleryAPIKey) { $postBuildParams['PSGalleryAPIKey'] = $PSGalleryAPIKey }
 if ($PSGalleryAPIPath) { $postBuildParams['PSGalleryAPIPath'] = $PSGalleryAPIPath }
+if ($GitHubAPIKey) { $postBuildParams['GitHubAPIKey'] = $GitHubAPIKey }
+if ($GitHubAPIPath) { $postBuildParams['GitHubAPIPath'] = $GitHubAPIPath }
+if ($PSBoundParameters.ContainsKey('GitHubOwner')) { $postBuildParams['GitHubOwner'] = $GitHubOwner }
+if ($PSBoundParameters.ContainsKey('GitHubRepository')) { $postBuildParams['GitHubRepository'] = $GitHubRepository }
+if ($Prerelease) { $postBuildParams['Prerelease'] = $Prerelease }
 
 Invoke-LS2PostBuildPublish @postBuildParams
