@@ -737,21 +737,21 @@ $script:ESCDefinitions = data {
                 "strong certificate-to-account mapping enforcement, allowing an attacker to authenticate as any "
                 "principal whose UPN or DNS name they can include in the Subject or SAN of the certificate.`n`n"
                 "Schema v1 templates cannot be modified in place. Supersede this template with a schema v2+ "
-                "equivalent, or remove the Client Authentication EKU if it is not required.`n`n"
+                "equivalent.`n`n"
                 "More info:`n"
                 "  - https://support.microsoft.com/help/5014754"
             )
 
             FixTemplate        = @(
-                "# Schema v1 templates cannot be modifieed in-place."
-                "# Supersede this template by creating a new schema v2 (or later) template with equivalent settings,"
-                "# then configure the old template to be superseded by the new one."
-                "# See: https://www.gradenegger.eu/en/basics-replace-superseding-of-certificate-templates/"
+                '# Schema v1 templates cannot be upgraded in-place.'
+                '# Supersede this template by creating a new schema v2 (or later) template with equivalent settings,'
+                '# then configure the old template to be superseded by the new one.'
+                '# See: https://www.gradenegger.eu/en/basics-replace-superseding-of-certificate-templates/'
             )
 
             RevertTemplate     = @(
-                "# No automated revert. Template schema version cannot be changed via script."
-                "# If you superseded this template, re-enable the old template and remove the superseding relationship."
+                '# No automated revert. Template schema version cannot be changed via script.'
+                '# If you superseded this template, re-enable the old template and remove the superseding relationship.'
             )
         }
 
