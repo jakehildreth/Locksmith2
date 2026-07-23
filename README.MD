@@ -1,6 +1,8 @@
+# Locksmith 2
+
 ![The Locksmith 2 logo features the word "locksmith" followed by the number "2" in a bold, blocky pixelated font. The design uses a gradient color scheme transitioning from light lavender on the left through pink tones to coral/orange on the right, set against a dark purple background with a rectangular border. The retro-digital aesthetic gives the logo a modern yet approachable feel, suggesting a tool that makes security management accessible and straightforward. The "2" indicates this is the second version of the Locksmith tool.](Images/Locksmith2.png)
 
-# An AD CS toolkit for Active Directory Admins, Defensive Security Professionals, and Filthy Red Teamers
+## An AD CS toolkit for Active Directory Admins, Defensive Security Professionals, and Filthy Red Teamers
 
 [![PowerShell Gallery](https://img.shields.io/powershellgallery/v/Locksmith2.svg)](https://www.powershellgallery.com/packages/Locksmith2)
 [![PowerShell](https://img.shields.io/badge/PowerShell-5.1+-blue.svg)](https://github.com/PowerShell/PowerShell)[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/jakehildreth/Locksmith2)
@@ -35,6 +37,7 @@ Locksmith 2 represents the next generation in the Locksmith line of open-source 
 ## Installation
 
 ### From PowerShell Gallery
+
 ```powershell
 Install-Module -Name Locksmith2 -Scope CurrentUser -Force
 ```
@@ -56,6 +59,7 @@ Invoke-Locksmith2
 ```
 
 ### Generate HTML Dashboard
+
 ```powershell
 New-LS2Dashboard
 ```
@@ -63,7 +67,7 @@ New-LS2Dashboard
 ## Supported ESC Techniques
 
 | Technique | Description | Target Objects | Sub-techniques |
-|-----------|-------------|----------------|----------------|
+| --------- | ----------- | -------------- | -------------- |
 | **ESC1** | Misconfigured Certificate Templates | Templates | — |
 | **ESC2** | Certificate SubCA Abuse | Templates | — |
 | **ESC3** | Enrollment Agent Restrictions | Templates | ESC3c1, ESC3c2 |
@@ -142,6 +146,7 @@ Get-LS2Stores [-Name <String>]
 ```
 
 Returns:
+
 - **PrincipalStore**: Resolved principals by SID
 - **AdcsObjectStore**: AD CS objects with security properties
 - **DomainStore**: Domain information
@@ -203,8 +208,6 @@ Locksmith 2 is "Open Source, acknowledged contribution", this means that any con
 4. Write clear commit messages using conventional commits
 5. Submit a pull request
 6. Request a review from @jakehildreth
-
-
 
 ### Acknowledgments
 
