@@ -1,4 +1,4 @@
-function Set-Owner {
+﻿function Set-Owner {
     <#
         .SYNOPSIS
         Normalizes and resolves owner identity references for AD CS objects.

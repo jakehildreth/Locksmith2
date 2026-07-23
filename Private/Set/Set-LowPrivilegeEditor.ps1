@@ -1,4 +1,4 @@
-function Set-LowPrivilegeEditor {
+﻿function Set-LowPrivilegeEditor {
     <#
         .SYNOPSIS
         Identifies custom principals with write permissions on AD CS objects.

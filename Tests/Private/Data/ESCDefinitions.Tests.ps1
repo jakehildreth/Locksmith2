@@ -1,4 +1,4 @@
-#requires -Version 5.1
+﻿#requires -Version 5.1
 BeforeAll {
     $DataPath = Join-Path (Split-Path (Split-Path (Split-Path $PSScriptRoot))) 'Private\Data\ESCDefinitions.ps1'
     . $DataPath

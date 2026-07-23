@@ -1,4 +1,4 @@
-function Get-LS2Stores {
+﻿function Get-LS2Stores {
     <#
         .SYNOPSIS
         Returns the internal data stores used by Locksmith2.

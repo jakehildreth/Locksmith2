@@ -1,4 +1,4 @@
-function Set-SANAllowed {
+﻿function Set-SANAllowed {
     <#
         .SYNOPSIS
         Adds a SANAllowed property to AD CS certificate template objects.

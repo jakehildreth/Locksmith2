@@ -1,4 +1,4 @@
-function Set-CAComputerPrincipal {
+﻿function Set-CAComputerPrincipal {
     <#
         .SYNOPSIS
         Adds CA identification and computer principal properties to AD CS Certification Authority objects.

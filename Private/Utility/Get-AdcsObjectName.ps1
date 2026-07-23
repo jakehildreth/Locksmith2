@@ -1,4 +1,4 @@
-function Get-AdcsObjectName {
+﻿function Get-AdcsObjectName {
     <#
     .SYNOPSIS
         Gets a display name for an AD CS object using fallback resolution.

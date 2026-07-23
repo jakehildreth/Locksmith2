@@ -1,4 +1,4 @@
-function Invoke-Locksmith2 {
+﻿function Invoke-Locksmith2 {
     <#
         .SYNOPSIS
         Performs comprehensive AD CS security audit scanning for known ESC vulnerabilities.
@@ -60,6 +60,12 @@ function Invoke-Locksmith2 {
         Use in non-interactive or automated contexts where [System.Environment]::UserInteractive
         would otherwise trigger a prompt.
 
+        .PARAMETER Scans
+        Specifies which ESC techniques to scan for. Defaults to 'All'.
+        Accepts coarse LS1-style names (ESC3, ESC4, ESC5, ESC7) which expand to the
+        corresponding LS2 sub-techniques, as well as granular LS2 names (ESC3c1, ESC4a, etc.).
+        'EKUwu' is accepted as an alias for 'ESC15'.
+
         .INPUTS
         None. This function does not accept pipeline input.
 
@@ -102,6 +108,21 @@ function Invoke-Locksmith2 {
 
         Runs audit and expands group issues into individual per-member issues.
 
+        .EXAMPLE
+        Invoke-Locksmith2 -Scans 'ESC1', 'ESC2'
+
+        Runs only the ESC1 and ESC2 template scans.
+
+        .EXAMPLE
+        Invoke-Locksmith2 -Scans 'ESC3'
+
+        Runs both ESC3 Condition 1 and Condition 2 scans.
+
+        .EXAMPLE
+        Invoke-Locksmith2 -Scans 'EKUwu'
+
+        Runs the ESC15/EKUwu scan.
+
         .LINK
         https://github.com/jakehildreth/Locksmith2
 
@@ -121,8 +142,17 @@ function Invoke-Locksmith2 {
         Author: Jake Hildreth (@jakehildreth)
         Requires PowerShell 5.1 or later
         Requires appropriate AD permissions to read Public Key Services container
+
+        Privilege degradation matrix:
+        - Local Administrator: Required to repair the local PowerShell environment
+          and to run some certutil-based remediation steps.
+        - Domain User / Computer Account: Sufficient to read the Public Key Services
+          container and detect most ESC conditions.
+        - Domain Admin / Enterprise Admin / Builtin Administrator: Required for
+          complete audit filter data and for automatic execution of fix/revert scripts.
     #>
     [CmdletBinding()]
+    [Alias('Invoke-LS2', 'Locksmith2', 'Start-Locksmith2', 'Start-LS2')]
     param (
         [string]$Forest,
         [System.Management.Automation.PSCredential]$Credential,
@@ -133,7 +163,10 @@ function Invoke-Locksmith2 {
         [switch]$SkipForestCheck,
         [switch]$ExpandGroups,
         [switch]$Rescan,
-        [switch]$Force
+        [switch]$Force,
+        [Parameter()]
+        [ValidateSet('All', 'Auditing', 'ESC1', 'ESC2', 'ESC3', 'ESC3c1', 'ESC3c2', 'ESC4', 'ESC4a', 'ESC4o', 'ESC5', 'ESC5a', 'ESC5o', 'ESC6', 'ESC7', 'ESC7a', 'ESC7m', 'ESC8', 'ESC9', 'ESC11', 'ESC13', 'ESC15', 'EKUwu', 'ESC16', 'SchemaV1')]
+        [string[]]$Scans = 'All'
     )
 
     #requires -Version 5.1
@@ -168,31 +201,44 @@ function Invoke-Locksmith2 {
 
     Write-Verbose "Connection context resolved: Forest=$($ctx.Forest), Method=$($ctx.Method)"
 
-    if (Test-IsInteractiveSession) {
-        $rawUser = if ($ctx.Credential) { $ctx.Credential.UserName } else { [System.Security.Principal.WindowsIdentity]::GetCurrent().Name }
-        $userDisplay = if ($rawUser -match '^([^\\]+)\\(.+)$') { "$($Matches[1].ToUpper())\$($Matches[2])" } else { $rawUser }
-        Write-Host ''
-        Write-Host 'Connection Context' -ForegroundColor Cyan
-        Write-Host "  Forest   : $($ctx.Forest)"
-        Write-Host "  User     : $userDisplay"
-        Write-Host "  Computer : $($env:USERDOMAIN.ToUpper())\$($env:COMPUTERNAME.ToUpper())"
-        Write-Host "  Method   : $($ctx.Method)"
-        Write-Host ''
-        if ($Force -or ([System.Environment]::UserInteractive) ) {
-            $confirm = 'y'
-        } else {
-            $confirm = Read-Choice -Question 'Proceed with scan?' -Options @('y', 'n') -Default 'y'
-        }
-        if ($confirm -ne 'y') {
-            Write-Host 'Scan cancelled.' -ForegroundColor Yellow
-            return
-        }
-        Write-Host ''
+    $shouldProceed = Show-ConnectionContext -Context $ctx -Force:$Force
+    if (-not $shouldProceed) {
+        return
+    }
+
+    # Resolve requested scan names to granular LS2 technique names
+    $scanMap = @{
+        'ESC3'  = @('ESC3c1', 'ESC3c2')
+        'ESC4'  = @('ESC4a', 'ESC4o')
+        'ESC5'  = @('ESC5a', 'ESC5o')
+        'ESC7'  = @('ESC7a', 'ESC7m')
+        'EKUwu' = @('ESC15')
+    }
+
+    $techniques = @(
+        'ESC1', 'ESC2', 'ESC3c1', 'ESC3c2', 'ESC4a', 'ESC4o',
+        'ESC5a', 'ESC5o', 'ESC6', 'ESC7a', 'ESC7m', 'ESC8', 'ESC9', 'ESC11', 'ESC13', 'ESC15', 'ESC16',
+        'Auditing', 'SchemaV1'
+    )
+
+    if ($Scans -contains 'All') {
+        $resolvedScans = $techniques
+    } else {
+        $resolvedScans = @(
+            foreach ($scan in $Scans) {
+                if ($scanMap.ContainsKey($scan)) {
+                    $scanMap[$scan]
+                } else {
+                    $scan
+                }
+            }
+        ) | Select-Object -Unique
     }
 
     $initParams = @{
         Forest     = $ctx.Forest
         Credential = $ctx.Credential
+        Scans      = $resolvedScans
     }
     if ($Rescan) {
         $initParams['Rescan'] = $true
@@ -205,20 +251,20 @@ function Invoke-Locksmith2 {
         return
     }
 
-    Write-Verbose "`nScan complete. Issue summary:"
-    $techniques = @(
-        'ESC1', 'ESC2', 'ESC3c1', 'ESC3c2', 'ESC4a', 'ESC4o',
-        'ESC5a', 'ESC5o', 'ESC6', 'ESC7a', 'ESC7m', 'ESC8', 'ESC9', 'ESC11', 'ESC13', 'ESC15', 'ESC16',
-        'Auditing', 'SchemaV1'
-    )
+    $shouldProceed = Show-PrivilegeContext -Context $ctx -RootDSE $script:RootDSE -Force:$Force
+    if (-not $shouldProceed) {
+        return
+    }
 
-    foreach ($technique in $techniques) {
+    Write-Verbose "`nScan complete. Issue summary:"
+
+    foreach ($technique in $resolvedScans) {
         $issueCount = Get-IssueCount -Technique $technique
         Write-Verbose "  $($technique): $issueCount issue(s)"
     }
 
-    # Get all flattened issues
-    $allIssues = Get-FlattenedIssues
+    # Get flattened issues, limited to the requested scans
+    $allIssues = @(Get-FlattenedIssues | Where-Object { $_.Technique -in $resolvedScans })
 
     # Expand groups if requested
     if ($ExpandGroups) {

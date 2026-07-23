@@ -1,4 +1,4 @@
-function Set-TemplateEnabled {
+﻿function Set-TemplateEnabled {
     <#
         .SYNOPSIS
         Adds Enabled and EnabledOn properties to AD CS certificate template objects.

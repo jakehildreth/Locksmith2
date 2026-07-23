@@ -1,4 +1,4 @@
-@{
+﻿@{
     # Rules excluded by design for the Locksmith2 codebase.
     # Each exclusion is documented with its rationale below.
     ExcludeRules = @(

@@ -1,4 +1,4 @@
-function Find-LS2VulnerableCA {
+﻿function Find-LS2VulnerableCA {
     <#
     .SYNOPSIS
         Identifies vulnerable AD CS Certification Authorities based on ESC technique definitions.

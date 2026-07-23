@@ -1,4 +1,4 @@
-#requires -Version 5.1
+﻿#requires -Version 5.1
 BeforeAll {
     # Dot-source via scriptblock to handle UTF-16LE source encoding
     $SourcePath = Join-Path (Split-Path (Split-Path (Split-Path $PSScriptRoot))) 'Private\Utility\Get-ForestNameFromDN.ps1'

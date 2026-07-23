@@ -1,4 +1,4 @@
-function Set-HasNonStandardOwner {
+﻿function Set-HasNonStandardOwner {
     <#
         .SYNOPSIS
         Adds HasNonStandardOwner property to AD CS objects based on their owner.

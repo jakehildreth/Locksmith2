@@ -1,4 +1,4 @@
-# MAINTENANCE: When adding a new ESC entry here, you MUST also:
+﻿# MAINTENANCE: When adding a new ESC entry here, you MUST also:
 #   1. Add the technique name to the [ValidateSet(...)] in the appropriate Find-LS2Vulnerable* function:
 #        - Template techniques  -> Public/Find-LS2VulnerableTemplate.ps1
 #        - CA techniques        -> Public/Find-LS2VulnerableCA.ps1

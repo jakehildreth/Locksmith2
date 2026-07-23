@@ -1,4 +1,4 @@
-function Read-Choice {
+﻿function Read-Choice {
     <#
         .SYNOPSIS
         Prompts the user to select from a list of options.

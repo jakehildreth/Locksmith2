@@ -1,4 +1,4 @@
-function Get-FlattenedIssues {
+﻿function Get-FlattenedIssues {
     <#
         .SYNOPSIS
         Flattens the IssueStore hashtable into individual LS2Issue objects.

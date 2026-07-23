@@ -1,4 +1,4 @@
-function Expand-IssueByGroup {
+﻿function Expand-IssueByGroup {
     <#
         .SYNOPSIS
         Expands issues for group principals into individual issues for each group member.

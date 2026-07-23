@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
 Dangerous ACE Definitions for AD CS Security Auditing
 

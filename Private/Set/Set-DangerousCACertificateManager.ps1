@@ -1,4 +1,4 @@
-function Set-DangerousCACertificateManager {
+﻿function Set-DangerousCACertificateManager {
     <#
         .SYNOPSIS
         Adds a DangerousCACertificateManager property to AD CS Certification Authority objects.

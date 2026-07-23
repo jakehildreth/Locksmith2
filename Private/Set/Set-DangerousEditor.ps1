@@ -1,4 +1,4 @@
-function Set-DangerousEditor {
+﻿function Set-DangerousEditor {
     <#
         .SYNOPSIS
         Identifies dangerous principals with write permissions on AD CS objects.

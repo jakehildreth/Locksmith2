@@ -1,4 +1,4 @@
-function Find-LS2VulnerableObject {
+﻿function Find-LS2VulnerableObject {
     <#
     .SYNOPSIS
         Identifies vulnerable AD CS infrastructure objects (containers, computer accounts).

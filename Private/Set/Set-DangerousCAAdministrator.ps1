@@ -1,4 +1,4 @@
-function Set-DangerousCAAdministrator {
+﻿function Set-DangerousCAAdministrator {
     <#
         .SYNOPSIS
         Adds a DangerousCAAdministrator property to AD CS Certification Authority objects.

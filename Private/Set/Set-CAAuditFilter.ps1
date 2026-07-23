@@ -1,4 +1,4 @@
-function Set-CAAuditFilter {
+﻿function Set-CAAuditFilter {
     <#
         .SYNOPSIS
         Adds AuditFilter configuration properties to AD CS Certification Authority objects.

@@ -1,4 +1,4 @@
-function Set-CAEditFlags {
+﻿function Set-CAEditFlags {
     <#
         .SYNOPSIS
         Adds EditFlags configuration properties to AD CS Certification Authority objects.

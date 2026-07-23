@@ -1,4 +1,4 @@
-function Resolve-LS2ConnectionContext {
+﻿function Resolve-LS2ConnectionContext {
     <#
         .SYNOPSIS
         Detects the appropriate forest name and credential for a Locksmith2 scan.

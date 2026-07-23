@@ -1,4 +1,4 @@
-#requires -Version 5.1
+﻿#requires -Version 5.1
 # Run integration tests against a real AD CS environment.
 # Must be run from the module root.
 #

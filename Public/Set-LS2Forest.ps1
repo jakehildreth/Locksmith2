@@ -1,4 +1,4 @@
-function Set-LS2Forest {
+﻿function Set-LS2Forest {
     <#
         .SYNOPSIS
         Sets the script-scope Forest variable for Locksmith2.

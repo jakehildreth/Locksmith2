@@ -1,4 +1,4 @@
-function Set-EnrollmentAgentEKUExist {
+﻿function Set-EnrollmentAgentEKUExist {
     <#
         .SYNOPSIS
         Adds an EnrollmentAgentEKUExist property to AD CS certificate template objects.

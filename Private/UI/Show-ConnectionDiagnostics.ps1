@@ -1,4 +1,4 @@
-function Show-LS2ConnectionDiagnostics {
+﻿function Show-ConnectionDiagnostics {
     <#
         .SYNOPSIS
         Displays detailed connection diagnostics for Active Directory LDAP connectivity.
@@ -23,11 +23,11 @@ function Show-LS2ConnectionDiagnostics {
         Used to capture the specific bind error.
 
         .EXAMPLE
-        Show-LS2ConnectionDiagnostics -Forest 'corp.contoso.com'
+        Show-ConnectionDiagnostics -Forest 'corp.contoso.com'
         Displays diagnostics for the target forest using the current identity.
 
         .EXAMPLE
-        Show-LS2ConnectionDiagnostics -Forest 'corp.contoso.com' -Credential $cred -RootDSE $rootDSE
+        Show-ConnectionDiagnostics -Forest 'corp.contoso.com' -Credential $cred -RootDSE $rootDSE
         Displays diagnostics including credential info and the original bind error.
 
         .OUTPUTS

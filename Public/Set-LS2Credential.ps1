@@ -1,4 +1,4 @@
-function Set-LS2Credential {
+﻿function Set-LS2Credential {
     <#
         .SYNOPSIS
         Sets the script-scope Credential variable for Locksmith2.

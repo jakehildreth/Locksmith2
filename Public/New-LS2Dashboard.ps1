@@ -1,65 +1,65 @@
-function New-LS2Dashboard {
+﻿function New-LS2Dashboard {
     <#
     .SYNOPSIS
     Generates an interactive HTML dashboard for Locksmith2 scan results.
-    
+
     .DESCRIPTION
     Creates a comprehensive HTML dashboard with left navigation menu showing:
     - All issues with expanded principals
     - Issues filtered by type (Template, CA, Object)
     - Risky principals analysis.
-    
+
     .PARAMETER FilePath
     Path where the HTML dashboard will be saved.
     Default: Locksmith2-Dashboard.html in the current working directory.
-    
+
     .PARAMETER Show
     Opens the dashboard in the default browser after generation.
     Defaults to $true when no parameters are specified.
-    
+
     .PARAMETER ExpandGroups
     Expands group principals into individual member issues.
-    
+
     .PARAMETER Online
     Uses online CDN resources instead of embedding CSS/JS.
     Results in smaller file size but requires internet connection to view.
-    
+
     .INPUTS
     None. This function does not accept pipeline input.
-    
+
     .OUTPUTS
     None. Generates an HTML file at the specified path.
-    
+
     .EXAMPLE
     Invoke-Locksmith2
     New-LS2Dashboard -FilePath C:\Reports\locksmith-dashboard.html -Show
-    
+
     Runs a scan and generates an interactive dashboard.
-    
+
     .EXAMPLE
     New-LS2Dashboard -ExpandGroups -Show
-    
+
     Generates dashboard with group memberships expanded to individual principals.
-    
+
     .EXAMPLE
     New-LS2Dashboard -FilePath C:\Reports\report.html -Online
-    
+
     Generates a smaller dashboard file using online CDN resources.
-    
+
     .NOTES
     Author: Jake Hildreth (@jakehildreth)
     Requires: PSWriteHTML module (https://github.com/EvotecIT/PSWriteHTML)
     Requires: PowerShell 5.1 or later
-    
+
     The dashboard reads from the current IssueStore. Run Invoke-Locksmith2 or
     Find-LS2Vulnerable* functions first to populate the store with scan data.
-    
+
     .LINK
     Invoke-Locksmith2
-    
+
     .LINK
     Find-LS2RiskyPrincipal
-    
+
     .LINK
     Get-FlattenedIssues
     #>
@@ -67,17 +67,17 @@ function New-LS2Dashboard {
     param(
         [Parameter()]
         [string]$FilePath,
-        
+
         [Parameter()]
         [bool]$Show = $true,
-        
+
         [Parameter()]
         [switch]$ExpandGroups,
-        
+
         [Parameter()]
         [switch]$Online
     )
-    
+
     #requires -Version 5.1
 
     if (-not $FilePath) {
@@ -133,14 +133,14 @@ function New-LS2Dashboard {
     # Techniques = $null  -> no filter (All Issues).
     # IsPrincipals = $true -> use the principals table and formatting instead of issue table.
     $tabDefs = [ordered]@{
-        'All Issues'        = @{ Icon = 'exclamation-triangle'; IconColor = 'Red';    Techniques = $null;                                                          Subtitle = 'All discovered AD CS vulnerabilities with principals expanded';                                             Title = 'All AD CS Security Issues';           SortColumn = 'Technique' }
-        'Templates'         = @{ Icon = 'file-contract';        IconColor = 'Orange'; Techniques = @('ESC1','ESC2','ESC3c1','ESC3c2','ESC4a','ESC4o','ESC9');      Subtitle = 'Misconfigured templates allowing SAN abuse, weak enrollment restrictions, or enrollment agent exploitation'; Title = 'Template Vulnerabilities';            SortColumn = 'Technique' }
-        'CAs'               = @{ Icon = 'certificate';          IconColor = 'Yellow'; Techniques = @('ESC6','ESC7a','ESC7m','ESC8','ESC11','ESC16');               Subtitle = 'Insecure CA configurations and dangerous role assignments (ESC6, ESC7, ESC8, ESC11, ESC16)';             Title = 'CA Configuration Issues';             SortColumn = 'Name'      }
-        'Objects'           = @{ Icon = 'folder';               IconColor = 'Blue';   Techniques = @('ESC5a','ESC5o');                                             Subtitle = 'Dangerous permissions on PKI infrastructure objects (ESC5)';                                               Title = 'Infrastructure Object Issues';        SortColumn = 'Name'      }
-        'Risky Principals'  = @{ Icon = 'user-shield';          IconColor = 'Purple'; IsPrincipals = $true;                                                        Subtitle = 'Ranked by number of exploitable AD CS vulnerabilities' }
-        'Dangerous Configurations' = @{ Icon = 'cog';                  IconColor = 'Red';    Techniques = @('ESC1','ESC2','ESC3c1','ESC3c2','ESC6','ESC8','ESC9','ESC11','ESC16'); Subtitle = 'Insecure template/CA configurations enabling certificate abuse (ESC1, ESC2, ESC6, ESC8, ESC9, ESC11, ESC16)'; Title = 'Configuration-Based Vulnerabilities'; SortColumn = 'Technique' }
-        'Access Control'    = @{ Icon = 'key';                  IconColor = 'Green';  Techniques = @('ESC4a','ESC5a');                                             Subtitle = 'Excessive write/modify permissions on templates and PKI objects (ESC4a, ESC5a)';                            Title = 'Write/Modify Permission Issues';       SortColumn = 'ActiveDirectoryRights' }
-        'Ownership'         = @{ Icon = 'crown';                IconColor = 'Gold';   Techniques = @('ESC4o','ESC5o');                                             Subtitle = 'Non-standard owners with full control over templates or PKI objects (ESC4o, ESC5o)';                      Title = 'Dangerous Ownership Configurations';   SortColumn = 'Owner'     }
+        'All Issues'        = @{ Icon = 'exclamation-triangle'; IconColor = 'Red';    Techniques = $null;                                                          Subtitle = 'All discovered AD CS vulnerabilities with principals expanded';                                             Title = 'All AD CS Security Issues';           SortColumn = 'RiskValue'; SortOrder = 'Descending'; SummaryLabel = 'Issue' }
+        'Templates'         = @{ Icon = 'file-contract';        IconColor = 'Orange'; Techniques = @('ESC1','ESC2','ESC3c1','ESC3c2','ESC4a','ESC4o','ESC9');      Subtitle = 'Misconfigured templates allowing SAN abuse, weak enrollment restrictions, or enrollment agent exploitation'; Title = 'Template Vulnerabilities';            SortColumn = 'RiskValue'; SortOrder = 'Descending'; SummaryLabel = 'Template Issue' }
+        'CAs'               = @{ Icon = 'certificate';          IconColor = 'Yellow'; Techniques = @('ESC6','ESC7a','ESC7m','ESC8','ESC11','ESC16');               Subtitle = 'Insecure CA configurations and dangerous role assignments (ESC6, ESC7, ESC8, ESC11, ESC16)';             Title = 'CA Configuration Issues';             SortColumn = 'RiskValue'; SortOrder = 'Descending'; SummaryLabel = 'CA Issue' }
+        'Objects'           = @{ Icon = 'folder';               IconColor = 'Blue';   Techniques = @('ESC5a','ESC5o');                                             Subtitle = 'Dangerous permissions on PKI infrastructure objects (ESC5)';                                               Title = 'Infrastructure Object Issues';        SortColumn = 'RiskValue'; SortOrder = 'Descending'; SummaryLabel = 'Object Issue' }
+        'Risky Principals'  = @{ Icon = 'user-shield';          IconColor = 'Purple'; IsPrincipals = $true;                                                        Subtitle = 'Ranked by number of exploitable AD CS vulnerabilities';                                                                                                              SortColumn = 'IssueCount'; SortOrder = 'Descending' }
+        'Dangerous Configurations' = @{ Icon = 'cog';                  IconColor = 'Red';    Techniques = @('ESC1','ESC2','ESC3c1','ESC3c2','ESC6','ESC8','ESC9','ESC11','ESC16'); Subtitle = 'Insecure template/CA configurations enabling certificate abuse (ESC1, ESC2, ESC6, ESC8, ESC9, ESC11, ESC16)'; Title = 'Configuration-Based Vulnerabilities'; SortColumn = 'RiskValue'; SortOrder = 'Descending'; SummaryLabel = 'Configuration Issue' }
+        'Access Control'    = @{ Icon = 'key';                  IconColor = 'Green';  Techniques = @('ESC4a','ESC5a');                                             Subtitle = 'Excessive write/modify permissions on templates and PKI objects (ESC4a, ESC5a)';                            Title = 'Write/Modify Permission Issues';       SortColumn = 'RiskValue'; SortOrder = 'Descending'; SummaryLabel = 'Access Control Issue' }
+        'Ownership'         = @{ Icon = 'crown';                IconColor = 'Gold';   Techniques = @('ESC4o','ESC5o');                                             Subtitle = 'Non-standard owners with full control over templates or PKI objects (ESC4o, ESC5o)';                      Title = 'Dangerous Ownership Configurations';   SortColumn = 'RiskValue'; SortOrder = 'Descending'; SummaryLabel = 'Ownership Issue' }
     }
 
     # Build filtered + projected table for each issue tab
@@ -165,6 +165,7 @@ function New-LS2Dashboard {
     $generatedAt  = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
     $scanUser     = if ($script:Credential) { $script:Credential.UserName } else { [System.Security.Principal.WindowsIdentity]::GetCurrent().Name }
     $scanComputer = "$env:USERDOMAIN\$env:COMPUTERNAME"
+
     # Resolve logo and encode as base64 data URI for self-contained HTML
     $logoSource = $null
     $moduleBase = (Get-Module -Name Locksmith2 -ErrorAction SilentlyContinue).ModuleBase
@@ -229,6 +230,26 @@ function New-LS2Dashboard {
         New-HTMLTableCondition -Name 'IssueCount' -ComparisonType number -Operator gt -Value 10 -BackgroundColor '#ef5350' -Color White
     }
 
+    # Renders one summary card. Called inside New-HTMLSection.
+    # Cards are clickable: they filter the tab's DataTable by RiskName. Clicking the
+    # active card again clears the filter. Non-selected cards are faded via CSS class.
+    $summaryCard = {
+        param(
+            [string]$Label,
+            [string]$Value,
+            [string]$Color,
+            [string]$TableId,
+            [string]$FilterValue,
+            [string]$CardClass = 'summary-card'
+        )
+        New-HTMLTag -Tag 'div' -Attributes @{ class = "$CardClass summary-card-clickable"; 'data-filter' = $FilterValue; 'data-table-id' = $TableId } {
+            New-HTMLPanel {
+                New-HTMLText -Text $Label -FontSize 12 -Color '#888' -Alignment center
+                New-HTMLText -Text $Value -FontSize 32 -FontWeight bold -Color $Color -Alignment center
+            }
+        }
+    }
+
     $tableButtons = @('copyHtml5', 'excelHtml5', 'csvHtml5', 'pdfHtml5', 'searchBuilder', 'searchPanes')
 
     New-HTML -TitleText "Locksmith 2 Dashboard - $forestName - $generatedAt" -Online:$Online -FilePath $FilePath -Show:$Show {
@@ -236,7 +257,16 @@ function New-LS2Dashboard {
         # Persistent header — logo + collection context. New-HTMLHeader renders outside the tab
         # container and does not create a tab-content slot (unlike New-HTMLSection/Panel at this level).
         New-HTMLHeader {
-            Add-HTMLStyle -Content 'header { text-align: center; padding: 12px 0; } header img { max-width: 50%; height: auto; display: inline-block; }'
+            Add-HTMLStyle -Content @'
+header { text-align: center; padding: 12px 0; }
+header img { max-width: 50%; height: auto; display: inline-block; }
+.summary-section { display: flex; flex-wrap: wrap; gap: 12px; width: 100%; }
+.summary-card { display: flex; flex: 1 1 0; min-width: 140px; cursor: pointer; transition: opacity 0.2s ease-in-out, transform 0.1s ease-in-out; }
+.summary-card > .flexPanel { width: 100%; }
+.summary-card:hover { opacity: 1 !important; transform: translateY(-2px); }
+.summary-card-active > .flexPanel { outline: 2px solid #333; }
+.summary-section:has(.summary-card-active) .summary-card:not(.summary-card-active) { opacity: 0.45; }
+'@
             if ($logoSource) {
                 New-HTMLImage -Source $logoSource -Width '50%' -AlternativeText 'Locksmith 2'
             }
@@ -249,6 +279,7 @@ function New-LS2Dashboard {
 
         foreach ($tabName in $tabDefs.Keys) {
             $def = $tabDefs[$tabName]
+            $tableId = if ($def.IsPrincipals) { $null } else { 'IssuesTable-' + ($tabName -replace '\s+', '-' -replace '[^A-Za-z0-9-]', '') }
             New-HTMLTab -Name $tabName -IconSolid $def.Icon -IconColor $def.IconColor {
                 if ($def.IsPrincipals) {
                     New-HTMLTable -DataTable $principalsTable `
@@ -256,17 +287,82 @@ function New-LS2Dashboard {
                         -PagingLength 25 `
                         -Buttons $tableButtons `
                         -Title 'Principals by Risk Score' `
-                        -DefaultSortColumn 'IssueCount' `
-                        -DefaultSortOrder Descending {& $principalFormatting}
+                        -DefaultSortColumn $def.SortColumn `
+                        -DefaultSortOrder $def.SortOrder {& $principalFormatting}
                     New-HTMLHorizontalLine
                     New-HTMLText -Text "$(@($principalsTable).Count) principals  --  $($def.Subtitle)" -Color '#666' -FontSize 13 -FontStyle italic
                 } else {
+                    if ($def.Issues.Count -gt 0) {
+                        $tabRiskNames = foreach ($issue in $def.Issues) {
+                            if ($issue.RiskName) { $issue.RiskName } else { 'Unrated' }
+                        }
+                        $tabRiskGroups = $tabRiskNames | Group-Object -NoElement
+                        $tabRiskCountMap = @{}
+                        foreach ($group in $tabRiskGroups) {
+                            $tabRiskCountMap[$group.Name] = $group.Count
+                        }
+
+                        $tabTotal      = $def.Issues.Count
+                        $tabCritical   = if ($tabRiskCountMap.ContainsKey('Critical'))     { $tabRiskCountMap['Critical'] }     else { 0 }
+                        $tabHigh       = if ($tabRiskCountMap.ContainsKey('High'))         { $tabRiskCountMap['High'] }         else { 0 }
+                        $tabMedium     = if ($tabRiskCountMap.ContainsKey('Medium'))       { $tabRiskCountMap['Medium'] }       else { 0 }
+                        $tabLow        = if ($tabRiskCountMap.ContainsKey('Low'))          { $tabRiskCountMap['Low'] }          else { 0 }
+                        $tabInfo       = if ($tabRiskCountMap.ContainsKey('Informational')) { $tabRiskCountMap['Informational'] } else { 0 }
+
+                        New-HTMLSection -HeaderText 'Scan Summary' -Content {
+                            New-HTMLTag -Tag 'div' -Attributes @{ class = 'summary-section'; 'data-table-id' = $tableId } {
+                                & $summaryCard -Label "Total $($def.SummaryLabel)s" -Value $tabTotal -Color '#333' -TableId $tableId -FilterValue ''
+                                & $summaryCard -Label 'Critical' -Value $tabCritical -Color '#b71c1c' -TableId $tableId -FilterValue 'Critical'
+                                & $summaryCard -Label 'High' -Value $tabHigh -Color '#e53935' -TableId $tableId -FilterValue 'High'
+                                & $summaryCard -Label 'Medium' -Value $tabMedium -Color '#ff9800' -TableId $tableId -FilterValue 'Medium'
+                                & $summaryCard -Label 'Low' -Value $tabLow -Color '#fdd835' -TableId $tableId -FilterValue 'Low'
+                                & $summaryCard -Label 'Informational' -Value $tabInfo -Color '#1976d2' -TableId $tableId -FilterValue 'Informational'
+                            }
+                            Add-HTMLScript -Content "
+document.addEventListener('DOMContentLoaded', function() {
+    var section = document.querySelector('.summary-section[data-table-id=\'$tableId\']');
+    if (!section) return;
+    section.addEventListener('click', function(e) {
+        var card = e.target.closest('.summary-card');
+        if (!card) return;
+        var tableId = section.getAttribute('data-table-id');
+        var table = document.getElementById(tableId);
+        if (!table) return;
+        var dt = (window.jQuery && jQuery.fn.DataTable) ? jQuery(table).DataTable() : null;
+        if (!dt) return;
+        var filter = card.getAttribute('data-filter') || '';
+        if (filter === '') {
+            section.querySelectorAll('.summary-card').forEach(function(c) { c.classList.remove('summary-card-active'); });
+            dt.column(1).search('').draw();
+            return;
+        }
+        card.classList.toggle('summary-card-active');
+        var activeFilters = [];
+        section.querySelectorAll('.summary-card.summary-card-active').forEach(function(c) {
+            var f = c.getAttribute('data-filter');
+            if (f) { activeFilters.push(f); }
+        });
+        if (activeFilters.length === 0) {
+            dt.column(1).search('').draw();
+        } else {
+            var pattern = activeFilters.map(function(f) { return '^' + f.replace(/[-[\]{}()*+?.,\\\\^$|#\s]/g, '\\\\$&') + '$'; }).join('|');
+            dt.column(1).search(pattern, true, false).draw();
+        }
+    });
+});
+"
+                        }
+                        New-HTMLHorizontalLine
+                    }
+
                     New-HTMLTable -DataTable $def.Table `
+                        -DataTableID $tableId `
                         -Filtering `
                         -PagingLength 25 `
                         -Buttons $tableButtons `
                         -Title $def.Title `
-                        -DefaultSortColumn $def.SortColumn {& $issueFormatting}
+                        -DefaultSortColumn $def.SortColumn `
+                        -DefaultSortOrder $def.SortOrder {& $issueFormatting}
                     New-HTMLHorizontalLine
                     New-HTMLText -Text "$($def.Issues.Count) issues  --  $($def.Subtitle)" -Color '#666' -FontSize 13 -FontStyle italic
                 }

@@ -1,4 +1,4 @@
-#requires -Version 5.1
+﻿#requires -Version 5.1
 BeforeAll {
     $PesterPreference = [PesterConfiguration]::Default
     $PesterPreference.Should.ErrorAction = 'Continue'
