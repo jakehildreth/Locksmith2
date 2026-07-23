@@ -1,4 +1,4 @@
-name: Build and Publish to PSGallery
+name: Build and Publish to PSGallery and GitHub
 
 on:
   push:
@@ -10,11 +10,14 @@ on:
       - 'Locksmith2.psm1'
       - 'Locksmith2.psd1'
       - 'LICENSE'
+      - '.github/workflows/publish.yml'
   workflow_dispatch:  # Allow manual trigger
 
 jobs:
   build-and-publish:
     runs-on: windows-latest
+    permissions:
+      contents: write
 
     steps:
     - name: Checkout code
@@ -50,9 +53,10 @@ jobs:
       shell: pwsh
       env:
         PSGALLERY_API_KEY: ${{ secrets.PSGALLERY_API_KEY }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         Write-Host "Building and publishing Locksmith2 (release)..." -ForegroundColor Cyan
-        ./Build/Build-Module.ps1 -PublishToPSGallery -PSGalleryAPIKey $env:PSGALLERY_API_KEY
+        ./Build/Build-Module.ps1 -PublishToPSGallery -PSGalleryAPIKey $env:PSGALLERY_API_KEY -PublishToGitHub -GitHubAPIKey $env:GITHUB_TOKEN
         Write-Host "Published successfully" -ForegroundColor Green
 
     - name: Build and Publish (Prerelease)
@@ -60,9 +64,10 @@ jobs:
       shell: pwsh
       env:
         PSGALLERY_API_KEY: ${{ secrets.PSGALLERY_API_KEY }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         Write-Host "Building and publishing Locksmith2 (prerelease)..." -ForegroundColor Cyan
-        ./Build/Build-Module.ps1 -PublishToPSGallery -PSGalleryAPIKey $env:PSGALLERY_API_KEY -Prerelease 'pre'
+        ./Build/Build-Module.ps1 -PublishToPSGallery -PSGalleryAPIKey $env:PSGALLERY_API_KEY -PublishToGitHub -GitHubAPIKey $env:GITHUB_TOKEN -Prerelease 'pre'
         Write-Host "Published successfully" -ForegroundColor Green
 
     - name: Get module version
