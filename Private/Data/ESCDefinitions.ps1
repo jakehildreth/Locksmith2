@@ -713,14 +713,14 @@ $script:ESCDefinitions = data {
         }
 
         ESC15  = @{
-            # ESC15: Schema v1 template with auth EKU — bypasses strong certificate mapping
+            # ESC15: Enabled schema v1 template with auth EKU — bypasses strong certificate mapping
             # (szOID_NTDS_CA_SECURITY_EXT is absent in schema v1 certificates)
             Technique          = 'ESC15'
 
             Conditions         = @(
                 @{ Property = 'TemplateSchemaVersion'; Value = 1 }
                 @{ Property = 'AuthenticationEKUExist'; Value = $true }
-                @{ Property = 'ManagerApprovalNotRequired'; Value = $true }
+                @{ Property = 'Enabled'; Value = $true }
                 @{ Property = 'AuthorizedSignatureNotRequired'; Value = $true }
             )
 
@@ -730,30 +730,28 @@ $script:ESCDefinitions = data {
             )
 
             IssueTemplate      = @(
-                "`$(IdentityReference) can enroll in the `$(TemplateName) template, which uses a schema version 1 "
+                "`$(IdentityReference) can enroll in the `$(TemplateName) template, which uses schema version 1 "
                 "and a Client Authentication EKU.`n`n"
                 "Schema v1 templates do not include the CA security extension (szOID_NTDS_CA_SECURITY_EXT) "
                 "introduced by KB5014754. This means certificates issued from this template are not subject to "
                 "strong certificate-to-account mapping enforcement, allowing an attacker to authenticate as any "
                 "principal whose UPN or DNS name they can include in the Subject or SAN of the certificate.`n`n"
-                "Until the template is upgraded to schema v2+, enabling Manager Approval is the recommended "
-                "short-term mitigation to prevent unapproved enrollment.`n`n"
+                "Schema v1 templates cannot be modified in place. Supersede this template with a schema v2+ "
+                "equivalent, or remove the Client Authentication EKU if it is not required.`n`n"
                 "More info:`n"
                 "  - https://support.microsoft.com/help/5014754"
             )
 
             FixTemplate        = @(
-                "# Quick mitigation: Enable Manager Approval to require approval before certificate issuance"
-                "`$Object = '`$(DistinguishedName)'"
-                "Get-ADObject `$Object | Set-ADObject -Replace @{'msPKI-Enrollment-Flag' = 2}"
-                "# Long-term fix: supersede this template with a schema v2+ equivalent"
+                "# Schema v1 templates cannot be modifieed in-place."
+                "# Supersede this template by creating a new schema v2 (or later) template with equivalent settings,"
+                "# then configure the old template to be superseded by the new one."
                 "# See: https://www.gradenegger.eu/en/basics-replace-superseding-of-certificate-templates/"
             )
 
             RevertTemplate     = @(
-                "# Disable Manager Approval"
-                "`$Object = '`$(DistinguishedName)'"
-                "Get-ADObject `$Object | Set-ADObject -Replace @{'msPKI-Enrollment-Flag' = 0}"
+                "# No automated revert. Template schema version cannot be changed via script."
+                "# If you superseded this template, re-enable the old template and remove the superseding relationship."
             )
         }
 
@@ -790,12 +788,13 @@ $script:ESCDefinitions = data {
         }
 
         SchemaV1 = @{
-            # SchemaV1: Any enabled schema v1 template — informational hygiene finding
+            # SchemaV1: Enabled schema v1 template without client auth EKU — informational hygiene finding
             Technique      = 'SchemaV1'
 
             Conditions     = @(
                 @{ Property = 'TemplateSchemaVersion'; Value = 1 }
                 @{ Property = 'Enabled'; Value = $true }
+                @{ Property = 'AuthenticationEKUExist'; Value = $false }
             )
 
             IssueTemplate  = @(
@@ -804,7 +803,9 @@ $script:ESCDefinitions = data {
                 "available in later schema versions. Certificates issued from schema v1 templates do not "
                 "include the CA security extension (szOID_NTDS_CA_SECURITY_EXT), reducing their compatibility "
                 "with strong certificate mapping requirements.`n`n"
-                "Consider superseding this template with a schema v2+ equivalent."
+                "Because this template does not include a Client Authentication EKU, it is not directly "
+                "exploitable for account takeover via ESC15. However, it should still be superseded with a "
+                "schema v2+ equivalent to ensure compatibility with modern security features."
             )
 
             FixTemplate    = @(

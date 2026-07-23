@@ -25,7 +25,6 @@ InModuleScope 'Locksmith2' {
                     SchemaClassName                = 'pKICertificateTemplate'
                     SANAllowed                     = $true
                     AuthenticationEKUExist         = $true
-                    ManagerApprovalNotRequired     = $true
                     AuthorizedSignatureNotRequired = $true
                     DangerousEnrollee              = @('S-1-1-0')
                     distinguishedName              = 'CN=VulnTemplate,CN=Certificate Templates,CN=Public Key Services,CN=Services,CN=Configuration,DC=contoso,DC=com'
@@ -112,9 +111,9 @@ InModuleScope 'Locksmith2' {
 
             It 'should skip a template where any ESC1 condition is not met' {
                 $safeTemplate = New-MockLS2AdcsObject -Properties @{
-                    SANAllowed            = $false
-                    distinguishedName     = 'CN=SafeTemplate,CN=Certificate Templates,...'
-                    Name                  = 'SafeTemplate'
+                    SANAllowed        = $false
+                    distinguishedName = 'CN=SafeTemplate,CN=Certificate Templates,...'
+                    Name              = 'SafeTemplate'
                 }
                 $script:AdcsObjectStore = @{ $safeTemplate.distinguishedName = $safeTemplate }
                 $result = @(Find-LS2VulnerableTemplate -Technique 'ESC1')
@@ -173,16 +172,16 @@ InModuleScope 'Locksmith2' {
             BeforeAll {
                 function script:New-ESC13VulnerableTemplate {
                     $t = New-MockLS2AdcsObject -Properties @{
-                        objectClass              = @('top', 'pKICertificateTemplate')
-                        SchemaClassName          = 'pKICertificateTemplate'
-                        AuthenticationEKUExist   = $true
-                        HasLinkedGroupOIDPolicy  = $true
-                        LinkedGroupOIDPolicies   = @('CN=PrivilegedGroup,CN=Users,DC=contoso,DC=com')
-                        DangerousEnrollee        = @('S-1-1-0')
-                        distinguishedName        = 'CN=ESC13Template,CN=Certificate Templates,CN=Public Key Services,CN=Services,CN=Configuration,DC=contoso,DC=com'
-                        Name                     = 'ESC13Template'
-                        Enabled                  = $true
-                        EnabledOn                = @('CONTOSO-CA\CA01')
+                        objectClass             = @('top', 'pKICertificateTemplate')
+                        SchemaClassName         = 'pKICertificateTemplate'
+                        AuthenticationEKUExist  = $true
+                        HasLinkedGroupOIDPolicy = $true
+                        LinkedGroupOIDPolicies  = @('CN=PrivilegedGroup,CN=Users,DC=contoso,DC=com')
+                        DangerousEnrollee       = @('S-1-1-0')
+                        distinguishedName       = 'CN=ESC13Template,CN=Certificate Templates,CN=Public Key Services,CN=Services,CN=Configuration,DC=contoso,DC=com'
+                        Name                    = 'ESC13Template'
+                        Enabled                 = $true
+                        EnabledOn               = @('CONTOSO-CA\CA01')
                     }
                     $security = New-Object System.DirectoryServices.ActiveDirectorySecurity
                     $sid = [System.Security.Principal.SecurityIdentifier]::new('S-1-1-0')
@@ -267,14 +266,14 @@ InModuleScope 'Locksmith2' {
 
             It 'should not return an issue when DangerousEnrollee is empty' {
                 $safeTemplate = New-MockLS2AdcsObject -Properties @{
-                    SchemaClassName          = 'pKICertificateTemplate'
-                    AuthenticationEKUExist   = $true
-                    HasLinkedGroupOIDPolicy  = $true
-                    LinkedGroupOIDPolicies   = @('CN=PrivilegedGroup,CN=Users,DC=contoso,DC=com')
-                    DangerousEnrollee        = @()
-                    LowPrivilegeEnrollee     = @()
-                    distinguishedName        = 'CN=SafeTemplate,CN=Certificate Templates,CN=Public Key Services,CN=Services,CN=Configuration,DC=contoso,DC=com'
-                    Name                     = 'SafeTemplate'
+                    SchemaClassName         = 'pKICertificateTemplate'
+                    AuthenticationEKUExist  = $true
+                    HasLinkedGroupOIDPolicy = $true
+                    LinkedGroupOIDPolicies  = @('CN=PrivilegedGroup,CN=Users,DC=contoso,DC=com')
+                    DangerousEnrollee       = @()
+                    LowPrivilegeEnrollee    = @()
+                    distinguishedName       = 'CN=SafeTemplate,CN=Certificate Templates,CN=Public Key Services,CN=Services,CN=Configuration,DC=contoso,DC=com'
+                    Name                    = 'SafeTemplate'
                 }
                 $script:AdcsObjectStore = @{ $safeTemplate.distinguishedName = $safeTemplate }
 
@@ -330,7 +329,7 @@ InModuleScope 'Locksmith2' {
                 Mock 'Test-IssueExists' { $false }
             }
 
-            It 'should return an LS2Issue when template has TemplateSchemaVersion=1, auth EKU, no manager approval, and DangerousEnrollee' {
+            It 'should return an LS2Issue when template has TemplateSchemaVersion=1, auth EKU, is Enabled, AuthorizedSignatureNotRequired, and DangerousEnrollee' {
                 $vulnTemplate = New-ESC15VulnerableTemplate
                 $script:AdcsObjectStore = @{ $vulnTemplate.distinguishedName = $vulnTemplate }
 
@@ -354,9 +353,9 @@ InModuleScope 'Locksmith2' {
                     SchemaClassName                = 'pKICertificateTemplate'
                     TemplateSchemaVersion          = 2
                     AuthenticationEKUExist         = $true
-                    ManagerApprovalNotRequired     = $true
                     AuthorizedSignatureNotRequired = $true
                     DangerousEnrollee              = @('S-1-1-0')
+                    Enabled                        = $true
                     distinguishedName              = 'CN=SafeTemplate,CN=Certificate Templates,CN=Public Key Services,CN=Services,CN=Configuration,DC=contoso,DC=com'
                     Name                           = 'SafeTemplate'
                 }
@@ -372,9 +371,27 @@ InModuleScope 'Locksmith2' {
                     SchemaClassName                = 'pKICertificateTemplate'
                     TemplateSchemaVersion          = 1
                     AuthenticationEKUExist         = $false
-                    ManagerApprovalNotRequired     = $true
                     AuthorizedSignatureNotRequired = $true
                     DangerousEnrollee              = @('S-1-1-0')
+                    Enabled                        = $true
+                    distinguishedName              = 'CN=SafeTemplate,CN=Certificate Templates,CN=Public Key Services,CN=Services,CN=Configuration,DC=contoso,DC=com'
+                    Name                           = 'SafeTemplate'
+                }
+                $script:AdcsObjectStore = @{ $safeTemplate.distinguishedName = $safeTemplate }
+
+                $result = @(Find-LS2VulnerableTemplate -Technique 'ESC15')
+
+                $result.Count | Should -Be 0
+            }
+
+            It 'should not return an issue when Enabled is false' {
+                $safeTemplate = New-MockLS2AdcsObject -Properties @{
+                    SchemaClassName                = 'pKICertificateTemplate'
+                    TemplateSchemaVersion          = 1
+                    AuthenticationEKUExist         = $true
+                    AuthorizedSignatureNotRequired = $true
+                    DangerousEnrollee              = @('S-1-1-0')
+                    Enabled                        = $false
                     distinguishedName              = 'CN=SafeTemplate,CN=Certificate Templates,CN=Public Key Services,CN=Services,CN=Configuration,DC=contoso,DC=com'
                     Name                           = 'SafeTemplate'
                 }
@@ -391,13 +408,14 @@ InModuleScope 'Locksmith2' {
                 Mock 'Test-IssueExists' { $false }
             }
 
-            It 'should return an LS2Issue for any enabled schema v1 template' {
+            It 'should return an LS2Issue for any enabled schema v1 template without client auth EKU' {
                 $template = New-MockLS2AdcsObject -Properties @{
-                    SchemaClassName       = 'pKICertificateTemplate'
-                    TemplateSchemaVersion = 1
-                    Enabled               = $true
-                    distinguishedName     = 'CN=SchemaV1Template,CN=Certificate Templates,CN=Public Key Services,CN=Services,CN=Configuration,DC=contoso,DC=com'
-                    Name                  = 'SchemaV1Template'
+                    SchemaClassName        = 'pKICertificateTemplate'
+                    TemplateSchemaVersion  = 1
+                    Enabled                = $true
+                    AuthenticationEKUExist = $false
+                    distinguishedName      = 'CN=SchemaV1Template,CN=Certificate Templates,CN=Public Key Services,CN=Services,CN=Configuration,DC=contoso,DC=com'
+                    Name                   = 'SchemaV1Template'
                 }
                 $script:AdcsObjectStore = @{ $template.distinguishedName = $template }
 
@@ -409,17 +427,34 @@ InModuleScope 'Locksmith2' {
 
             It 'should return an issue with Technique SchemaV1' {
                 $template = New-MockLS2AdcsObject -Properties @{
-                    SchemaClassName       = 'pKICertificateTemplate'
-                    TemplateSchemaVersion = 1
-                    Enabled               = $true
-                    distinguishedName     = 'CN=SchemaV1Template,CN=Certificate Templates,CN=Public Key Services,CN=Services,CN=Configuration,DC=contoso,DC=com'
-                    Name                  = 'SchemaV1Template'
+                    SchemaClassName        = 'pKICertificateTemplate'
+                    TemplateSchemaVersion  = 1
+                    Enabled                = $true
+                    AuthenticationEKUExist = $false
+                    distinguishedName      = 'CN=SchemaV1Template,CN=Certificate Templates,CN=Public Key Services,CN=Services,CN=Configuration,DC=contoso,DC=com'
+                    Name                   = 'SchemaV1Template'
                 }
                 $script:AdcsObjectStore = @{ $template.distinguishedName = $template }
 
                 $result = @(Find-LS2VulnerableTemplate -Technique 'SchemaV1')
 
                 $result[0].Technique | Should -Be 'SchemaV1'
+            }
+
+            It 'should not return an issue when AuthenticationEKUExist is true' {
+                $safeTemplate = New-MockLS2AdcsObject -Properties @{
+                    SchemaClassName        = 'pKICertificateTemplate'
+                    TemplateSchemaVersion  = 1
+                    Enabled                = $true
+                    AuthenticationEKUExist = $true
+                    distinguishedName      = 'CN=AuthEKUTemplate,CN=Certificate Templates,CN=Public Key Services,CN=Services,CN=Configuration,DC=contoso,DC=com'
+                    Name                   = 'AuthEKUTemplate'
+                }
+                $script:AdcsObjectStore = @{ $safeTemplate.distinguishedName = $safeTemplate }
+
+                $result = @(Find-LS2VulnerableTemplate -Technique 'SchemaV1')
+
+                $result.Count | Should -Be 0
             }
 
             It 'should not return an issue when TemplateSchemaVersion is 2' {
