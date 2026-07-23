@@ -10,6 +10,7 @@ on:
       - 'Locksmith2.psm1'
       - 'Locksmith2.psd1'
       - 'LICENSE'
+      - '.github/workflows/publish.yml'
   workflow_dispatch:  # Allow manual trigger
 
 jobs:
