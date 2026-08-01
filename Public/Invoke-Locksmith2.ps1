@@ -40,15 +40,15 @@
         .PARAMETER Mode
         Specifies the output mode for displaying scan results.
         If not specified, returns LS2Issue objects to the pipeline without formatting.
-        - Mode 0: Identify issues, output to console in table format
-        - Mode 1: Identify issues and fixes, output to console in list format
+        - Mode 0: Summary table (Name, Technique, Issue, Severity)
+        - Mode 1: Detailed per-technique list views
+        - Mode 5: Full list view including Fix and Revert scripts
 
         .PARAMETER DetailLevel
-        Specifies a named detail level for displaying scan results using LS2Issue format views.
-        Takes precedence over Mode if both are specified.
-        - Summary: compact table per technique (Technique, Forest, ObjectClass, Name, Issue)
-        - Detailed: per-technique list views showing only properties relevant to each technique
-        - Full: list view with every property including Fix and Revert scripts
+        Friendly alias for -Mode. Takes precedence over -Mode if both are specified.
+        - Summary: same as Mode 0
+        - Detailed: same as Mode 1
+        - Full: same as Mode 5
 
         .PARAMETER SkipForestCheck
         Reserved for future use. Currently not implemented.
@@ -77,12 +77,13 @@
         None. This function does not accept pipeline input.
 
         .OUTPUTS
-        Hashtable
-        Returns four hashtables:
-        - PrincipalStore: All resolved principals by SID
-        - DomainStore: All domains in the audited forest
-        - AdcsObjectStore: All AD CS objects
-        - IssueStore: All discovered vulnerabilities grouped by technique
+        LS2Issue[]
+        Returns LS2Issue objects to the pipeline when neither -Mode nor -DetailLevel is specified.
+        Use this form for further filtering, selection, or export.
+
+        None
+        When -Mode or -DetailLevel is specified, output is sent directly to the console
+        using Write-Host and Format-* cmdlets and is not available to the pipeline.
 
         .EXAMPLE
         Invoke-Locksmith2
@@ -112,7 +113,7 @@
 
         .EXAMPLE
         Invoke-Locksmith2 -DetailLevel Detailed
-        
+
         Runs audit and displays results using per-technique detailed format views.
 
         .EXAMPLE
@@ -168,7 +169,7 @@
     param (
         [string]$Forest,
         [System.Management.Automation.PSCredential]$Credential,
-        [ValidateSet(0, 1)]
+        [ValidateSet(0, 1, 5)]
         [Nullable[int]]$Mode,
         [ValidateSet('Summary', 'Detailed', 'Full')]
         [string]$DetailLevel,
@@ -293,14 +294,22 @@
         Set-LS2RiskRating -Issues $allIssues
     }
 
-    # Output based on whether DetailLevel or Mode was specified
+    # Output based on whether Mode or DetailLevel was specified
+    $displayMode = $null
     if ($PSBoundParameters.ContainsKey('DetailLevel')) {
-        Show-IssueReport -Issues $allIssues -DetailLevel $DetailLevel
+        switch ($DetailLevel) {
+            'Summary'  { $displayMode = 0 }
+            'Detailed' { $displayMode = 1 }
+            'Full'     { $displayMode = 5 }
+        }
     } elseif ($PSBoundParameters.ContainsKey('Mode')) {
-        # Display issues in console using specified mode
-        Show-IssueReport -Issues $allIssues -Mode $Mode
+        $displayMode = $Mode
+    }
+
+    if ($null -ne $displayMode) {
+        Show-IssueReport -Issues $allIssues -Mode $displayMode
     } else {
-        # Return LS2Issue objects to pipeline
+        # Return LS2Issue objects to pipeline; default format view renders summary table
         $allIssues
     }
 }

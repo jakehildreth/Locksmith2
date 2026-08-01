@@ -50,6 +50,10 @@ InModuleScope 'Locksmith2' {
             { Show-IssueReport -Issues $script:testIssues -Mode 1 } | Should -Not -Throw
         }
 
+        It 'should not throw in Mode 5' {
+            { Show-IssueReport -Issues $script:testIssues -Mode 5 } | Should -Not -Throw
+        }
+
         It 'should call Write-Host at least once in Mode 0' {
             Show-IssueReport -Issues $script:testIssues -Mode 0
             Should -Invoke 'Write-Host' -Times 1 -Exactly:$false
@@ -57,6 +61,11 @@ InModuleScope 'Locksmith2' {
 
         It 'should call Write-Host at least once in Mode 1' {
             Show-IssueReport -Issues $script:testIssues -Mode 1
+            Should -Invoke 'Write-Host' -Times 1 -Exactly:$false
+        }
+
+        It 'should call Write-Host at least once in Mode 5' {
+            Show-IssueReport -Issues $script:testIssues -Mode 5
             Should -Invoke 'Write-Host' -Times 1 -Exactly:$false
         }
 

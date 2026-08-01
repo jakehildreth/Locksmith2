@@ -5,7 +5,7 @@
 #>
 BeforeDiscovery {
     $ModuleRoot = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
-    $script:FormatFilePath = Join-Path $ModuleRoot 'Formats/LS2Issue.format.ps1xml'
+    $script:FormatFilePath = Join-Path $ModuleRoot 'LS2Issue.format.ps1xml'
 
     # Expected property lists per view (order matters)
     $script:ExpectedListViews = @(
@@ -29,7 +29,7 @@ BeforeDiscovery {
 
 BeforeAll {
     $ModuleRoot = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
-    $script:FormatFilePath = Join-Path $ModuleRoot 'Formats/LS2Issue.format.ps1xml'
+    $script:FormatFilePath = Join-Path $ModuleRoot 'LS2Issue.format.ps1xml'
     $ls2Manifest = if ($env:LS2_MODULE_ROOT) { Join-Path $env:LS2_MODULE_ROOT 'Locksmith2.psd1' } else { Join-Path $ModuleRoot 'Locksmith2.psd1' }
     Import-Module $ls2Manifest -Force -ErrorAction Stop
 
@@ -75,7 +75,13 @@ Describe 'Summary view' -Tag 'Unit' {
 
     It 'shows exactly the summary columns in order' {
         $columns = @($script:SummaryView.TableControl.TableRowEntries.TableRowEntry.TableColumnItems.TableColumnItem.PropertyName)
-        $columns | Should -Be @('Technique', 'Forest', 'ObjectClass', 'Name', 'Issue')
+        $columns | Should -Be @('Name', 'Technique', 'Issue', 'RiskName')
+    }
+
+    It 'labels RiskName as Severity' {
+        $severityHeader = @($script:SummaryView.TableControl.TableHeaders.TableColumnHeader) |
+            Where-Object { $_.Label -eq 'Severity' }
+        $severityHeader | Should -Not -BeNullOrEmpty
     }
 }
 
@@ -109,8 +115,7 @@ Describe 'ESC7 role labeling' -Tag 'Unit' {
     }
 }
 
-InModuleScope 'Locksmith2' {
-    Describe 'View rendering' -Tag 'Unit' {
+Describe 'View rendering' -Tag 'Unit' {
         BeforeAll {
             $script:templateIssue = [LS2Issue]@{
                 Technique              = 'ESC1'
@@ -167,4 +172,3 @@ InModuleScope 'Locksmith2' {
             $out | Should -Match 'VulnTemplate'
         }
     }
-}

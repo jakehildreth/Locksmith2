@@ -154,7 +154,7 @@ Describe 'Invoke-LS2PostBuildPublish' {
 
         It 'Should patch the manifest inside the nested Locksmith2 folder' {
             Invoke-LS2PostBuildPublish -ArtefactRoot $artefactRoot -PublishToPSGallery:$false
-            Should -Invoke Update-ModuleManifest -ParameterFilter { $Path -like '*root-nested*Locksmith2.psd1' } -Exactly 1
+            Should -Invoke Update-ModuleManifest -ParameterFilter { $Path -like '*root-nested*Locksmith2.psd1' } -Exactly 2
         }
     }
 

@@ -83,6 +83,31 @@ InModuleScope 'Locksmith2' {
             Should -Invoke 'Show-IssueReport' -Times 1 -ParameterFilter { $Mode -eq 1 }
         }
 
+        It 'should call Show-IssueReport -Mode 5 when -Mode 5 is specified' {
+            Invoke-Locksmith2 -Mode 5
+            Should -Invoke 'Show-IssueReport' -Times 1 -ParameterFilter { $Mode -eq 5 }
+        }
+
+        It 'should call Show-IssueReport -Mode 0 when -DetailLevel Summary is specified' {
+            Invoke-Locksmith2 -DetailLevel 'Summary'
+            Should -Invoke 'Show-IssueReport' -Times 1 -ParameterFilter { $Mode -eq 0 }
+        }
+
+        It 'should call Show-IssueReport -Mode 1 when -DetailLevel Detailed is specified' {
+            Invoke-Locksmith2 -DetailLevel 'Detailed'
+            Should -Invoke 'Show-IssueReport' -Times 1 -ParameterFilter { $Mode -eq 1 }
+        }
+
+        It 'should call Show-IssueReport -Mode 5 when -DetailLevel Full is specified' {
+            Invoke-Locksmith2 -DetailLevel 'Full'
+            Should -Invoke 'Show-IssueReport' -Times 1 -ParameterFilter { $Mode -eq 5 }
+        }
+
+        It 'should prefer -DetailLevel over -Mode when both are specified' {
+            Invoke-Locksmith2 -Mode 0 -DetailLevel 'Full'
+            Should -Invoke 'Show-IssueReport' -Times 1 -ParameterFilter { $Mode -eq 5 }
+        }
+
         It 'should write an error and not call Get-FlattenedIssues when Initialize-LS2Scan returns false' {
             Mock 'Initialize-LS2Scan' { $false }
             Mock 'Write-Error' { }
