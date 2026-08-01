@@ -12,17 +12,13 @@
     PowerShellVersion    = '5.1'
     PrivateData          = @{
         PSData = @{
-            ExternalModuleDependencies = @('Microsoft.PowerShell.Utility', 'Microsoft.PowerShell.Archive', 'Microsoft.PowerShell.Management', 'Microsoft.PowerShell.Security', 'PowerShellGet', 'CimCmdlets')
+            ExternalModuleDependencies = @('Microsoft.PowerShell.Utility', 'Microsoft.PowerShell.Archive', 'Microsoft.PowerShell.Management', 'Microsoft.PowerShell.Security', 'PowerShellGet')
             ProjectUri                 = 'https://github.com/jakehildreth/Locksmith2'
             RequireLicenseAcceptance   = $false
             Tags                       = @('Locksmith', 'Locksmith2', 'ActiveDirectory', 'ADCS', 'CA', 'Certificate', 'CertificateAuthority', 'CertificateServices', 'PKI', 'X509', 'Windows')
         }
     }
-    RequiredModules      = @(@{
-            Guid          = '357478c8-bec5-4ee3-bc2e-21d2357b2dd1'
-            ModuleName    = 'PSCertutil'
-            ModuleVersion = '0.0.2'
-        }, 'Microsoft.PowerShell.Utility', 'Microsoft.PowerShell.Archive', 'Microsoft.PowerShell.Management', 'Microsoft.PowerShell.Security', 'PowerShellGet', 'CimCmdlets')
+    RequiredModules      = @('Microsoft.PowerShell.Utility', 'Microsoft.PowerShell.Archive', 'Microsoft.PowerShell.Management', 'Microsoft.PowerShell.Security', 'PowerShellGet')
     RootModule           = 'Locksmith2.psm1'
     ScriptsToProcess     = @('Classes\LS2Principal.ps1', 'Classes\LS2AdcsObject.ps1')
     FormatsToProcess     = @('Formats\LS2Issue.format.ps1xml')
