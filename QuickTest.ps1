@@ -1,4 +1,4 @@
-# Set-Location ~\Documents\Locksmith2\
+﻿# Set-Location ~\Documents\Locksmith2\
 Import-Module .\Locksmith2.psd1 -Force
 
 if (-not $Credential) {

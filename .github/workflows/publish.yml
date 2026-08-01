@@ -1,8 +1,7 @@
-name: Build and Publish to PSGallery
+name: Build and Publish to PSGallery and GitHub
 
 on:
   push:
-    branches: [ main ]
     paths:
       - 'Public/**'
       - 'Private/**'
@@ -11,11 +10,14 @@ on:
       - 'Locksmith2.psm1'
       - 'Locksmith2.psd1'
       - 'LICENSE'
+      - '.github/workflows/publish.yml'
   workflow_dispatch:  # Allow manual trigger
 
 jobs:
   build-and-publish:
     runs-on: windows-latest
+    permissions:
+      contents: write
 
     steps:
     - name: Checkout code
@@ -27,8 +29,9 @@ jobs:
         Write-Host "Installing required modules..." -ForegroundColor Cyan
         Install-Module -Name Pester -AllowClobber -Scope CurrentUser -SkipPublisherCheck -Force
         Install-Module -Name PSScriptAnalyzer -AllowClobber -Scope CurrentUser -Force
-        Install-Module -Name PSPublishModule -AllowClobber -Scope CurrentUser -Force
+        Install-Module -Name PSPublishModule -AllowClobber -MaximumVersion 2.0.27 -Scope CurrentUser -Force
         Install-Module -Name PSCertUtil -AllowClobber -Scope CurrentUser -Force
+        Install-Module -Name PSWriteHTML -AllowClobber -Scope CurrentUser -Force
         Write-Host "Modules installed successfully" -ForegroundColor Green
 
     # - name: Run Pester tests
@@ -45,13 +48,26 @@ jobs:
     #
     #     Write-Host "All tests passed!" -ForegroundColor Green
 
-    - name: Build and Publish to PowerShell Gallery
+    - name: Build and Publish (Release)
+      if: github.ref == 'refs/heads/main'
       shell: pwsh
       env:
         PSGALLERY_API_KEY: ${{ secrets.PSGALLERY_API_KEY }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        Write-Host "Building and publishing Locksmith2 module..." -ForegroundColor Cyan
-        ./Build/Build-Module.ps1 -PublishToPSGallery -PSGalleryAPIKey $env:PSGALLERY_API_KEY
+        Write-Host "Building and publishing Locksmith2 (release)..." -ForegroundColor Cyan
+        ./Build/Build-Module.ps1 -PublishToPSGallery -PSGalleryAPIKey $env:PSGALLERY_API_KEY -PublishToGitHub -GitHubAPIKey $env:GITHUB_TOKEN
+        Write-Host "Published successfully" -ForegroundColor Green
+
+    - name: Build and Publish (Prerelease)
+      if: github.ref != 'refs/heads/main'
+      shell: pwsh
+      env:
+        PSGALLERY_API_KEY: ${{ secrets.PSGALLERY_API_KEY }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        Write-Host "Building and publishing Locksmith2 (prerelease)..." -ForegroundColor Cyan
+        ./Build/Build-Module.ps1 -PublishToPSGallery -PSGalleryAPIKey $env:PSGALLERY_API_KEY -PublishToGitHub -GitHubAPIKey $env:GITHUB_TOKEN -Prerelease 'pre'
         Write-Host "Published successfully" -ForegroundColor Green
 
     - name: Get module version
@@ -60,5 +76,7 @@ jobs:
       run: |
         $manifest = Import-PowerShellDataFile ./Locksmith2.psd1
         $version = $manifest.ModuleVersion
-        echo "version=$version" >> $env:GITHUB_OUTPUT
-        Write-Host "Module version: $version" -ForegroundColor Green
+        $prerelease = $manifest.PrivateData.PSData.Prerelease
+        $fullVersion = if ($prerelease) { "$version-$prerelease" } else { $version }
+        echo "version=$fullVersion" >> $env:GITHUB_OUTPUT
+        Write-Host "Module version: $fullVersion" -ForegroundColor Green

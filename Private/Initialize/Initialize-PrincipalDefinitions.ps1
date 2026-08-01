@@ -1,12 +1,13 @@
-function Initialize-PrincipalDefinitions {
+﻿function Initialize-PrincipalDefinitions {
     <#
         .SYNOPSIS
         Loads and customizes principal definitions for the current forest.
 
         .DESCRIPTION
-        Loads PrincipalDefinitions.psd1 and injects forest-specific security principals
-        (such as the forest's Enterprise Admins SID) into the definitions. Stores the
-        customized definitions in module-level variables for use throughout the scan.
+        Reads principal definitions from $script:PrincipalDefinitionsBase (loaded at module
+        import) and injects forest-specific security principals (such as the forest's
+        Enterprise Admins SID). Stores the customized definitions in module-level variables
+        for use throughout the scan.
         
         This function should be called after Initialize-DomainStore so that domain SIDs
         are available for injection.
@@ -40,23 +41,24 @@ function Initialize-PrincipalDefinitions {
     }
 
     process {
+        if (-not $script:PrincipalDefinitionsBase) {
+            $PSCmdlet.ThrowTerminatingError(
+                [System.Management.Automation.ErrorRecord]::new(
+                    [System.InvalidOperationException]::new('PrincipalDefinitionsBase is not initialized. Cannot load principal definitions.'),
+                    'PrincipalDefinitionsBaseNotInitialized',
+                    [System.Management.Automation.ErrorCategory]::InvalidOperation,
+                    $null
+                )
+            )
+        }
+
         try {
-            # Load the base definitions from PSD1 file
-            # Use $PSScriptRoot which points to Private\Initialize, so go up one level to Private, then into Data
-            $definitionsPath = Join-Path (Split-Path $PSScriptRoot -Parent) 'Data\PrincipalDefinitions.psd1'
-            Write-Verbose "Loading principal definitions from: $definitionsPath"
-            
-            if (-not (Test-Path $definitionsPath)) {
-                throw "Principal definitions file not found at: $definitionsPath"
-            }
-            
-            $definitions = Import-PowerShellDataFile -Path $definitionsPath
-            Write-Verbose "Successfully loaded principal definitions file"
-            
+            Write-Verbose 'Loading principal definitions from $script:PrincipalDefinitionsBase'
+
             # Start with the base definitions
-            $script:SafePrincipals = $definitions.SafePrincipals
-            $script:DangerousPrincipals = $definitions.DangerousPrincipals
-            $script:StandardOwners = $definitions.StandardOwners
+            $script:SafePrincipals      = $script:PrincipalDefinitionsBase.SafePrincipals
+            $script:DangerousPrincipals = $script:PrincipalDefinitionsBase.DangerousPrincipals
+            $script:StandardOwners      = $script:PrincipalDefinitionsBase.StandardOwners
             
             # Inject forest-specific principals
             if ($script:RootDSE -and $script:DomainStore) {

@@ -1,20 +1,35 @@
-function Find-LS2VulnerableCA {
+﻿function Find-LS2VulnerableCA {
     <#
     .SYNOPSIS
         Identifies vulnerable AD CS Certification Authorities based on ESC technique definitions.
 
     .DESCRIPTION
-        Reads ESC technique definitions from ESCDefinitions.psd1, queries the AdcsObjectStore
+        Uses ESC technique definitions loaded at module initialization, queries the AdcsObjectStore
         for matching CAs, and generates issues for configuration problems or dangerous role assignments.
         
         ESC6: Detects CAs with EDITF_ATTRIBUTESUBJECTALTNAME2 enabled
         ESC7a: Detects dangerous CA Administrator role assignments
         ESC7m: Detects dangerous Certificate Manager role assignments
+        ESC8: Detects vulnerable web enrollment endpoints (HTTP always; HTTPS if NTLM offered or EPA not required)
         ESC11: Detects CAs that don't require RPC encryption
         ESC16: Detects CAs with disabled CRL/AIA extensions
 
     .PARAMETER Technique
-        ESC technique name to scan for (e.g., 'ESC6', 'ESC7a', 'ESC7m', 'ESC11', 'ESC16')
+        ESC technique name to scan for (e.g., 'ESC6', 'ESC7a', 'ESC7m', 'ESC8', 'ESC11', 'ESC16')
+
+    .PARAMETER Forest
+        Fully qualified domain name of the target AD forest. If not specified, uses the value already
+        set in module scope or auto-detected by Resolve-LS2ConnectionContext.
+
+    .PARAMETER Credential
+        PSCredential for authenticating to Active Directory. If not specified, uses the credential
+        already set in module scope or the current user's identity.
+
+    .PARAMETER ExpandGroups
+        When specified, expands group principals in discovered issues into individual per-member issues.
+
+    .PARAMETER Rescan
+        Forces a fresh vulnerability scan even if the IssueStore is already populated.
 
     .EXAMPLE
         Find-LS2VulnerableCA -Technique ESC6
@@ -57,6 +72,7 @@ function Find-LS2VulnerableCA {
         - ESC6: EDITF_ATTRIBUTESUBJECTALTNAME2 flag enabled
         - ESC7a: Dangerous CA Administrator role assignments
         - ESC7m: Dangerous Certificate Manager role assignments
+        - ESC8: Vulnerable web enrollment endpoints
         - ESC11: Missing RPC encryption requirement
         - ESC16: Disabled CRL/AIA security extensions
 
@@ -72,7 +88,7 @@ function Find-LS2VulnerableCA {
     [CmdletBinding()]
     param(
         [Parameter()]
-        [ValidateSet('ESC6', 'ESC7a', 'ESC7m', 'ESC11', 'ESC16')]
+        [ValidateSet('ESC6', 'ESC7a', 'ESC7m', 'ESC8', 'ESC11', 'ESC16', 'Auditing')]
         [string]$Technique,
         
         [Parameter()]
@@ -104,7 +120,7 @@ function Find-LS2VulnerableCA {
     if (-not $Technique) {
         Write-Verbose "No technique specified. Returning all CA issues..."
         $allIssues = Get-FlattenedIssues
-        $caTechniques = @('ESC6', 'ESC7a', 'ESC7m', 'ESC11', 'ESC16')
+        $caTechniques = @('ESC6', 'ESC7a', 'ESC7m', 'ESC8', 'ESC11', 'ESC16', 'Auditing')
         $caIssues = $allIssues | Where-Object { $_.Technique -in $caTechniques }
         
         if ($ExpandGroups) {
@@ -115,12 +131,13 @@ function Find-LS2VulnerableCA {
         return
     }
 
-    # Load all ESC definitions
-    $definitionsPath = Join-Path $PSScriptRoot '..\Private\Data\ESCDefinitions.psd1'
-    $allDefinitions = Import-PowerShellDataFile -Path $definitionsPath
-    $config = $allDefinitions[$Technique]
+    if (-not $script:ESCDefinitions) {
+        Write-Warning 'ESCDefinitions not initialized. Cannot scan for vulnerabilities.'
+        return
+    }
+    $config = $script:ESCDefinitions[$Technique]
 
-    Write-Verbose "Scanning for $Technique using definitions from $definitionsPath"
+    Write-Verbose "Scanning for $Technique"
 
     # Query AdcsObjectStore for CAs
     $allCAs = $script:AdcsObjectStore.Values | Where-Object { $_.objectClass -contains 'pKIEnrollmentService' }
@@ -264,6 +281,101 @@ function Find-LS2VulnerableCA {
             }
         }
     }
+    # ESC8: endpoint-based (one issue per vulnerable web enrollment endpoint)
+    elseif ($Technique -eq 'ESC8') {
+        $fixText = if ($config.FixTemplate -is [array]) { $config.FixTemplate -join "`n" } else { $config.FixTemplate }
+        $revertText = if ($config.RevertTemplate -is [array]) { $config.RevertTemplate -join "`n" } else { $config.RevertTemplate }
+
+        foreach ($ca in $allCAs) {
+            $caName = if ($ca.cn) { $ca.cn } else { 'Unknown CA' }
+            $caFullName = $ca.CAFullName
+            if (-not $caFullName) {
+                Write-Verbose "  CA '$caName' has no CAFullName - skipping ESC8 check"
+                continue
+            }
+
+            $forestName = if ($ca.distinguishedName -match 'DC=([^,]+)') {
+                $ca.distinguishedName -replace '^.*?DC=(.*)$', '$1' -replace ',DC=', '.'
+            } else {
+                'Unknown'
+            }
+
+            $endpoints = @($ca.WebEnrollmentEndpoints)
+            if (-not $endpoints -or $endpoints.Count -eq 0) {
+                Write-Verbose "  CA '$caName' has no web enrollment endpoints"
+                continue
+            }
+
+            foreach ($endpoint in $endpoints) {
+                $url = $endpoint.URL
+                $isHttp = $url -match '^http://'
+
+                # Determine if this endpoint is vulnerable
+                $vulnerable = $false
+                if ($isHttp) {
+                    $vulnerable = $true
+                } elseif ($endpoint.NtlmOffered -eq $true -or $endpoint.EpaNotRequired -eq $true) {
+                    $vulnerable = $true
+                }
+
+                if (-not $vulnerable) {
+                    Write-Verbose "  Endpoint $url is not vulnerable - skipping"
+                    continue
+                }
+
+                # Build issue text describing the applicable attack vectors
+                if ($isHttp) {
+                    $issueText = "The web enrollment endpoint at $url uses plain HTTP and is vulnerable to NTLM relay attacks.`n`n" +
+                        "Any attacker who can intercept network traffic can relay NTLM credentials to this endpoint " +
+                        "and request a certificate on behalf of the victim.`n`nMore info:`n  - https://posts.specterops.io/certified-pre-owned-d95910965cd2"
+                } else {
+                    $vectors = @()
+                    if ($endpoint.NtlmOffered -eq $true) { $vectors += 'NTLM relay (NTLM offered on HTTPS endpoint)' }
+                    if ($endpoint.EpaNotRequired -eq $true) { $vectors += 'Kerberos relay (EPA not required)' }
+                    $vectorList = $vectors -join ' and '
+                    $issueText = "The web enrollment endpoint at $url is vulnerable to $vectorList.`n`n" +
+                        "An attacker who can intercept network traffic can relay credentials to this endpoint " +
+                        "and request a certificate on behalf of the victim.`n`nMore info:`n  - https://posts.specterops.io/certified-pre-owned-d95910965cd2"
+                }
+
+                # Determine attack vector for scoring
+                if ($isHttp) {
+                    $endpointAttackVector = 'HTTP'
+                } elseif ($endpoint.NtlmOffered -eq $true) {
+                    $endpointAttackVector = 'HTTPS-NTLM'
+                } else {
+                    $endpointAttackVector = 'HTTPS-Kerberos'
+                }
+
+                $issue = [LS2Issue]@{
+                    Technique             = 'ESC8'
+                    Forest                = $forestName
+                    Name                  = $caName
+                    DistinguishedName     = $ca.distinguishedName
+                    ObjectClass           = 'pKIEnrollmentService'
+                    CAFullName            = $caFullName
+                    EndpointURL           = $url
+                    EndpointAttackVector  = $endpointAttackVector
+                    Issue                 = $issueText
+                    Fix                   = $fixText
+                    Revert                = $revertText
+                }
+
+                $dn = $ca.distinguishedName
+                $issueKey = "ESC8:$url"
+                if (-not $script:IssueStore) { $script:IssueStore = @{} }
+                if (-not $script:IssueStore.ContainsKey($dn)) { $script:IssueStore[$dn] = @{} }
+                if (-not $script:IssueStore[$dn].ContainsKey($issueKey)) { $script:IssueStore[$dn][$issueKey] = @() }
+
+                if (-not (Test-IssueExists -Issue $issue -DistinguishedName $dn -Technique $Technique)) {
+                    $script:IssueStore[$dn][$issueKey] += $issue
+                    $issueCount++
+                }
+
+                $issue
+            }
+        }
+    }
     # ESC6, ESC11, and ESC16 are configuration-based (no enrollee/principal iteration)
     else {
         $vulnerableCAs = @(foreach ($ca in $allCAs) {
@@ -325,13 +437,15 @@ function Find-LS2VulnerableCA {
             # Expand template variables
             $issueText = $issueTemplate `
                 -replace '\$\(CAName\)', $caName `
-                -replace '\$\(CAFullName\)', $caFullName
+                -replace '\$\(CAFullName\)', $caFullName `
+                -replace '\$\(AuditFilter\)', $ca.AuditFilter
             
             $fixScript = $fixTemplate `
                 -replace '\$\(CAFullName\)', $caFullName
             
             $revertScript = $revertTemplate `
-                -replace '\$\(CAFullName\)', $caFullName
+                -replace '\$\(CAFullName\)', $caFullName `
+                -replace '\$\(AuditFilter\)', $ca.AuditFilter
 
             # Create LS2Issue object
             $issue = [LS2Issue]@{

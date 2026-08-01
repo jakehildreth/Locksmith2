@@ -1,4 +1,4 @@
-function New-LDAPSearcher {
+﻿function New-LDAPSearcher {
     <#
         .SYNOPSIS
         Creates a configured DirectorySearcher for LDAP queries.

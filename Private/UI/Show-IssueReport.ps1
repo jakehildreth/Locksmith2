@@ -1,4 +1,4 @@
-function Show-IssueReport {
+﻿function Show-IssueReport {
     <#
         .SYNOPSIS
         Displays discovered AD CS issues in console based on specified mode.

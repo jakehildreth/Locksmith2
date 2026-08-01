@@ -1,4 +1,4 @@
-function Get-AdcsObject {
+﻿function Get-AdcsObject {
     <#
         .SYNOPSIS
         Retrieves all objects from the Public Key Services Container in Active Directory.
@@ -88,7 +88,7 @@ function Get-AdcsObject {
                     Write-Verbose "Stored AD CS object: $distinguishedName"
                 }
                 
-                $objectDirectoryEntry
+                $script:AdcsObjectStore[$distinguishedName]
                 $objectCount++
             }
             Write-Verbose "Found $objectCount total objects in the Public Key Services container and its subtree"

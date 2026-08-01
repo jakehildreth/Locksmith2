@@ -1,4 +1,4 @@
-function Convert-IdentityReferenceToSid {
+﻿function Convert-IdentityReferenceToSid {
     <#
         .SYNOPSIS
         Converts an IdentityReference (NTAccount) to a SecurityIdentifier (SID).
@@ -13,15 +13,8 @@ function Convert-IdentityReferenceToSid {
         Supports forest-wide searches using Global Catalog when RootDSE is provided, enabling resolution
         of principals from child domains and trusted domains within the forest.
 
-        .PARAMETER Principal
+        .PARAMETER IdentityReference
         The IdentityReference object to convert. Typically from ACL IdentityReference properties.
-
-        .PARAMETER Credential
-        PSCredential for authenticating to Active Directory. Required when running from non-domain joined computers.
-
-        .PARAMETER RootDSE
-        A DirectoryEntry object for the RootDSE. Used to determine the domain context for LDAP queries.
-        If not specified, attempts to derive the domain from the NTAccount name.
 
         .INPUTS
         System.Security.Principal.IdentityReference
@@ -57,6 +50,21 @@ function Convert-IdentityReferenceToSid {
     )
 
     process {
+        $identityValue = $IdentityReference.Value
+
+        # Some ACL APIs can return SID-shaped values wrapped in non-SID IdentityReference types.
+        # Normalize them early so we do not perform bogus sAMAccountName LDAP lookups.
+        if ($IdentityReference -isnot [System.Security.Principal.SecurityIdentifier] -and $identityValue -match '^(?:O:)?(S-1-[\d-]+)$') {
+            try {
+                $IdentityReference = [System.Security.Principal.SecurityIdentifier]::new($Matches[1])
+                $identityValue = $IdentityReference.Value
+                Write-Verbose "Normalized SID-shaped identity reference '$identityValue' to SecurityIdentifier"
+            } catch {
+                Write-Warning "Could not parse SID-shaped identity reference '$identityValue': $_"
+                return $IdentityReference
+            }
+        }
+
         # If already a SID, return it
         if ($IdentityReference -is [System.Security.Principal.SecurityIdentifier]) {
             return $IdentityReference
@@ -65,10 +73,10 @@ function Convert-IdentityReferenceToSid {
         # Check PrincipalStore first (if it exists) - it has the SID already
         if ($script:PrincipalStore) {
             # Try to find by NTAccount value
-            $matchingPrincipal = $script:PrincipalStore.Values | Where-Object { $_.ntAccountName -eq $IdentityReference.Value } | Select-Object -First 1
-            if ($matchingPrincipal -and $matchingPrincipal.sid) {
-                Write-Verbose "PrincipalStore HIT for '$($IdentityReference.Value)' → SID: $($matchingPrincipal.sid)"
-                return [System.Security.Principal.SecurityIdentifier]::new($matchingPrincipal.sid)
+            $matchingPrincipal = $script:PrincipalStore.Values | Where-Object { $_.ntAccountName -eq $identityValue } | Select-Object -First 1
+            if ($matchingPrincipal -and $matchingPrincipal.objectSid) {
+                Write-Verbose "PrincipalStore HIT for '$identityValue' → SID: $($matchingPrincipal.objectSid)"
+                return [System.Security.Principal.SecurityIdentifier]::new($matchingPrincipal.objectSid)
             }
         }
 
@@ -88,7 +96,7 @@ function Convert-IdentityReferenceToSid {
 
         try {
             # Parse the NTAccount name
-            $ntAccountString = $IdentityReference.Value
+            $ntAccountString = $identityValue
             if ($ntAccountString -match '^(.+?)\\(.+)$') {
                 $samAccountName = $Matches[2]
             } else {

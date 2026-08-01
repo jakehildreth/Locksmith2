@@ -1,4 +1,4 @@
-class LS2Principal {
+﻿class LS2Principal {
     [string]$distinguishedName
     [string]$objectSid
     [string]$sAMAccountName
@@ -96,11 +96,6 @@ class LS2Principal {
         # Dispose only if not null
         if ($tempEntry) {
             $tempEntry.Dispose()
-        }
-        
-        # Add nTSecurityDescriptor as an alias for ObjectSecurity
-        $this | Add-Member -MemberType ScriptProperty -Name nTSecurityDescriptor -Value {
-            return $this.ObjectSecurity
         }
     }
     

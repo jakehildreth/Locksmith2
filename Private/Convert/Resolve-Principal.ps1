@@ -1,4 +1,4 @@
-function Resolve-Principal {
+﻿function Resolve-Principal {
     <#
         .SYNOPSIS
         Resolves an IdentityReference to a complete principal object and caches it in the PrincipalStore.
@@ -16,13 +16,6 @@ function Resolve-Principal {
 
         .PARAMETER IdentityReference
         The IdentityReference object to convert. Can be either NTAccount or SecurityIdentifier.
-
-        .PARAMETER Credential
-        PSCredential for authenticating to Active Directory. Required for LDAP queries.
-
-        .PARAMETER RootDSE
-        A DirectoryEntry object for the RootDSE. Used to determine the domain context for LDAP queries.
-        If not specified, attempts to query without specific domain context.
 
         .INPUTS
         System.Security.Principal.IdentityReference
@@ -73,6 +66,28 @@ function Resolve-Principal {
             Write-Warning "Could not convert IdentityReference to SID: $($IdentityReference.Value)"
             return $null
         }
+
+        if ($sidKey -isnot [System.Security.Principal.SecurityIdentifier]) {
+            $sidValue = if ($sidKey -is [string]) {
+                $sidKey
+            } elseif ($sidKey.PSObject.Properties['Value']) {
+                $sidKey.Value
+            } else {
+                $null
+            }
+
+            if ($sidValue -match '^(?:O:)?(S-1-[\d-]+)$') {
+                try {
+                    $sidKey = [System.Security.Principal.SecurityIdentifier]::new($Matches[1])
+                } catch {
+                    Write-Warning "Could not parse SID value '$sidValue' while resolving principal '$($IdentityReference.Value)': $_"
+                    return $null
+                }
+            } else {
+                Write-Warning "Could not convert IdentityReference '$($IdentityReference.Value)' to a SecurityIdentifier. Resolved type: $($sidKey.GetType().FullName)"
+                return $null
+            }
+        }
         
         $sidString = $sidKey.Value
         
@@ -97,7 +112,13 @@ function Resolve-Principal {
         if ($script:PrincipalStore.ContainsKey($sidString)) {
             $storedPrincipal = $script:PrincipalStore[$sidString]
             Write-Verbose "Store HIT: Found stored principal for SID '$sidString': $($storedPrincipal.distinguishedName)"
-            
+
+            # Well-known principals (e.g., Everyone, Authenticated Users) have no DN
+            if ($null -eq $storedPrincipal.distinguishedName) {
+                Write-Verbose "Well-known principal '$sidString' has no DN. Returning null."
+                return $null
+            }
+
             # Create fresh DirectoryEntry from stored DN
             $objectPath = "LDAP://$script:Server/$($storedPrincipal.distinguishedName)"
             $objectEntry = New-AuthenticatedDirectoryEntry -Path $objectPath
@@ -172,7 +193,13 @@ function Resolve-Principal {
                 Write-Verbose "Resolved SID '$sidString' to '$distinguishedName' via LDAP"
                 return $objectEntry
             } else {
-                Write-Warning "Could not find SID '$sidString' in Active Directory via LDAP query."
+                # Non-domain SIDs (Everyone, Anonymous Logon, etc.) may or may not
+                # exist as foreignSecurityPrincipal objects. Not finding them is normal.
+                if ($sidKey.AccountDomainSid -eq $null) {
+                    Write-Verbose "Well-known SID '$sidString' not found as foreignSecurityPrincipal in AD."
+                } else {
+                    Write-Warning "Could not find SID '$sidString' in Active Directory via LDAP query."
+                }
                 
                 # For well-known SIDs that don't exist in AD, create a minimal store entry
                 # This includes BUILTIN groups and other system principals
@@ -189,7 +216,7 @@ function Resolve-Principal {
                 return $null
             }
         } catch {
-            Write-Warning "LDAP query failed for SID '$sidString': $_"
+            Write-Warning "Principal resolution failed for SID '$sidString': $_"
             return $null
         } finally {
             if ($searcher) { $searcher.Dispose() }

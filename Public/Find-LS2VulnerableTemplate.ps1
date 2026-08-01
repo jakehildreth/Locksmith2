@@ -1,14 +1,28 @@
-function Find-LS2VulnerableTemplate {
+﻿function Find-LS2VulnerableTemplate {
     <#
     .SYNOPSIS
         Identifies vulnerable AD CS templates based on ESC technique definitions.
 
     .DESCRIPTION
-        Reads ESC technique definitions from ESCDefinitions.psd1, queries the AdcsObjectStore
+        Uses ESC technique definitions loaded at module initialization, queries the AdcsObjectStore
         for matching templates, and generates issues for problematic enrollees.
 
     .PARAMETER Technique
         ESC technique name to scan for (e.g., 'ESC1', 'ESC2', 'ESC3c1', 'ESC3c2')
+
+    .PARAMETER Forest
+        Fully qualified domain name of the target AD forest. If not specified, uses the value already
+        set in module scope or auto-detected by Resolve-LS2ConnectionContext.
+
+    .PARAMETER Credential
+        PSCredential for authenticating to Active Directory. If not specified, uses the credential
+        already set in module scope or the current user's identity.
+
+    .PARAMETER ExpandGroups
+        When specified, expands group principals in discovered issues into individual per-member issues.
+
+    .PARAMETER Rescan
+        Forces a fresh vulnerability scan even if the IssueStore is already populated.
 
     .EXAMPLE
         Find-LS2VulnerableTemplate -Technique ESC1
@@ -58,7 +72,7 @@ function Find-LS2VulnerableTemplate {
     [CmdletBinding()]
     param(
         [Parameter()]
-        [ValidateSet('ESC1', 'ESC2', 'ESC3c1', 'ESC3c2', 'ESC9', 'ESC4a', 'ESC4o')]
+        [ValidateSet('ESC1', 'ESC2', 'ESC3c1', 'ESC3c2', 'ESC9', 'ESC4a', 'ESC4o', 'ESC13', 'ESC15', 'SchemaV1')]
         [string]$Technique,
         
         [Parameter()]
@@ -88,7 +102,7 @@ function Find-LS2VulnerableTemplate {
     if (-not $Technique) {
         Write-Verbose "No technique specified. Returning all template issues..."
         $allIssues = Get-FlattenedIssues
-        $templateTechniques = @('ESC1', 'ESC2', 'ESC3c1', 'ESC3c2', 'ESC9', 'ESC4a', 'ESC4o')
+        $templateTechniques = @('ESC1', 'ESC2', 'ESC3c1', 'ESC3c2', 'ESC9', 'ESC4a', 'ESC4o', 'ESC13', 'ESC15', 'SchemaV1')
         $templateIssues = $allIssues | Where-Object { $_.Technique -in $templateTechniques }
         
         if ($ExpandGroups) {
@@ -99,12 +113,13 @@ function Find-LS2VulnerableTemplate {
         return
     }
 
-    # Load all ESC definitions
-    $definitionsPath = Join-Path $PSScriptRoot '..\Private\Data\ESCDefinitions.psd1'
-    $allDefinitions = Import-PowerShellDataFile -Path $definitionsPath
-    $config = $allDefinitions[$Technique]
+    if (-not $script:ESCDefinitions) {
+        Write-Warning 'ESCDefinitions not initialized. Cannot scan for vulnerabilities.'
+        return
+    }
+    $config = $script:ESCDefinitions[$Technique]
 
-    Write-Verbose "Scanning for $Technique using definitions from $definitionsPath"
+    Write-Verbose "Scanning for $Technique"
 
     # Query AdcsObjectStore for templates, then filter by conditions
     $allTemplates = $script:AdcsObjectStore.Values | Where-Object { $_.IsCertificateTemplate() }
@@ -195,15 +210,18 @@ function Find-LS2VulnerableTemplate {
                     $config.RevertTemplate
                 }
 
+                # Resolve IdentityReference to NTAccount format (SID → DOMAIN\Name)
+                $identityReferenceName = ($ace.IdentityReference | Convert-IdentityReferenceToNTAccount).Value
+
                 # Expand template variables in Issue, Fix, and Revert strings
                 $issueText = $issueTemplate `
-                    -replace '\$\(IdentityReference\)', $ace.IdentityReference `
+                    -replace '\$\(IdentityReference\)', $identityReferenceName `
                     -replace '\$\(TemplateName\)', $template.Name `
                     -replace '\$\(ActiveDirectoryRights\)', $ace.ActiveDirectoryRights
                 
                 $fixScript = $fixTemplate `
                     -replace '\$\(DistinguishedName\)', $template.distinguishedName `
-                    -replace '\$\(IdentityReference\)', $ace.IdentityReference
+                    -replace '\$\(IdentityReference\)', $identityReferenceName
                 
                 $revertScript = $revertTemplate `
                     -replace '\$\(DistinguishedName\)', $template.distinguishedName
@@ -233,7 +251,7 @@ function Find-LS2VulnerableTemplate {
                     Name                   = $template.Name
                     DistinguishedName      = $template.distinguishedName
                     ObjectClass            = 'pKICertificateTemplate'
-                    IdentityReference      = $ace.IdentityReference
+                    IdentityReference      = $identityReferenceName
                     IdentityReferenceSID   = $editorSid
                     IdentityReferenceClass = $principalObjectClass
                     ActiveDirectoryRights  = $ace.ActiveDirectoryRights
@@ -282,6 +300,11 @@ function Find-LS2VulnerableTemplate {
             $templateName = if ($template.displayName) { $template.displayName } else { $template.Name }
             $owner = if ($template.Owner) { $template.Owner } else { 'Unknown' }
 
+            # Resolve owner SID to NTAccount format if needed (handles bare SID or O:SID SDDL format)
+            $ownerToDisplay = if ($owner -match '^(?:O:)?(S-1-[\d-]+)') {
+                ([System.Security.Principal.SecurityIdentifier]::new($Matches[1]) | Convert-IdentityReferenceToNTAccount).Value
+            } else { $owner }
+
             Write-Verbose "  Checking template: $templateName"
 
             # Get domain/forest name from DN
@@ -290,14 +313,14 @@ function Find-LS2VulnerableTemplate {
             # Create issue using template expansion
             $issueText = ($config.IssueTemplate -join '') `
                 -replace '\$\(TemplateName\)', $templateName `
-                -replace '\$\(Owner\)', $owner
+                -replace '\$\(Owner\)', $ownerToDisplay
 
             $fixScript = ($config.FixTemplate -join "`n") `
                 -replace '\$\(DistinguishedName\)', $template.distinguishedName
 
             $revertScript = ($config.RevertTemplate -join "`n") `
                 -replace '\$\(DistinguishedName\)', $template.distinguishedName `
-                -replace '\$\(OriginalOwner\)', $owner
+                -replace '\$\(OriginalOwner\)', $ownerToDisplay
 
             # Create issue object
             $issue = [LS2Issue]::new(@{
@@ -306,7 +329,7 @@ function Find-LS2VulnerableTemplate {
                     Name                = $templateName
                     DistinguishedName   = $template.distinguishedName
                     ObjectClass         = 'pKICertificateTemplate'
-                    Owner               = $owner
+                    Owner               = $ownerToDisplay
                     HasNonStandardOwner = $true
                     Enabled             = $template.Enabled
                     EnabledOn           = $template.EnabledOn
@@ -334,6 +357,52 @@ function Find-LS2VulnerableTemplate {
             }
 
             # Always output to pipeline
+            if ($ExpandGroups) {
+                Expand-IssueByGroup -Issue $issue
+            } else {
+                $issue
+            }
+        }
+        Write-Verbose "$Technique scan complete. Found $issueCount issue(s)."
+        return
+    }
+
+    # SchemaV1: per-template hygiene finding — no enrollee iteration
+    elseif ($Technique -eq 'SchemaV1') {
+        foreach ($template in $vulnerableTemplates) {
+            $templateName = if ($template.displayName) { $template.displayName } else { $template.Name }
+
+            $forestName = Get-ForestNameFromDN -DistinguishedName $template.distinguishedName
+
+            $issueText = ($config.IssueTemplate -join '') `
+                -replace '\$\(TemplateName\)', $templateName
+
+            $fixScript  = ($config.FixTemplate  -join "`n")
+            $revertScript = ($config.RevertTemplate -join "`n")
+
+            $issue = [LS2Issue]@{
+                Technique         = $Technique
+                Forest            = $forestName
+                Name              = $templateName
+                DistinguishedName = $template.distinguishedName
+                ObjectClass       = 'pKICertificateTemplate'
+                Enabled           = $template.Enabled
+                EnabledOn         = $template.EnabledOn
+                Issue             = $issueText
+                Fix               = $fixScript
+                Revert            = $revertScript
+            }
+
+            $dn = $template.distinguishedName
+            if (-not $script:IssueStore) { $script:IssueStore = @{} }
+            if (-not $script:IssueStore.ContainsKey($dn)) { $script:IssueStore[$dn] = @{} }
+            if (-not $script:IssueStore[$dn].ContainsKey($Technique)) { $script:IssueStore[$dn][$Technique] = @() }
+
+            if (-not (Test-IssueExists -Issue $issue -DistinguishedName $dn -Technique $Technique)) {
+                $script:IssueStore[$dn][$Technique] += $issue
+                $issueCount++
+            }
+
             if ($ExpandGroups) {
                 Expand-IssueByGroup -Issue $issue
             } else {
@@ -409,10 +478,20 @@ function Find-LS2VulnerableTemplate {
                 $config.RevertTemplate
             }
 
+            # Resolve IdentityReference to NTAccount format (SID → DOMAIN\Name)
+            $identityReferenceName = ($ace.IdentityReference | Convert-IdentityReferenceToNTAccount).Value
+
             # Expand template variables in Issue, Fix, and Revert strings
+            $linkedGroup = if ($template.LinkedGroupOIDPolicies -and $template.LinkedGroupOIDPolicies.Count -gt 0) {
+                $template.LinkedGroupOIDPolicies -join ', '
+            } else {
+                ''
+            }
+
             $issueText = $issueTemplate `
-                -replace '\$\(IdentityReference\)', $ace.IdentityReference `
-                -replace '\$\(TemplateName\)', $template.Name
+                -replace '\$\(IdentityReference\)', $identityReferenceName `
+                -replace '\$\(TemplateName\)', $template.Name `
+                -replace '\$\(LinkedGroup\)', $linkedGroup
             
             $fixScript = $fixTemplate `
                 -replace '\$\(DistinguishedName\)', $template.distinguishedName
@@ -420,14 +499,23 @@ function Find-LS2VulnerableTemplate {
             $revertScript = $revertTemplate `
                 -replace '\$\(DistinguishedName\)', $template.distinguishedName
 
+            # Get principal objectClass from PrincipalStore
+            $principalObjectClass = if ($script:PrincipalStore -and $script:PrincipalStore.ContainsKey($enrolleeSid)) {
+                $script:PrincipalStore[$enrolleeSid].objectClass
+            } else {
+                $null
+            }
+
             # Create LS2Issue object
             $issue = [LS2Issue]@{
                 Technique             = $technique
                 Forest                = $forestName
                 Name                  = $template.Name
                 DistinguishedName     = $template.distinguishedName
-                IdentityReference     = $ace.IdentityReference
+                ObjectClass           = 'pKICertificateTemplate'
+                IdentityReference     = $identityReferenceName
                 IdentityReferenceSID  = $enrolleeSid
+                IdentityReferenceClass = $principalObjectClass
                 ActiveDirectoryRights = $ace.ActiveDirectoryRights
                 Enabled               = $template.Enabled
                 EnabledOn             = $template.EnabledOn

@@ -1,4 +1,4 @@
-function Initialize-DirectoryConnections {
+﻿function Initialize-DirectoryConnections {
     <#
         .SYNOPSIS
         Initializes script-scoped authenticated DirectoryEntry objects for common LDAP/GC paths.

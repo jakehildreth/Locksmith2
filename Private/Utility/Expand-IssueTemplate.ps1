@@ -1,4 +1,4 @@
-function Expand-IssueTemplate {
+﻿function Expand-IssueTemplate {
     <#
     .SYNOPSIS
         Expands Issue, Fix, and Revert templates with variable substitution.
@@ -64,7 +64,7 @@ function Expand-IssueTemplate {
 
     # Expand variables in all templates
     foreach ($key in $Variables.Keys) {
-        $pattern = "`$(`$key)"
+        $pattern = "`$($key)"
         $escapedPattern = [regex]::Escape($pattern)
         $value = $Variables[$key]
         

@@ -1,4 +1,4 @@
-function Test-IssueExists {
+﻿function Test-IssueExists {
     <#
         .SYNOPSIS
         Checks if an issue already exists in the IssueStore.

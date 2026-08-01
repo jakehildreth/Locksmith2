@@ -1,4 +1,4 @@
-function Initialize-AdcsObjectStore {
+﻿function Initialize-AdcsObjectStore {
     <#
         .SYNOPSIS
         Populates the module-level AdcsObjectStore with all AD CS objects.
@@ -46,8 +46,8 @@ function Initialize-AdcsObjectStore {
     }
 
     process {
-        # Require Credential and RootDSE
-        if (-not $script:Credential) {
+        # Require Credential unless Resolve-LS2ConnectionContext determined none is needed (e.g. DomainUser path)
+        if (-not $script:Credential -and -not $script:CredentialResolved) {
             Write-Warning "Credential not set. Cannot initialize AdcsObjectStore."
             return
         }
@@ -57,17 +57,18 @@ function Initialize-AdcsObjectStore {
             return
         }
 
-        # Get all AD CS objects from Public Key Services container
-        $script:AdcsObject = Get-AdcsObject
-        Write-Verbose "Retrieved $($script:AdcsObject.Count) AD CS objects from Public Key Services container"
+        # Get all AD CS objects from Public Key Services container (populates AdcsObjectStore)
+        Get-AdcsObject | Out-Null
+        Write-Verbose "Retrieved $($script:AdcsObjectStore.Count) AD CS objects from Public Key Services container"
         
         # Process certificate templates
-        $Templates = $script:AdcsObject | Where-Object SchemaClassName -EQ pKICertificateTemplate
+        $Templates = $script:AdcsObjectStore.Values | Where-Object { $_.IsCertificateTemplate() }
         Write-Verbose "Processing $($Templates.Count) certificate templates..."
         
         $Templates = $Templates |
         Set-SANAllowed |
         Set-AuthenticationEKUExist |
+        Set-LinkedGroupOIDPolicy |
         Set-AnyPurposeEKUExist |
         Set-EnrollmentAgentEKUExist |
         Set-RequiresEnrollmentAgentSignature |
@@ -79,10 +80,11 @@ function Initialize-AdcsObjectStore {
         Set-ManagerApprovalNotRequired |
         Set-AuthorizedSignatureNotRequired |
         Set-TemplateEnabled |
+        Set-Owner |
         Set-HasNonStandardOwner
         
         # Process Certification Authorities
-        $CAs = $script:AdcsObject | Where-Object { $_.objectClass -contains 'pKIEnrollmentService' }
+        $CAs = $script:AdcsObjectStore.Values | Where-Object { $_.IsCertificationAuthority() }
         $caCount = @($CAs).Count
         Write-Verbose "Processing $caCount Certification Authority object(s)..."
         
@@ -93,16 +95,18 @@ function Initialize-AdcsObjectStore {
         Set-CADisableExtensionList |
         Set-CAAdministrator |
         Set-CACertificateManager |
+        Set-CAWebEnrollmentEndpoints |
         Set-DangerousCAAdministrator |
         Set-LowPrivilegeCAAdministrator |
         Set-DangerousCACertificateManager |
         Set-LowPrivilegeCACertificateManager |
+        Set-Owner |
         Set-HasNonStandardOwner
         
         # Process all other infrastructure objects for non-standard owners
-        $OtherObjects = $script:AdcsObject | Where-Object {
-            $_.SchemaClassName -ne 'pKICertificateTemplate' -and
-            $_.objectClass -notcontains 'pKIEnrollmentService'
+        $OtherObjects = $script:AdcsObjectStore.Values | Where-Object {
+            -not $_.IsCertificateTemplate() -and
+            -not $_.IsCertificationAuthority()
         }
         $otherObjectCount = @($OtherObjects).Count
         Write-Verbose "Processing $otherObjectCount infrastructure object(s)..."
@@ -110,6 +114,7 @@ function Initialize-AdcsObjectStore {
         $OtherObjects = $OtherObjects | 
         Set-DangerousEditor |
         Set-LowPrivilegeEditor |
+        Set-Owner |
         Set-HasNonStandardOwner
         
         Write-Verbose "AdcsObjectStore initialization complete. Statistics:"
