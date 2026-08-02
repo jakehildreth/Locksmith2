@@ -25,6 +25,7 @@ InModuleScope 'Locksmith2' {
                     SchemaClassName                = 'pKICertificateTemplate'
                     SANAllowed                     = $true
                     AuthenticationEKUExist         = $true
+                    ManagerApprovalNotRequired     = $true
                     AuthorizedSignatureNotRequired = $true
                     DangerousEnrollee              = @('S-1-1-0')
                     distinguishedName              = 'CN=VulnTemplate,CN=Certificate Templates,CN=Public Key Services,CN=Services,CN=Configuration,DC=contoso,DC=com'

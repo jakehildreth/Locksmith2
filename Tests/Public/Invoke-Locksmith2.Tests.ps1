@@ -73,6 +73,25 @@ InModuleScope 'Locksmith2' {
             Should -Invoke 'Show-IssueReport' -Times 0
         }
 
+        It 'should return issues sorted by RiskValue descending when outputting to pipeline' {
+            $lowIssue = [LS2Issue]@{
+                Technique = 'ESC6'; Forest = 'contoso.com'; Name = 'LowCA'
+                DistinguishedName = 'CN=LowCA,...'; ObjectClass = 'pKIEnrollmentService'
+                RiskValue = 2; RiskName = 'Low'
+            }
+            $criticalIssue = [LS2Issue]@{
+                Technique = 'ESC1'; Forest = 'contoso.com'; Name = 'CriticalTemplate'
+                DistinguishedName = 'CN=CriticalTemplate,...'; ObjectClass = 'pKICertificateTemplate'
+                RiskValue = 5; RiskName = 'Critical'
+            }
+            Mock 'Get-FlattenedIssues' { @($lowIssue, $criticalIssue) }
+            Mock 'Set-LS2RiskRating' { }
+
+            $result = @(Invoke-Locksmith2)
+            $result[0].RiskName | Should -Be 'Critical'
+            $result[1].RiskName | Should -Be 'Low'
+        }
+
         It 'should call Show-IssueReport -Mode 0 when -Mode 0 is specified' {
             Invoke-Locksmith2 -Mode 0
             Should -Invoke 'Show-IssueReport' -Times 1 -ParameterFilter { $Mode -eq 0 }
@@ -81,6 +100,31 @@ InModuleScope 'Locksmith2' {
         It 'should call Show-IssueReport -Mode 1 when -Mode 1 is specified' {
             Invoke-Locksmith2 -Mode 1
             Should -Invoke 'Show-IssueReport' -Times 1 -ParameterFilter { $Mode -eq 1 }
+        }
+
+        It 'should call Show-IssueReport -Mode 5 when -Mode 5 is specified' {
+            Invoke-Locksmith2 -Mode 5
+            Should -Invoke 'Show-IssueReport' -Times 1 -ParameterFilter { $Mode -eq 5 }
+        }
+
+        It 'should call Show-IssueReport -Mode 0 when -DetailLevel Summary is specified' {
+            Invoke-Locksmith2 -DetailLevel 'Summary'
+            Should -Invoke 'Show-IssueReport' -Times 1 -ParameterFilter { $Mode -eq 0 }
+        }
+
+        It 'should call Show-IssueReport -Mode 1 when -DetailLevel Detailed is specified' {
+            Invoke-Locksmith2 -DetailLevel 'Detailed'
+            Should -Invoke 'Show-IssueReport' -Times 1 -ParameterFilter { $Mode -eq 1 }
+        }
+
+        It 'should call Show-IssueReport -Mode 5 when -DetailLevel Full is specified' {
+            Invoke-Locksmith2 -DetailLevel 'Full'
+            Should -Invoke 'Show-IssueReport' -Times 1 -ParameterFilter { $Mode -eq 5 }
+        }
+
+        It 'should prefer -DetailLevel over -Mode when both are specified' {
+            Invoke-Locksmith2 -Mode 0 -DetailLevel 'Full'
+            Should -Invoke 'Show-IssueReport' -Times 1 -ParameterFilter { $Mode -eq 5 }
         }
 
         It 'should write an error and not call Get-FlattenedIssues when Initialize-LS2Scan returns false' {

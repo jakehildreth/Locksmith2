@@ -12,56 +12,42 @@ https://github.com/jdhitsolutions/PSScriptTools
         <TypeName>LS2Issue</TypeName>
       </ViewSelectedBy>
       <TableControl>
-        <!--Delete the AutoSize node if you want to use the defined widths.-->
-        <AutoSize />
         <TableHeaders>
           <TableColumnHeader>
+            <Label>Name</Label>
+            <Width>17</Width>
+            <Alignment>left</Alignment>
+          </TableColumnHeader>
+          <TableColumnHeader>
             <Label>Technique</Label>
-            <Width>12</Width>
-            <Alignment>left</Alignment>
-          </TableColumnHeader>
-          <TableColumnHeader>
-            <Label>Forest</Label>
-            <Width>13</Width>
-            <Alignment>left</Alignment>
-          </TableColumnHeader>
-          <TableColumnHeader>
-            <Label>ObjectClass</Label>
-            <Width>25</Width>
-            <Alignment>left</Alignment>
-          </TableColumnHeader>
-          <TableColumnHeader>
-            <Label>Enabled</Label>
-            <Width>10</Width>
+            <Width>9</Width>
             <Alignment>left</Alignment>
           </TableColumnHeader>
           <TableColumnHeader>
             <Label>Issue</Label>
-            <Width>883</Width>
+            <Width>37</Width>
+            <Alignment>left</Alignment>
+          </TableColumnHeader>
+          <TableColumnHeader>
+            <Label>Severity</Label>
+            <Width>12</Width>
             <Alignment>left</Alignment>
           </TableColumnHeader>
         </TableHeaders>
         <TableRowEntries>
           <TableRowEntry>
             <TableColumnItems>
-              <!--
-            By default the entries use property names, but you can replace them with script blocks.
-            <ScriptBlock>$_.foo /1mb -as [int]</ScriptBlock>
--->
+              <TableColumnItem>
+                <PropertyName>Name</PropertyName>
+              </TableColumnItem>
               <TableColumnItem>
                 <PropertyName>Technique</PropertyName>
               </TableColumnItem>
               <TableColumnItem>
-                <PropertyName>Forest</PropertyName>
-              </TableColumnItem>
-              <TableColumnItem>
-                <PropertyName>ObjectClass</PropertyName>
-              </TableColumnItem>
-              <TableColumnItem>
-                <PropertyName>Enabled</PropertyName>
-              </TableColumnItem>
-              <TableColumnItem>
                 <PropertyName>Issue</PropertyName>
+              </TableColumnItem>
+              <TableColumnItem>
+                <ScriptBlock>if ($_.RiskName -eq 'Informational') { 'Info' } else { $_.RiskName }</ScriptBlock>
               </TableColumnItem>
             </TableColumnItems>
           </TableRowEntry>
@@ -74,26 +60,25 @@ https://github.com/jdhitsolutions/PSScriptTools
         <TypeName>LS2Issue</TypeName>
       </ViewSelectedBy>
       <TableControl>
-        <AutoSize />
         <TableHeaders>
           <TableColumnHeader>
-            <Label>Technique</Label>
-            <Alignment>left</Alignment>
-          </TableColumnHeader>
-          <TableColumnHeader>
-            <Label>Forest</Label>
-            <Alignment>left</Alignment>
-          </TableColumnHeader>
-          <TableColumnHeader>
-            <Label>ObjectClass</Label>
-            <Alignment>left</Alignment>
-          </TableColumnHeader>
-          <TableColumnHeader>
             <Label>Name</Label>
+            <Width>17</Width>
+            <Alignment>left</Alignment>
+          </TableColumnHeader>
+          <TableColumnHeader>
+            <Label>Technique</Label>
+            <Width>9</Width>
             <Alignment>left</Alignment>
           </TableColumnHeader>
           <TableColumnHeader>
             <Label>Issue</Label>
+            <Width>37</Width>
+            <Alignment>left</Alignment>
+          </TableColumnHeader>
+          <TableColumnHeader>
+            <Label>Severity</Label>
+            <Width>12</Width>
             <Alignment>left</Alignment>
           </TableColumnHeader>
         </TableHeaders>
@@ -101,26 +86,23 @@ https://github.com/jdhitsolutions/PSScriptTools
           <TableRowEntry>
             <TableColumnItems>
               <TableColumnItem>
-                <PropertyName>Technique</PropertyName>
-              </TableColumnItem>
-              <TableColumnItem>
-                <PropertyName>Forest</PropertyName>
-              </TableColumnItem>
-              <TableColumnItem>
-                <PropertyName>ObjectClass</PropertyName>
-              </TableColumnItem>
-              <TableColumnItem>
                 <PropertyName>Name</PropertyName>
               </TableColumnItem>
               <TableColumnItem>
+                <PropertyName>Technique</PropertyName>
+              </TableColumnItem>
+              <TableColumnItem>
                 <PropertyName>Issue</PropertyName>
+              </TableColumnItem>
+              <TableColumnItem>
+                <ScriptBlock>if ($_.RiskName -eq 'Informational') { 'Info' } else { $_.RiskName }</ScriptBlock>
               </TableColumnItem>
             </TableColumnItems>
           </TableRowEntry>
         </TableRowEntries>
       </TableControl>
     </View>
-    <!-- Detailed views: enrollee-based template techniques (ESC1, ESC2, ESC3c1, ESC3c2, ESC9) -->
+    <!-- Detailed views: enrollee-based template techniques (ESC1, ESC2, ESC3c1, ESC3c2, ESC9, ESC15) -->
     <View>
       <Name>ESC1Detailed</Name>
       <ViewSelectedBy>
@@ -135,6 +117,12 @@ https://github.com/jdhitsolutions/PSScriptTools
               </ListItem>
               <ListItem>
                 <PropertyName>Technique</PropertyName>
+              </ListItem>
+              <ListItem>
+                <PropertyName>RiskName</PropertyName>
+              </ListItem>
+              <ListItem>
+                <PropertyName>RiskValue</PropertyName>
               </ListItem>
               <ListItem>
                 <PropertyName>ObjectClass</PropertyName>
@@ -178,6 +166,12 @@ https://github.com/jdhitsolutions/PSScriptTools
                 <PropertyName>Technique</PropertyName>
               </ListItem>
               <ListItem>
+                <PropertyName>RiskName</PropertyName>
+              </ListItem>
+              <ListItem>
+                <PropertyName>RiskValue</PropertyName>
+              </ListItem>
+              <ListItem>
                 <PropertyName>ObjectClass</PropertyName>
               </ListItem>
               <ListItem>
@@ -217,6 +211,12 @@ https://github.com/jdhitsolutions/PSScriptTools
               </ListItem>
               <ListItem>
                 <PropertyName>Technique</PropertyName>
+              </ListItem>
+              <ListItem>
+                <PropertyName>RiskName</PropertyName>
+              </ListItem>
+              <ListItem>
+                <PropertyName>RiskValue</PropertyName>
               </ListItem>
               <ListItem>
                 <PropertyName>ObjectClass</PropertyName>
@@ -260,6 +260,12 @@ https://github.com/jdhitsolutions/PSScriptTools
                 <PropertyName>Technique</PropertyName>
               </ListItem>
               <ListItem>
+                <PropertyName>RiskName</PropertyName>
+              </ListItem>
+              <ListItem>
+                <PropertyName>RiskValue</PropertyName>
+              </ListItem>
+              <ListItem>
                 <PropertyName>ObjectClass</PropertyName>
               </ListItem>
               <ListItem>
@@ -301,6 +307,12 @@ https://github.com/jdhitsolutions/PSScriptTools
                 <PropertyName>Technique</PropertyName>
               </ListItem>
               <ListItem>
+                <PropertyName>RiskName</PropertyName>
+              </ListItem>
+              <ListItem>
+                <PropertyName>RiskValue</PropertyName>
+              </ListItem>
+              <ListItem>
                 <PropertyName>ObjectClass</PropertyName>
               </ListItem>
               <ListItem>
@@ -326,6 +338,211 @@ https://github.com/jdhitsolutions/PSScriptTools
         </ListEntries>
       </ListControl>
     </View>
+    <View>
+      <Name>ESC15Detailed</Name>
+      <ViewSelectedBy>
+        <TypeName>LS2Issue</TypeName>
+      </ViewSelectedBy>
+      <ListControl>
+        <ListEntries>
+          <ListEntry>
+            <ListItems>
+              <ListItem>
+                <PropertyName>Name</PropertyName>
+              </ListItem>
+              <ListItem>
+                <PropertyName>Technique</PropertyName>
+              </ListItem>
+              <ListItem>
+                <PropertyName>RiskName</PropertyName>
+              </ListItem>
+              <ListItem>
+                <PropertyName>RiskValue</PropertyName>
+              </ListItem>
+              <ListItem>
+                <PropertyName>ObjectClass</PropertyName>
+              </ListItem>
+              <ListItem>
+                <PropertyName>DistinguishedName</PropertyName>
+              </ListItem>
+              <ListItem>
+                <PropertyName>IdentityReference</PropertyName>
+              </ListItem>
+              <ListItem>
+                <PropertyName>IdentityReferenceClass</PropertyName>
+              </ListItem>
+              <ListItem>
+                <PropertyName>Enabled</PropertyName>
+              </ListItem>
+              <ListItem>
+                <PropertyName>EnabledOn</PropertyName>
+              </ListItem>
+              <ListItem>
+                <PropertyName>Issue</PropertyName>
+              </ListItem>
+            </ListItems>
+          </ListEntry>
+        </ListEntries>
+      </ListControl>
+    </View>
+    <View>
+      <Name>ESC13Detailed</Name>
+      <ViewSelectedBy>
+        <TypeName>LS2Issue</TypeName>
+      </ViewSelectedBy>
+      <ListControl>
+        <ListEntries>
+          <ListEntry>
+            <ListItems>
+              <ListItem>
+                <PropertyName>Name</PropertyName>
+              </ListItem>
+              <ListItem>
+                <PropertyName>Technique</PropertyName>
+              </ListItem>
+              <ListItem>
+                <PropertyName>RiskName</PropertyName>
+              </ListItem>
+              <ListItem>
+                <PropertyName>RiskValue</PropertyName>
+              </ListItem>
+              <ListItem>
+                <PropertyName>ObjectClass</PropertyName>
+              </ListItem>
+              <ListItem>
+                <PropertyName>DistinguishedName</PropertyName>
+              </ListItem>
+              <ListItem>
+                <PropertyName>IdentityReference</PropertyName>
+              </ListItem>
+              <ListItem>
+                <PropertyName>IdentityReferenceClass</PropertyName>
+              </ListItem>
+              <ListItem>
+                <PropertyName>Enabled</PropertyName>
+              </ListItem>
+              <ListItem>
+                <PropertyName>EnabledOn</PropertyName>
+              </ListItem>
+              <ListItem>
+                <PropertyName>Issue</PropertyName>
+              </ListItem>
+            </ListItems>
+          </ListEntry>
+        </ListEntries>
+      </ListControl>
+    </View>
+    <View>
+      <Name>SchemaV1Detailed</Name>
+      <ViewSelectedBy>
+        <TypeName>LS2Issue</TypeName>
+      </ViewSelectedBy>
+      <ListControl>
+        <ListEntries>
+          <ListEntry>
+            <ListItems>
+              <ListItem>
+                <PropertyName>Name</PropertyName>
+              </ListItem>
+              <ListItem>
+                <PropertyName>Technique</PropertyName>
+              </ListItem>
+              <ListItem>
+                <PropertyName>RiskName</PropertyName>
+              </ListItem>
+              <ListItem>
+                <PropertyName>RiskValue</PropertyName>
+              </ListItem>
+              <ListItem>
+                <PropertyName>ObjectClass</PropertyName>
+              </ListItem>
+              <ListItem>
+                <PropertyName>DistinguishedName</PropertyName>
+              </ListItem>
+              <ListItem>
+                <PropertyName>Enabled</PropertyName>
+              </ListItem>
+              <ListItem>
+                <PropertyName>EnabledOn</PropertyName>
+              </ListItem>
+              <ListItem>
+                <PropertyName>Issue</PropertyName>
+              </ListItem>
+            </ListItems>
+          </ListEntry>
+        </ListEntries>
+      </ListControl>
+    </View>
+    <View>
+      <Name>AuditingDetailed</Name>
+      <ViewSelectedBy>
+        <TypeName>LS2Issue</TypeName>
+      </ViewSelectedBy>
+      <ListControl>
+        <ListEntries>
+          <ListEntry>
+            <ListItems>
+              <ListItem>
+                <PropertyName>Name</PropertyName>
+              </ListItem>
+              <ListItem>
+                <PropertyName>Technique</PropertyName>
+              </ListItem>
+              <ListItem>
+                <PropertyName>RiskName</PropertyName>
+              </ListItem>
+              <ListItem>
+                <PropertyName>RiskValue</PropertyName>
+              </ListItem>
+              <ListItem>
+                <PropertyName>DistinguishedName</PropertyName>
+              </ListItem>
+              <ListItem>
+                <PropertyName>CAFullName</PropertyName>
+              </ListItem>
+              <ListItem>
+                <PropertyName>Issue</PropertyName>
+              </ListItem>
+            </ListItems>
+          </ListEntry>
+        </ListEntries>
+      </ListControl>
+    </View>
+    <View>
+      <Name>ESC8Detailed</Name>
+      <ViewSelectedBy>
+        <TypeName>LS2Issue</TypeName>
+      </ViewSelectedBy>
+      <ListControl>
+        <ListEntries>
+          <ListEntry>
+            <ListItems>
+              <ListItem>
+                <PropertyName>Name</PropertyName>
+              </ListItem>
+              <ListItem>
+                <PropertyName>Technique</PropertyName>
+              </ListItem>
+              <ListItem>
+                <PropertyName>RiskName</PropertyName>
+              </ListItem>
+              <ListItem>
+                <PropertyName>RiskValue</PropertyName>
+              </ListItem>
+              <ListItem>
+                <PropertyName>DistinguishedName</PropertyName>
+              </ListItem>
+              <ListItem>
+                <PropertyName>CAFullName</PropertyName>
+              </ListItem>
+              <ListItem>
+                <PropertyName>Issue</PropertyName>
+              </ListItem>
+            </ListItems>
+          </ListEntry>
+        </ListEntries>
+      </ListControl>
+    </View>
     <!-- Detailed view: full-ACL template technique (ESC4a) -->
     <View>
       <Name>ESC4aDetailed</Name>
@@ -341,6 +558,12 @@ https://github.com/jdhitsolutions/PSScriptTools
               </ListItem>
               <ListItem>
                 <PropertyName>Technique</PropertyName>
+              </ListItem>
+              <ListItem>
+                <PropertyName>RiskName</PropertyName>
+              </ListItem>
+              <ListItem>
+                <PropertyName>RiskValue</PropertyName>
               </ListItem>
               <ListItem>
                 <PropertyName>ObjectClass</PropertyName>
@@ -391,6 +614,12 @@ https://github.com/jdhitsolutions/PSScriptTools
                 <PropertyName>Technique</PropertyName>
               </ListItem>
               <ListItem>
+                <PropertyName>RiskName</PropertyName>
+              </ListItem>
+              <ListItem>
+                <PropertyName>RiskValue</PropertyName>
+              </ListItem>
+              <ListItem>
                 <PropertyName>ObjectClass</PropertyName>
               </ListItem>
               <ListItem>
@@ -431,6 +660,12 @@ https://github.com/jdhitsolutions/PSScriptTools
               </ListItem>
               <ListItem>
                 <PropertyName>Technique</PropertyName>
+              </ListItem>
+              <ListItem>
+                <PropertyName>RiskName</PropertyName>
+              </ListItem>
+              <ListItem>
+                <PropertyName>RiskValue</PropertyName>
               </ListItem>
               <ListItem>
                 <PropertyName>ObjectClass</PropertyName>
@@ -475,6 +710,12 @@ https://github.com/jdhitsolutions/PSScriptTools
                 <PropertyName>Technique</PropertyName>
               </ListItem>
               <ListItem>
+                <PropertyName>RiskName</PropertyName>
+              </ListItem>
+              <ListItem>
+                <PropertyName>RiskValue</PropertyName>
+              </ListItem>
+              <ListItem>
                 <PropertyName>ObjectClass</PropertyName>
               </ListItem>
               <ListItem>
@@ -511,6 +752,12 @@ https://github.com/jdhitsolutions/PSScriptTools
                 <PropertyName>Technique</PropertyName>
               </ListItem>
               <ListItem>
+                <PropertyName>RiskName</PropertyName>
+              </ListItem>
+              <ListItem>
+                <PropertyName>RiskValue</PropertyName>
+              </ListItem>
+              <ListItem>
                 <PropertyName>DistinguishedName</PropertyName>
               </ListItem>
               <ListItem>
@@ -538,6 +785,12 @@ https://github.com/jdhitsolutions/PSScriptTools
               </ListItem>
               <ListItem>
                 <PropertyName>Technique</PropertyName>
+              </ListItem>
+              <ListItem>
+                <PropertyName>RiskName</PropertyName>
+              </ListItem>
+              <ListItem>
+                <PropertyName>RiskValue</PropertyName>
               </ListItem>
               <ListItem>
                 <PropertyName>DistinguishedName</PropertyName>
@@ -569,6 +822,12 @@ https://github.com/jdhitsolutions/PSScriptTools
                 <PropertyName>Technique</PropertyName>
               </ListItem>
               <ListItem>
+                <PropertyName>RiskName</PropertyName>
+              </ListItem>
+              <ListItem>
+                <PropertyName>RiskValue</PropertyName>
+              </ListItem>
+              <ListItem>
                 <PropertyName>DistinguishedName</PropertyName>
               </ListItem>
               <ListItem>
@@ -597,6 +856,12 @@ https://github.com/jdhitsolutions/PSScriptTools
               </ListItem>
               <ListItem>
                 <PropertyName>Technique</PropertyName>
+              </ListItem>
+              <ListItem>
+                <PropertyName>RiskName</PropertyName>
+              </ListItem>
+              <ListItem>
+                <PropertyName>RiskValue</PropertyName>
               </ListItem>
               <ListItem>
                 <PropertyName>DistinguishedName</PropertyName>
@@ -638,6 +903,12 @@ https://github.com/jdhitsolutions/PSScriptTools
                 <PropertyName>Technique</PropertyName>
               </ListItem>
               <ListItem>
+                <PropertyName>RiskName</PropertyName>
+              </ListItem>
+              <ListItem>
+                <PropertyName>RiskValue</PropertyName>
+              </ListItem>
+              <ListItem>
                 <PropertyName>DistinguishedName</PropertyName>
               </ListItem>
               <ListItem>
@@ -676,6 +947,12 @@ https://github.com/jdhitsolutions/PSScriptTools
               </ListItem>
               <ListItem>
                 <PropertyName>Technique</PropertyName>
+              </ListItem>
+              <ListItem>
+                <PropertyName>RiskName</PropertyName>
+              </ListItem>
+              <ListItem>
+                <PropertyName>RiskValue</PropertyName>
               </ListItem>
               <ListItem>
                 <PropertyName>Forest</PropertyName>

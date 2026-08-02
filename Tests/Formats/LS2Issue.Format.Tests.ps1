@@ -5,31 +5,36 @@
 #>
 BeforeDiscovery {
     $ModuleRoot = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
-    $script:FormatFilePath = Join-Path $ModuleRoot 'Formats/LS2Issue.format.ps1xml'
+    $script:FormatFilePath = Join-Path $ModuleRoot 'LS2Issue.format.ps1xml'
 
     # Expected property lists per view (order matters)
     $script:ExpectedListViews = @(
-        @{ ViewName = 'ESC1Detailed'; Properties = @('Name', 'Technique', 'ObjectClass', 'DistinguishedName', 'IdentityReference', 'IdentityReferenceClass', 'Enabled', 'EnabledOn', 'Issue') }
-        @{ ViewName = 'ESC2Detailed'; Properties = @('Name', 'Technique', 'ObjectClass', 'DistinguishedName', 'IdentityReference', 'IdentityReferenceClass', 'Enabled', 'EnabledOn', 'Issue') }
-        @{ ViewName = 'ESC3c1Detailed'; Properties = @('Name', 'Technique', 'ObjectClass', 'DistinguishedName', 'IdentityReference', 'IdentityReferenceClass', 'Enabled', 'EnabledOn', 'Issue') }
-        @{ ViewName = 'ESC3c2Detailed'; Properties = @('Name', 'Technique', 'ObjectClass', 'DistinguishedName', 'IdentityReference', 'IdentityReferenceClass', 'Enabled', 'EnabledOn', 'Issue') }
-        @{ ViewName = 'ESC9Detailed'; Properties = @('Name', 'Technique', 'ObjectClass', 'DistinguishedName', 'IdentityReference', 'IdentityReferenceClass', 'Enabled', 'EnabledOn', 'Issue') }
-        @{ ViewName = 'ESC4aDetailed'; Properties = @('Name', 'Technique', 'ObjectClass', 'DistinguishedName', 'IdentityReference', 'IdentityReferenceClass', 'ActiveDirectoryRights', 'AceObjectTypeName', 'Enabled', 'EnabledOn', 'Issue') }
-        @{ ViewName = 'ESC4oDetailed'; Properties = @('Name', 'Technique', 'ObjectClass', 'DistinguishedName', 'Owner', 'HasNonStandardOwner', 'Enabled', 'EnabledOn', 'Issue') }
-        @{ ViewName = 'ESC5aDetailed'; Properties = @('Name', 'Technique', 'ObjectClass', 'DistinguishedName', 'IdentityReference', 'IdentityReferenceClass', 'ActiveDirectoryRights', 'AceObjectTypeName', 'Issue') }
-        @{ ViewName = 'ESC5oDetailed'; Properties = @('Name', 'Technique', 'ObjectClass', 'DistinguishedName', 'Owner', 'HasNonStandardOwner', 'Issue') }
-        @{ ViewName = 'ESC6Detailed'; Properties = @('Name', 'Technique', 'DistinguishedName', 'CAFullName', 'Issue') }
-        @{ ViewName = 'ESC11Detailed'; Properties = @('Name', 'Technique', 'DistinguishedName', 'CAFullName', 'Issue') }
-        @{ ViewName = 'ESC16Detailed'; Properties = @('Name', 'Technique', 'DistinguishedName', 'CAFullName', 'Issue') }
-        @{ ViewName = 'ESC7aDetailed'; Properties = @('Name', 'Technique', 'DistinguishedName', 'CAFullName', 'IdentityReference', 'IdentityReferenceClass', 'ActiveDirectoryRights', 'Issue') }
-        @{ ViewName = 'ESC7mDetailed'; Properties = @('Name', 'Technique', 'DistinguishedName', 'CAFullName', 'IdentityReference', 'IdentityReferenceClass', 'ActiveDirectoryRights', 'Issue') }
-        @{ ViewName = 'Full'; Properties = @('Name', 'Technique', 'Forest', 'ObjectClass', 'DistinguishedName', 'IdentityReference', 'IdentityReferenceSID', 'IdentityReferenceClass', 'ActiveDirectoryRights', 'AceObjectTypeGUID', 'AceObjectTypeName', 'Enabled', 'EnabledOn', 'CAFullName', 'Owner', 'HasNonStandardOwner', 'MemberCount', 'Issue', 'Fix', 'Revert') }
+        @{ ViewName = 'ESC1Detailed'; Properties = @('Name', 'Technique', 'RiskName', 'RiskValue', 'ObjectClass', 'DistinguishedName', 'IdentityReference', 'IdentityReferenceClass', 'Enabled', 'EnabledOn', 'Issue') }
+        @{ ViewName = 'ESC2Detailed'; Properties = @('Name', 'Technique', 'RiskName', 'RiskValue', 'ObjectClass', 'DistinguishedName', 'IdentityReference', 'IdentityReferenceClass', 'Enabled', 'EnabledOn', 'Issue') }
+        @{ ViewName = 'ESC3c1Detailed'; Properties = @('Name', 'Technique', 'RiskName', 'RiskValue', 'ObjectClass', 'DistinguishedName', 'IdentityReference', 'IdentityReferenceClass', 'Enabled', 'EnabledOn', 'Issue') }
+        @{ ViewName = 'ESC3c2Detailed'; Properties = @('Name', 'Technique', 'RiskName', 'RiskValue', 'ObjectClass', 'DistinguishedName', 'IdentityReference', 'IdentityReferenceClass', 'Enabled', 'EnabledOn', 'Issue') }
+        @{ ViewName = 'ESC9Detailed'; Properties = @('Name', 'Technique', 'RiskName', 'RiskValue', 'ObjectClass', 'DistinguishedName', 'IdentityReference', 'IdentityReferenceClass', 'Enabled', 'EnabledOn', 'Issue') }
+        @{ ViewName = 'ESC15Detailed'; Properties = @('Name', 'Technique', 'RiskName', 'RiskValue', 'ObjectClass', 'DistinguishedName', 'IdentityReference', 'IdentityReferenceClass', 'Enabled', 'EnabledOn', 'Issue') }
+        @{ ViewName = 'ESC13Detailed'; Properties = @('Name', 'Technique', 'RiskName', 'RiskValue', 'ObjectClass', 'DistinguishedName', 'IdentityReference', 'IdentityReferenceClass', 'Enabled', 'EnabledOn', 'Issue') }
+        @{ ViewName = 'SchemaV1Detailed'; Properties = @('Name', 'Technique', 'RiskName', 'RiskValue', 'ObjectClass', 'DistinguishedName', 'Enabled', 'EnabledOn', 'Issue') }
+        @{ ViewName = 'AuditingDetailed'; Properties = @('Name', 'Technique', 'RiskName', 'RiskValue', 'DistinguishedName', 'CAFullName', 'Issue') }
+        @{ ViewName = 'ESC8Detailed'; Properties = @('Name', 'Technique', 'RiskName', 'RiskValue', 'DistinguishedName', 'CAFullName', 'Issue') }
+        @{ ViewName = 'ESC4aDetailed'; Properties = @('Name', 'Technique', 'RiskName', 'RiskValue', 'ObjectClass', 'DistinguishedName', 'IdentityReference', 'IdentityReferenceClass', 'ActiveDirectoryRights', 'AceObjectTypeName', 'Enabled', 'EnabledOn', 'Issue') }
+        @{ ViewName = 'ESC4oDetailed'; Properties = @('Name', 'Technique', 'RiskName', 'RiskValue', 'ObjectClass', 'DistinguishedName', 'Owner', 'HasNonStandardOwner', 'Enabled', 'EnabledOn', 'Issue') }
+        @{ ViewName = 'ESC5aDetailed'; Properties = @('Name', 'Technique', 'RiskName', 'RiskValue', 'ObjectClass', 'DistinguishedName', 'IdentityReference', 'IdentityReferenceClass', 'ActiveDirectoryRights', 'AceObjectTypeName', 'Issue') }
+        @{ ViewName = 'ESC5oDetailed'; Properties = @('Name', 'Technique', 'RiskName', 'RiskValue', 'ObjectClass', 'DistinguishedName', 'Owner', 'HasNonStandardOwner', 'Issue') }
+        @{ ViewName = 'ESC6Detailed'; Properties = @('Name', 'Technique', 'RiskName', 'RiskValue', 'DistinguishedName', 'CAFullName', 'Issue') }
+        @{ ViewName = 'ESC11Detailed'; Properties = @('Name', 'Technique', 'RiskName', 'RiskValue', 'DistinguishedName', 'CAFullName', 'Issue') }
+        @{ ViewName = 'ESC16Detailed'; Properties = @('Name', 'Technique', 'RiskName', 'RiskValue', 'DistinguishedName', 'CAFullName', 'Issue') }
+        @{ ViewName = 'ESC7aDetailed'; Properties = @('Name', 'Technique', 'RiskName', 'RiskValue', 'DistinguishedName', 'CAFullName', 'IdentityReference', 'IdentityReferenceClass', 'ActiveDirectoryRights', 'Issue') }
+        @{ ViewName = 'ESC7mDetailed'; Properties = @('Name', 'Technique', 'RiskName', 'RiskValue', 'DistinguishedName', 'CAFullName', 'IdentityReference', 'IdentityReferenceClass', 'ActiveDirectoryRights', 'Issue') }
+        @{ ViewName = 'Full'; Properties = @('Name', 'Technique', 'RiskName', 'RiskValue', 'Forest', 'ObjectClass', 'DistinguishedName', 'IdentityReference', 'IdentityReferenceSID', 'IdentityReferenceClass', 'ActiveDirectoryRights', 'AceObjectTypeGUID', 'AceObjectTypeName', 'Enabled', 'EnabledOn', 'CAFullName', 'Owner', 'HasNonStandardOwner', 'MemberCount', 'Issue', 'Fix', 'Revert') }
     )
 }
 
 BeforeAll {
     $ModuleRoot = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
-    $script:FormatFilePath = Join-Path $ModuleRoot 'Formats/LS2Issue.format.ps1xml'
+    $script:FormatFilePath = Join-Path $ModuleRoot 'LS2Issue.format.ps1xml'
     $ls2Manifest = if ($env:LS2_MODULE_ROOT) { Join-Path $env:LS2_MODULE_ROOT 'Locksmith2.psd1' } else { Join-Path $ModuleRoot 'Locksmith2.psd1' }
     Import-Module $ls2Manifest -Force -ErrorAction Stop
 
@@ -74,8 +79,40 @@ Describe 'Summary view' -Tag 'Unit' {
     }
 
     It 'shows exactly the summary columns in order' {
-        $columns = @($script:SummaryView.TableControl.TableRowEntries.TableRowEntry.TableColumnItems.TableColumnItem.PropertyName)
-        $columns | Should -Be @('Technique', 'Forest', 'ObjectClass', 'Name', 'Issue')
+        $columns = @($script:SummaryView.TableControl.TableRowEntries.TableRowEntry.TableColumnItems.TableColumnItem)
+        $columns.Count | Should -Be 4
+        $columns[0].PropertyName | Should -Be 'Name'
+        $columns[1].PropertyName | Should -Be 'Technique'
+        $columns[2].PropertyName | Should -Be 'Issue'
+        $columns[3].ScriptBlock | Should -Not -BeNullOrEmpty
+    }
+
+    It 'labels RiskName as Severity' {
+        $severityHeader = @($script:SummaryView.TableControl.TableHeaders.TableColumnHeader) |
+            Where-Object { $_.Label -eq 'Severity' }
+        $severityHeader | Should -Not -BeNullOrEmpty
+    }
+
+    It 'sets Severity column width to at least 10' {
+        $severityHeader = @($script:SummaryView.TableControl.TableHeaders.TableColumnHeader) |
+            Where-Object { $_.Label -eq 'Severity' }
+        [int]$severityHeader.Width | Should -BeGreaterOrEqual 10
+    }
+
+    It 'renders Informational as Info in Summary view' {
+        $infoIssue = [LS2Issue]@{
+            Technique         = 'ESC1'
+            Forest            = 'contoso.com'
+            Name              = 'InfoTemplate'
+            DistinguishedName = 'CN=InfoTemplate,...'
+            ObjectClass       = 'pKICertificateTemplate'
+            Issue             = 'Informational issue'
+            RiskValue         = 1
+            RiskName          = 'Informational'
+        }
+        $out = $infoIssue | Format-Table -View 'Summary' | Out-String
+        $out | Should -Match 'InfoTemplate.*Info\s*$'
+        $out | Should -Not -Match 'InfoTemplate.*Informational\s*$'
     }
 }
 
@@ -109,62 +146,71 @@ Describe 'ESC7 role labeling' -Tag 'Unit' {
     }
 }
 
-InModuleScope 'Locksmith2' {
-    Describe 'View rendering' -Tag 'Unit' {
-        BeforeAll {
-            $script:templateIssue = [LS2Issue]@{
-                Technique              = 'ESC1'
-                Forest                 = 'contoso.com'
-                Name                   = 'VulnTemplate'
-                DistinguishedName      = 'CN=VulnTemplate,CN=Certificate Templates,CN=Public Key Services,CN=Services,CN=Configuration,DC=contoso,DC=com'
-                ObjectClass            = 'pKICertificateTemplate'
-                IdentityReference      = 'CONTOSO\Domain Users'
-                IdentityReferenceClass = 'group'
-                Enabled                = $true
-                EnabledOn              = @('CA01')
-                Issue                  = 'Test issue text'
-                Fix                    = 'Test fix script'
-                Revert                 = 'Test revert script'
-            }
-            $script:caRoleIssue = [LS2Issue]@{
-                Technique              = 'ESC7a'
-                Forest                 = 'contoso.com'
-                Name                   = 'TestCA'
-                DistinguishedName      = 'CN=TestCA,CN=Enrollment Services,CN=Public Key Services,CN=Services,CN=Configuration,DC=contoso,DC=com'
-                ObjectClass            = 'pKIEnrollmentService'
-                CAFullName             = 'ca01.contoso.com\TestCA'
-                IdentityReference      = 'CONTOSO\Help Desk'
-                IdentityReferenceClass = 'group'
-                ActiveDirectoryRights  = 'Administrators'
-                Issue                  = 'Test CA role issue'
-            }
+Describe 'View rendering' -Tag 'Unit' {
+    BeforeAll {
+        $script:templateIssue = [LS2Issue]@{
+            Technique              = 'ESC1'
+            Forest                 = 'contoso.com'
+            Name                   = 'VulnTemplate'
+            DistinguishedName      = 'CN=VulnTemplate,CN=Certificate Templates,CN=Public Key Services,CN=Services,CN=Configuration,DC=contoso,DC=com'
+            ObjectClass            = 'pKICertificateTemplate'
+            IdentityReference      = 'CONTOSO\Domain Users'
+            IdentityReferenceClass = 'group'
+            Enabled                = $true
+            EnabledOn              = @('CA01')
+            Issue                  = 'Test issue text'
+            Fix                    = 'Test fix script'
+            Revert                 = 'Test revert script'
         }
-
-        It 'renders ESC1Detailed with enrollee properties only' {
-            $out = $script:templateIssue | Format-List -View 'ESC1Detailed' | Out-String
-            $out | Should -Match 'IdentityReference'
-            $out | Should -Match '(?m)^Enabled'
-            $out | Should -Not -Match '(?m)^ActiveDirectoryRights'
-            $out | Should -Not -Match '(?m)^Fix'
+        $script:caRoleIssue = [LS2Issue]@{
+            Technique              = 'ESC7a'
+            Forest                 = 'contoso.com'
+            Name                   = 'TestCA'
+            DistinguishedName      = 'CN=TestCA,CN=Enrollment Services,CN=Public Key Services,CN=Services,CN=Configuration,DC=contoso,DC=com'
+            ObjectClass            = 'pKIEnrollmentService'
+            CAFullName             = 'ca01.contoso.com\TestCA'
+            IdentityReference      = 'CONTOSO\Help Desk'
+            IdentityReferenceClass = 'group'
+            ActiveDirectoryRights  = 'Administrators'
+            Issue                  = 'Test CA role issue'
         }
+    }
 
-        It 'renders ESC7aDetailed with Role label' {
-            $out = $script:caRoleIssue | Format-List -View 'ESC7aDetailed' | Out-String
-            $out | Should -Match '(?m)^Role\s+:'
-            $out | Should -Match 'Administrators'
-        }
+    It 'renders ESC1Detailed with enrollee properties only' {
+        $out = $script:templateIssue | Format-List -View 'ESC1Detailed' | Out-String
+        $out | Should -Match 'IdentityReference'
+        $out | Should -Match '(?m)^Enabled'
+        $out | Should -Not -Match '(?m)^ActiveDirectoryRights'
+        $out | Should -Not -Match '(?m)^Fix'
+    }
 
-        It 'renders Full with remediation scripts' {
-            $out = $script:templateIssue | Format-List -View 'Full' | Out-String
-            $out | Should -Match '(?m)^Fix'
-            $out | Should -Match '(?m)^Revert'
-            $out | Should -Match '(?m)^IdentityReferenceSID'
-        }
+    It 'renders ESC7aDetailed with Role label' {
+        $out = $script:caRoleIssue | Format-List -View 'ESC7aDetailed' | Out-String
+        $out | Should -Match '(?m)^Role\s+:'
+        $out | Should -Match 'Administrators'
+    }
 
-        It 'renders Summary as a table' {
-            $out = $script:templateIssue | Format-Table -View 'Summary' | Out-String
-            $out | Should -Match 'Technique'
-            $out | Should -Match 'VulnTemplate'
+    It 'renders Full with remediation scripts' {
+        $out = $script:templateIssue | Format-List -View 'Full' | Out-String
+        $out | Should -Match '(?m)^Fix'
+        $out | Should -Match '(?m)^Revert'
+        $out | Should -Match '(?m)^IdentityReferenceSID'
+    }
+
+    It 'renders Summary as a table' {
+        $out = $script:templateIssue | Format-Table -View 'Summary' | Out-String
+        $out | Should -Match 'Technique'
+        $out | Should -Match 'VulnTemplate'
+    }
+}
+
+Describe 'Technique coverage' -Tag 'Unit' {
+    It 'has a Detailed format view for every ESCDefinitions technique' {
+        $definedTechniques = InModuleScope 'Locksmith2' { $script:ESCDefinitions.Keys }
+        $viewNames = @($script:FormatXml.Configuration.ViewDefinitions.View.Name)
+        foreach ($technique in $definedTechniques) {
+            $expectedView = "$technique`Detailed"
+            $viewNames | Should -Contain $expectedView -Because "technique '$technique' requires format view '$expectedView'"
         }
     }
 }

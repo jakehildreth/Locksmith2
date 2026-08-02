@@ -97,4 +97,23 @@ if ($FoundErrors.Count -gt 0) {
 Update-TypeData -TypeName 'LS2AdcsObject' -MemberType AliasProperty -MemberName 'nTSecurityDescriptor' -Value 'ObjectSecurity' -Force
 Update-TypeData -TypeName 'LS2Principal' -MemberType AliasProperty -MemberName 'nTSecurityDescriptor' -Value 'ObjectSecurity' -Force
 
+# Load format data manually when importing from source.
+# Published modules have FormatsToProcess patched into the manifest by the post-build script.
+$manifestPath = Join-Path -Path $PSScriptRoot -ChildPath 'Locksmith2.psd1'
+if (Test-Path -Path $manifestPath) {
+    $manifestData = Import-PowerShellDataFile -Path $manifestPath
+    if (-not $manifestData.ContainsKey('FormatsToProcess') -or -not $manifestData.FormatsToProcess) {
+        $formatSearchPaths = @(
+            $PSScriptRoot
+            (Join-Path -Path $PSScriptRoot -ChildPath 'Formats')
+        )
+        foreach ($searchPath in $formatSearchPaths) {
+            $formatFiles = Get-ChildItem -Path $searchPath -Filter '*.format.ps1xml' -ErrorAction SilentlyContinue
+            foreach ($formatFile in $formatFiles) {
+                Update-FormatData -AppendPath $formatFile.FullName
+            }
+        }
+    }
+}
+
 Export-ModuleMember -Function '*' -Alias '*' -Cmdlet '*'

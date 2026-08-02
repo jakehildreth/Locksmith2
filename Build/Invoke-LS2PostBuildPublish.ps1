@@ -113,6 +113,18 @@
     }
     $moduleRoot = $resolvedPsd1.Directory.FullName
 
+    # ── Copy non-script assets that PSPublishModule does not include ───────────
+    $projectRoot = Split-Path -Path $PSScriptRoot -Parent
+    $sourceFormatFile = Join-Path $projectRoot 'LS2Issue.format.ps1xml'
+    if (Test-Path $sourceFormatFile) {
+        Write-Host '[i] Copying format file into artefact' -ForegroundColor Cyan
+        $targetFormatFile = Join-Path $moduleRoot 'LS2Issue.format.ps1xml'
+        Copy-Item -Path $sourceFormatFile -Destination $targetFormatFile -Force
+        $formatFileRelative = 'LS2Issue.format.ps1xml'
+        Update-ModuleManifest -Path $resolvedPsd1.FullName -FormatsToProcess $formatFileRelative
+        Write-Host "[+] FormatsToProcess patched - $formatFileRelative" -ForegroundColor Green
+    }
+
     # ── Vendor dependencies ────────────────────────────────────────────────────
     if (-not $PSCmdlet.ShouldProcess($moduleRoot, 'Vendor dependencies into artefact')) {
         return
@@ -152,6 +164,25 @@
     $psd1 = $resolvedPsd1.FullName
     Update-ModuleManifest -Path $psd1 -NestedModules $nestedEntries
     Write-Host "[+] Locksmith2.psd1 patched - NestedModules = $($nestedEntries -join ', ')" -ForegroundColor Green
+
+    # ── Sync patched artefact back to local PSModulePath ───────────────────────
+    # PSPublishModule installs the module before post-build patching, so the
+    # installed copy is missing format files and vendored deps. Copy the final
+    # artefact to both Desktop and Core user module paths so local testing uses
+    # the same bits that would be published.
+    $userModulePaths = @(
+        Join-Path $env:USERPROFILE 'Documents\PowerShell\Modules\Locksmith2'
+        Join-Path $env:USERPROFILE 'Documents\WindowsPowerShell\Modules\Locksmith2'
+    )
+    foreach ($installTarget in $userModulePaths) {
+        if ($PSCmdlet.ShouldProcess($installTarget, 'Sync patched artefact to local module path')) {
+            if (Test-Path $installTarget) {
+                Remove-Item -Path $installTarget -Recurse -Force
+            }
+            Copy-Item -Path $moduleRoot -Destination $installTarget -Recurse -Force
+            Write-Host "[+] Synced patched module to $installTarget" -ForegroundColor Green
+        }
+    }
 
     # ── Publish from artefact path (not from PSModulePath) ────────────────────
     # region PSGallery
