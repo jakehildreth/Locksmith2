@@ -508,6 +508,41 @@ https://github.com/jdhitsolutions/PSScriptTools
         </ListEntries>
       </ListControl>
     </View>
+    <View>
+      <Name>ESC8Detailed</Name>
+      <ViewSelectedBy>
+        <TypeName>LS2Issue</TypeName>
+      </ViewSelectedBy>
+      <ListControl>
+        <ListEntries>
+          <ListEntry>
+            <ListItems>
+              <ListItem>
+                <PropertyName>Name</PropertyName>
+              </ListItem>
+              <ListItem>
+                <PropertyName>Technique</PropertyName>
+              </ListItem>
+              <ListItem>
+                <PropertyName>RiskName</PropertyName>
+              </ListItem>
+              <ListItem>
+                <PropertyName>RiskValue</PropertyName>
+              </ListItem>
+              <ListItem>
+                <PropertyName>DistinguishedName</PropertyName>
+              </ListItem>
+              <ListItem>
+                <PropertyName>CAFullName</PropertyName>
+              </ListItem>
+              <ListItem>
+                <PropertyName>Issue</PropertyName>
+              </ListItem>
+            </ListItems>
+          </ListEntry>
+        </ListEntries>
+      </ListControl>
+    </View>
     <!-- Detailed view: full-ACL template technique (ESC4a) -->
     <View>
       <Name>ESC4aDetailed</Name>

@@ -69,9 +69,16 @@ InModuleScope 'Locksmith2' {
             Should -Invoke 'Write-Host' -Times 1 -Exactly:$false
         }
 
-        It 'should render per-technique banners in Mode 0' {
-            Show-IssueReport -Issues $script:testIssues -Mode 0
-            Should -Invoke 'Write-Host' -Times 2 -ParameterFilter { $Object -like '*ESC1 Issues*' -or $Object -like '*ESC6 Issues*' }
+        It 'should render per-technique banners in Mode <Mode>' -TestCases @(
+            @{ Mode = 0 }
+            @{ Mode = 1 }
+            @{ Mode = 5 }
+        ) {
+            param($Mode)
+            Show-IssueReport -Issues $script:testIssues -Mode $Mode
+            Should -Invoke 'Write-Host' -Times 2 -ParameterFilter {
+                $Object -like '*ESC1 Issues*' -or $Object -like '*ESC6 Issues*'
+            }
         }
 
         It 'should throw when Issues array is empty (empty strongly-typed array cannot bind)' {

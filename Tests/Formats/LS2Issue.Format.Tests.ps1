@@ -18,6 +18,7 @@ BeforeDiscovery {
         @{ ViewName = 'ESC13Detailed'; Properties = @('Name', 'Technique', 'RiskName', 'RiskValue', 'ObjectClass', 'DistinguishedName', 'IdentityReference', 'IdentityReferenceClass', 'Enabled', 'EnabledOn', 'Issue') }
         @{ ViewName = 'SchemaV1Detailed'; Properties = @('Name', 'Technique', 'RiskName', 'RiskValue', 'ObjectClass', 'DistinguishedName', 'Enabled', 'EnabledOn', 'Issue') }
         @{ ViewName = 'AuditingDetailed'; Properties = @('Name', 'Technique', 'RiskName', 'RiskValue', 'DistinguishedName', 'CAFullName', 'Issue') }
+        @{ ViewName = 'ESC8Detailed'; Properties = @('Name', 'Technique', 'RiskName', 'RiskValue', 'DistinguishedName', 'CAFullName', 'Issue') }
         @{ ViewName = 'ESC4aDetailed'; Properties = @('Name', 'Technique', 'RiskName', 'RiskValue', 'ObjectClass', 'DistinguishedName', 'IdentityReference', 'IdentityReferenceClass', 'ActiveDirectoryRights', 'AceObjectTypeName', 'Enabled', 'EnabledOn', 'Issue') }
         @{ ViewName = 'ESC4oDetailed'; Properties = @('Name', 'Technique', 'RiskName', 'RiskValue', 'ObjectClass', 'DistinguishedName', 'Owner', 'HasNonStandardOwner', 'Enabled', 'EnabledOn', 'Issue') }
         @{ ViewName = 'ESC5aDetailed'; Properties = @('Name', 'Technique', 'RiskName', 'RiskValue', 'ObjectClass', 'DistinguishedName', 'IdentityReference', 'IdentityReferenceClass', 'ActiveDirectoryRights', 'AceObjectTypeName', 'Issue') }
@@ -146,59 +147,70 @@ Describe 'ESC7 role labeling' -Tag 'Unit' {
 }
 
 Describe 'View rendering' -Tag 'Unit' {
-        BeforeAll {
-            $script:templateIssue = [LS2Issue]@{
-                Technique              = 'ESC1'
-                Forest                 = 'contoso.com'
-                Name                   = 'VulnTemplate'
-                DistinguishedName      = 'CN=VulnTemplate,CN=Certificate Templates,CN=Public Key Services,CN=Services,CN=Configuration,DC=contoso,DC=com'
-                ObjectClass            = 'pKICertificateTemplate'
-                IdentityReference      = 'CONTOSO\Domain Users'
-                IdentityReferenceClass = 'group'
-                Enabled                = $true
-                EnabledOn              = @('CA01')
-                Issue                  = 'Test issue text'
-                Fix                    = 'Test fix script'
-                Revert                 = 'Test revert script'
-            }
-            $script:caRoleIssue = [LS2Issue]@{
-                Technique              = 'ESC7a'
-                Forest                 = 'contoso.com'
-                Name                   = 'TestCA'
-                DistinguishedName      = 'CN=TestCA,CN=Enrollment Services,CN=Public Key Services,CN=Services,CN=Configuration,DC=contoso,DC=com'
-                ObjectClass            = 'pKIEnrollmentService'
-                CAFullName             = 'ca01.contoso.com\TestCA'
-                IdentityReference      = 'CONTOSO\Help Desk'
-                IdentityReferenceClass = 'group'
-                ActiveDirectoryRights  = 'Administrators'
-                Issue                  = 'Test CA role issue'
-            }
+    BeforeAll {
+        $script:templateIssue = [LS2Issue]@{
+            Technique              = 'ESC1'
+            Forest                 = 'contoso.com'
+            Name                   = 'VulnTemplate'
+            DistinguishedName      = 'CN=VulnTemplate,CN=Certificate Templates,CN=Public Key Services,CN=Services,CN=Configuration,DC=contoso,DC=com'
+            ObjectClass            = 'pKICertificateTemplate'
+            IdentityReference      = 'CONTOSO\Domain Users'
+            IdentityReferenceClass = 'group'
+            Enabled                = $true
+            EnabledOn              = @('CA01')
+            Issue                  = 'Test issue text'
+            Fix                    = 'Test fix script'
+            Revert                 = 'Test revert script'
         }
-
-        It 'renders ESC1Detailed with enrollee properties only' {
-            $out = $script:templateIssue | Format-List -View 'ESC1Detailed' | Out-String
-            $out | Should -Match 'IdentityReference'
-            $out | Should -Match '(?m)^Enabled'
-            $out | Should -Not -Match '(?m)^ActiveDirectoryRights'
-            $out | Should -Not -Match '(?m)^Fix'
-        }
-
-        It 'renders ESC7aDetailed with Role label' {
-            $out = $script:caRoleIssue | Format-List -View 'ESC7aDetailed' | Out-String
-            $out | Should -Match '(?m)^Role\s+:'
-            $out | Should -Match 'Administrators'
-        }
-
-        It 'renders Full with remediation scripts' {
-            $out = $script:templateIssue | Format-List -View 'Full' | Out-String
-            $out | Should -Match '(?m)^Fix'
-            $out | Should -Match '(?m)^Revert'
-            $out | Should -Match '(?m)^IdentityReferenceSID'
-        }
-
-        It 'renders Summary as a table' {
-            $out = $script:templateIssue | Format-Table -View 'Summary' | Out-String
-            $out | Should -Match 'Technique'
-            $out | Should -Match 'VulnTemplate'
+        $script:caRoleIssue = [LS2Issue]@{
+            Technique              = 'ESC7a'
+            Forest                 = 'contoso.com'
+            Name                   = 'TestCA'
+            DistinguishedName      = 'CN=TestCA,CN=Enrollment Services,CN=Public Key Services,CN=Services,CN=Configuration,DC=contoso,DC=com'
+            ObjectClass            = 'pKIEnrollmentService'
+            CAFullName             = 'ca01.contoso.com\TestCA'
+            IdentityReference      = 'CONTOSO\Help Desk'
+            IdentityReferenceClass = 'group'
+            ActiveDirectoryRights  = 'Administrators'
+            Issue                  = 'Test CA role issue'
         }
     }
+
+    It 'renders ESC1Detailed with enrollee properties only' {
+        $out = $script:templateIssue | Format-List -View 'ESC1Detailed' | Out-String
+        $out | Should -Match 'IdentityReference'
+        $out | Should -Match '(?m)^Enabled'
+        $out | Should -Not -Match '(?m)^ActiveDirectoryRights'
+        $out | Should -Not -Match '(?m)^Fix'
+    }
+
+    It 'renders ESC7aDetailed with Role label' {
+        $out = $script:caRoleIssue | Format-List -View 'ESC7aDetailed' | Out-String
+        $out | Should -Match '(?m)^Role\s+:'
+        $out | Should -Match 'Administrators'
+    }
+
+    It 'renders Full with remediation scripts' {
+        $out = $script:templateIssue | Format-List -View 'Full' | Out-String
+        $out | Should -Match '(?m)^Fix'
+        $out | Should -Match '(?m)^Revert'
+        $out | Should -Match '(?m)^IdentityReferenceSID'
+    }
+
+    It 'renders Summary as a table' {
+        $out = $script:templateIssue | Format-Table -View 'Summary' | Out-String
+        $out | Should -Match 'Technique'
+        $out | Should -Match 'VulnTemplate'
+    }
+}
+
+Describe 'Technique coverage' -Tag 'Unit' {
+    It 'has a Detailed format view for every ESCDefinitions technique' {
+        $definedTechniques = InModuleScope 'Locksmith2' { $script:ESCDefinitions.Keys }
+        $viewNames = @($script:FormatXml.Configuration.ViewDefinitions.View.Name)
+        foreach ($technique in $definedTechniques) {
+            $expectedView = "$technique`Detailed"
+            $viewNames | Should -Contain $expectedView -Because "technique '$technique' requires format view '$expectedView'"
+        }
+    }
+}
