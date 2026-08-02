@@ -1,4 +1,4 @@
-param (
+﻿param (
     # A CalVer string if you need to manually override the default yyyy.M.dHHmm version string.
     [string]$CalVer,
     # A prerelease tag to append to the module version (e.g., 'alpha', 'beta', 'rc1').
@@ -49,7 +49,7 @@ if (Get-Module -Name 'PSPublishModule' -ListAvailable) {
     try {
         Install-Module -Name Pester -AllowClobber -Scope CurrentUser -SkipPublisherCheck -Force
         Install-Module -Name PSScriptAnalyzer -AllowClobber -Scope CurrentUser -Force
-        Install-Module -Name PSPublishModule -MaximumVersion 2.0.27 -AllowClobber -Scope CurrentUser -Force
+        Install-Module -Name PSPublishModule -MaximumVersion 2.0.27 -AllowClobber -Scope CurrentUser -Force -SkipPublisherCheck
     } catch {
         Write-Error "PSPublishModule installation failed. $_"
     }

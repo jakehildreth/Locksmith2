@@ -43,6 +43,13 @@
         - Mode 0: Identify issues, output to console in table format
         - Mode 1: Identify issues and fixes, output to console in list format
 
+        .PARAMETER DetailLevel
+        Specifies a named detail level for displaying scan results using LS2Issue format views.
+        Takes precedence over Mode if both are specified.
+        - Summary: compact table per technique (Technique, Forest, ObjectClass, Name, Issue)
+        - Detailed: per-technique list views showing only properties relevant to each technique
+        - Full: list view with every property including Fix and Revert scripts
+
         .PARAMETER SkipForestCheck
         Reserved for future use. Currently not implemented.
 
@@ -104,6 +111,11 @@
         Runs audit and displays results in list format with fix scripts.
 
         .EXAMPLE
+        Invoke-Locksmith2 -DetailLevel Detailed
+        
+        Runs audit and displays results using per-technique detailed format views.
+
+        .EXAMPLE
         Invoke-Locksmith2 -ExpandGroups
 
         Runs audit and expands group issues into individual per-member issues.
@@ -158,6 +170,8 @@
         [System.Management.Automation.PSCredential]$Credential,
         [ValidateSet(0, 1)]
         [Nullable[int]]$Mode,
+        [ValidateSet('Summary', 'Detailed', 'Full')]
+        [string]$DetailLevel,
         [switch]$SkipVersionCheck,
         [switch]$SkipPowerShellCheck,
         [switch]$SkipForestCheck,
@@ -279,8 +293,10 @@
         Set-LS2RiskRating -Issues $allIssues
     }
 
-    # Output based on whether Mode was specified
-    if ($PSBoundParameters.ContainsKey('Mode')) {
+    # Output based on whether DetailLevel or Mode was specified
+    if ($PSBoundParameters.ContainsKey('DetailLevel')) {
+        Show-IssueReport -Issues $allIssues -DetailLevel $DetailLevel
+    } elseif ($PSBoundParameters.ContainsKey('Mode')) {
         # Display issues in console using specified mode
         Show-IssueReport -Issues $allIssues -Mode $Mode
     } else {
