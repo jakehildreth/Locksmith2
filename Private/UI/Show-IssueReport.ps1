@@ -7,7 +7,7 @@
         Formats and displays LS2Issue objects in the console using different output modes.
         Issues are grouped by technique with styled headers matching the original Locksmith format.
 
-        Mode 0: Summary table (Name, Technique, Issue, Severity)
+        Mode 0: Summary table per technique with banners
         Mode 1: Detailed per-technique list views
         Mode 5: Full list view including Fix and Revert scripts
 
@@ -16,7 +16,7 @@
 
         .PARAMETER Mode
         Output mode for displaying issues:
-        - 0: Summary table
+        - 0: Summary table per technique with banners
         - 1: Detailed per-technique list views
         - 5: Full list view with fix/revert scripts
 
@@ -76,15 +76,18 @@
 
     process {
         # Sort and group issues by technique
-        $sortedIssues = $Issues | Sort-Object Technique, Name, Issue
+        $sortedIssues = $Issues | Sort-Object Technique, @{ Expression = 'RiskValue'; Descending = $true }, Name, Issue
         $issuesByTechnique = $sortedIssues | Group-Object -Property Technique | Sort-Object Name
 
         Write-Host "`n[i] Locksmith discovered the following AD CS issues:`n" -ForegroundColor Cyan
 
         switch ($Mode) {
             0 {
-                # Mode 0: Summary table
-                $sortedIssues | Format-Table -View Summary
+                # Mode 0: Summary table per technique with banners
+                foreach ($group in $issuesByTechnique) {
+                    & $writeTechniqueHeader "$($group.Name) Issues"
+                    $group.Group | Format-Table -View Summary
+                }
             }
             1 {
                 # Mode 1: Per-technique detailed list views

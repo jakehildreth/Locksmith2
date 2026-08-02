@@ -310,6 +310,6 @@
         Show-IssueReport -Issues $allIssues -Mode $displayMode
     } else {
         # Return LS2Issue objects to pipeline; default format view renders summary table
-        $allIssues
+        $allIssues | Sort-Object @{ Expression = 'RiskValue'; Descending = $true }, Technique, Name, Issue
     }
 }

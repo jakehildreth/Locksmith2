@@ -9,21 +9,25 @@ BeforeDiscovery {
 
     # Expected property lists per view (order matters)
     $script:ExpectedListViews = @(
-        @{ ViewName = 'ESC1Detailed'; Properties = @('Name', 'Technique', 'ObjectClass', 'DistinguishedName', 'IdentityReference', 'IdentityReferenceClass', 'Enabled', 'EnabledOn', 'Issue') }
-        @{ ViewName = 'ESC2Detailed'; Properties = @('Name', 'Technique', 'ObjectClass', 'DistinguishedName', 'IdentityReference', 'IdentityReferenceClass', 'Enabled', 'EnabledOn', 'Issue') }
-        @{ ViewName = 'ESC3c1Detailed'; Properties = @('Name', 'Technique', 'ObjectClass', 'DistinguishedName', 'IdentityReference', 'IdentityReferenceClass', 'Enabled', 'EnabledOn', 'Issue') }
-        @{ ViewName = 'ESC3c2Detailed'; Properties = @('Name', 'Technique', 'ObjectClass', 'DistinguishedName', 'IdentityReference', 'IdentityReferenceClass', 'Enabled', 'EnabledOn', 'Issue') }
-        @{ ViewName = 'ESC9Detailed'; Properties = @('Name', 'Technique', 'ObjectClass', 'DistinguishedName', 'IdentityReference', 'IdentityReferenceClass', 'Enabled', 'EnabledOn', 'Issue') }
-        @{ ViewName = 'ESC4aDetailed'; Properties = @('Name', 'Technique', 'ObjectClass', 'DistinguishedName', 'IdentityReference', 'IdentityReferenceClass', 'ActiveDirectoryRights', 'AceObjectTypeName', 'Enabled', 'EnabledOn', 'Issue') }
-        @{ ViewName = 'ESC4oDetailed'; Properties = @('Name', 'Technique', 'ObjectClass', 'DistinguishedName', 'Owner', 'HasNonStandardOwner', 'Enabled', 'EnabledOn', 'Issue') }
-        @{ ViewName = 'ESC5aDetailed'; Properties = @('Name', 'Technique', 'ObjectClass', 'DistinguishedName', 'IdentityReference', 'IdentityReferenceClass', 'ActiveDirectoryRights', 'AceObjectTypeName', 'Issue') }
-        @{ ViewName = 'ESC5oDetailed'; Properties = @('Name', 'Technique', 'ObjectClass', 'DistinguishedName', 'Owner', 'HasNonStandardOwner', 'Issue') }
-        @{ ViewName = 'ESC6Detailed'; Properties = @('Name', 'Technique', 'DistinguishedName', 'CAFullName', 'Issue') }
-        @{ ViewName = 'ESC11Detailed'; Properties = @('Name', 'Technique', 'DistinguishedName', 'CAFullName', 'Issue') }
-        @{ ViewName = 'ESC16Detailed'; Properties = @('Name', 'Technique', 'DistinguishedName', 'CAFullName', 'Issue') }
-        @{ ViewName = 'ESC7aDetailed'; Properties = @('Name', 'Technique', 'DistinguishedName', 'CAFullName', 'IdentityReference', 'IdentityReferenceClass', 'ActiveDirectoryRights', 'Issue') }
-        @{ ViewName = 'ESC7mDetailed'; Properties = @('Name', 'Technique', 'DistinguishedName', 'CAFullName', 'IdentityReference', 'IdentityReferenceClass', 'ActiveDirectoryRights', 'Issue') }
-        @{ ViewName = 'Full'; Properties = @('Name', 'Technique', 'Forest', 'ObjectClass', 'DistinguishedName', 'IdentityReference', 'IdentityReferenceSID', 'IdentityReferenceClass', 'ActiveDirectoryRights', 'AceObjectTypeGUID', 'AceObjectTypeName', 'Enabled', 'EnabledOn', 'CAFullName', 'Owner', 'HasNonStandardOwner', 'MemberCount', 'Issue', 'Fix', 'Revert') }
+        @{ ViewName = 'ESC1Detailed'; Properties = @('Name', 'Technique', 'RiskName', 'RiskValue', 'ObjectClass', 'DistinguishedName', 'IdentityReference', 'IdentityReferenceClass', 'Enabled', 'EnabledOn', 'Issue') }
+        @{ ViewName = 'ESC2Detailed'; Properties = @('Name', 'Technique', 'RiskName', 'RiskValue', 'ObjectClass', 'DistinguishedName', 'IdentityReference', 'IdentityReferenceClass', 'Enabled', 'EnabledOn', 'Issue') }
+        @{ ViewName = 'ESC3c1Detailed'; Properties = @('Name', 'Technique', 'RiskName', 'RiskValue', 'ObjectClass', 'DistinguishedName', 'IdentityReference', 'IdentityReferenceClass', 'Enabled', 'EnabledOn', 'Issue') }
+        @{ ViewName = 'ESC3c2Detailed'; Properties = @('Name', 'Technique', 'RiskName', 'RiskValue', 'ObjectClass', 'DistinguishedName', 'IdentityReference', 'IdentityReferenceClass', 'Enabled', 'EnabledOn', 'Issue') }
+        @{ ViewName = 'ESC9Detailed'; Properties = @('Name', 'Technique', 'RiskName', 'RiskValue', 'ObjectClass', 'DistinguishedName', 'IdentityReference', 'IdentityReferenceClass', 'Enabled', 'EnabledOn', 'Issue') }
+        @{ ViewName = 'ESC15Detailed'; Properties = @('Name', 'Technique', 'RiskName', 'RiskValue', 'ObjectClass', 'DistinguishedName', 'IdentityReference', 'IdentityReferenceClass', 'Enabled', 'EnabledOn', 'Issue') }
+        @{ ViewName = 'ESC13Detailed'; Properties = @('Name', 'Technique', 'RiskName', 'RiskValue', 'ObjectClass', 'DistinguishedName', 'IdentityReference', 'IdentityReferenceClass', 'Enabled', 'EnabledOn', 'Issue') }
+        @{ ViewName = 'SchemaV1Detailed'; Properties = @('Name', 'Technique', 'RiskName', 'RiskValue', 'ObjectClass', 'DistinguishedName', 'Enabled', 'EnabledOn', 'Issue') }
+        @{ ViewName = 'AuditingDetailed'; Properties = @('Name', 'Technique', 'RiskName', 'RiskValue', 'DistinguishedName', 'CAFullName', 'Issue') }
+        @{ ViewName = 'ESC4aDetailed'; Properties = @('Name', 'Technique', 'RiskName', 'RiskValue', 'ObjectClass', 'DistinguishedName', 'IdentityReference', 'IdentityReferenceClass', 'ActiveDirectoryRights', 'AceObjectTypeName', 'Enabled', 'EnabledOn', 'Issue') }
+        @{ ViewName = 'ESC4oDetailed'; Properties = @('Name', 'Technique', 'RiskName', 'RiskValue', 'ObjectClass', 'DistinguishedName', 'Owner', 'HasNonStandardOwner', 'Enabled', 'EnabledOn', 'Issue') }
+        @{ ViewName = 'ESC5aDetailed'; Properties = @('Name', 'Technique', 'RiskName', 'RiskValue', 'ObjectClass', 'DistinguishedName', 'IdentityReference', 'IdentityReferenceClass', 'ActiveDirectoryRights', 'AceObjectTypeName', 'Issue') }
+        @{ ViewName = 'ESC5oDetailed'; Properties = @('Name', 'Technique', 'RiskName', 'RiskValue', 'ObjectClass', 'DistinguishedName', 'Owner', 'HasNonStandardOwner', 'Issue') }
+        @{ ViewName = 'ESC6Detailed'; Properties = @('Name', 'Technique', 'RiskName', 'RiskValue', 'DistinguishedName', 'CAFullName', 'Issue') }
+        @{ ViewName = 'ESC11Detailed'; Properties = @('Name', 'Technique', 'RiskName', 'RiskValue', 'DistinguishedName', 'CAFullName', 'Issue') }
+        @{ ViewName = 'ESC16Detailed'; Properties = @('Name', 'Technique', 'RiskName', 'RiskValue', 'DistinguishedName', 'CAFullName', 'Issue') }
+        @{ ViewName = 'ESC7aDetailed'; Properties = @('Name', 'Technique', 'RiskName', 'RiskValue', 'DistinguishedName', 'CAFullName', 'IdentityReference', 'IdentityReferenceClass', 'ActiveDirectoryRights', 'Issue') }
+        @{ ViewName = 'ESC7mDetailed'; Properties = @('Name', 'Technique', 'RiskName', 'RiskValue', 'DistinguishedName', 'CAFullName', 'IdentityReference', 'IdentityReferenceClass', 'ActiveDirectoryRights', 'Issue') }
+        @{ ViewName = 'Full'; Properties = @('Name', 'Technique', 'RiskName', 'RiskValue', 'Forest', 'ObjectClass', 'DistinguishedName', 'IdentityReference', 'IdentityReferenceSID', 'IdentityReferenceClass', 'ActiveDirectoryRights', 'AceObjectTypeGUID', 'AceObjectTypeName', 'Enabled', 'EnabledOn', 'CAFullName', 'Owner', 'HasNonStandardOwner', 'MemberCount', 'Issue', 'Fix', 'Revert') }
     )
 }
 
@@ -74,14 +78,40 @@ Describe 'Summary view' -Tag 'Unit' {
     }
 
     It 'shows exactly the summary columns in order' {
-        $columns = @($script:SummaryView.TableControl.TableRowEntries.TableRowEntry.TableColumnItems.TableColumnItem.PropertyName)
-        $columns | Should -Be @('Name', 'Technique', 'Issue', 'RiskName')
+        $columns = @($script:SummaryView.TableControl.TableRowEntries.TableRowEntry.TableColumnItems.TableColumnItem)
+        $columns.Count | Should -Be 4
+        $columns[0].PropertyName | Should -Be 'Name'
+        $columns[1].PropertyName | Should -Be 'Technique'
+        $columns[2].PropertyName | Should -Be 'Issue'
+        $columns[3].ScriptBlock | Should -Not -BeNullOrEmpty
     }
 
     It 'labels RiskName as Severity' {
         $severityHeader = @($script:SummaryView.TableControl.TableHeaders.TableColumnHeader) |
             Where-Object { $_.Label -eq 'Severity' }
         $severityHeader | Should -Not -BeNullOrEmpty
+    }
+
+    It 'sets Severity column width to at least 10' {
+        $severityHeader = @($script:SummaryView.TableControl.TableHeaders.TableColumnHeader) |
+            Where-Object { $_.Label -eq 'Severity' }
+        [int]$severityHeader.Width | Should -BeGreaterOrEqual 10
+    }
+
+    It 'renders Informational as Info in Summary view' {
+        $infoIssue = [LS2Issue]@{
+            Technique         = 'ESC1'
+            Forest            = 'contoso.com'
+            Name              = 'InfoTemplate'
+            DistinguishedName = 'CN=InfoTemplate,...'
+            ObjectClass       = 'pKICertificateTemplate'
+            Issue             = 'Informational issue'
+            RiskValue         = 1
+            RiskName          = 'Informational'
+        }
+        $out = $infoIssue | Format-Table -View 'Summary' | Out-String
+        $out | Should -Match 'InfoTemplate.*Info\s*$'
+        $out | Should -Not -Match 'InfoTemplate.*Informational\s*$'
     }
 }
 
