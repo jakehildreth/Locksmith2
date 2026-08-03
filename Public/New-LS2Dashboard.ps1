@@ -166,9 +166,31 @@
     $scanUser     = if ($script:Credential) { $script:Credential.UserName } else { [System.Security.Principal.WindowsIdentity]::GetCurrent().Name }
     $scanComputer = "$env:USERDOMAIN\$env:COMPUTERNAME"
 
+    # Resolve module version (and optional prerelease tag) for header/footer display
+    $moduleVersionString = $null
+    $locksmithModule = Get-Module -Name Locksmith2 -ErrorAction SilentlyContinue
+    if ($null -ne $locksmithModule) {
+        $moduleVersion = if ($locksmithModule.Version -is [array]) { $locksmithModule.Version[0] } else { $locksmithModule.Version }
+        $moduleVersionString = $moduleVersion.ToString()
+        $prereleaseTag = try { $locksmithModule.PrivateData.PSData.Prerelease } catch { $null }
+        if ($prereleaseTag) {
+            $moduleVersionString = "$moduleVersionString-$prereleaseTag"
+        }
+    }
+
+    $headerMetadata = [System.Collections.Generic.List[string]]::new()
+    $headerMetadata.Add("Forest: $forestName")
+    $headerMetadata.Add("User: $scanUser")
+    $headerMetadata.Add("Computer: $scanComputer")
+    if ($moduleVersionString) {
+        $headerMetadata.Add("Version: $moduleVersionString")
+    }
+    $headerMetadata.Add("Generated: $generatedAt")
+    $headerLine = $headerMetadata -join '  |  '
+
     # Resolve logo and encode as base64 data URI for self-contained HTML
     $logoSource = $null
-    $moduleBase = (Get-Module -Name Locksmith2 -ErrorAction SilentlyContinue).ModuleBase
+    $moduleBase = if ($null -ne $locksmithModule) { $locksmithModule.ModuleBase } else { $null }
     if ($null -ne $moduleBase) {
         foreach ($candidate in @(
             (Join-Path $moduleBase 'Images\Locksmith2.png'),
@@ -270,7 +292,7 @@ header img { max-width: 50%; height: auto; display: inline-block; }
             if ($logoSource) {
                 New-HTMLImage -Source $logoSource -Width '50%' -AlternativeText 'Locksmith 2'
             }
-            New-HTMLText -Text "Forest: $forestName  |  User: $scanUser  |  Computer: $scanComputer  |  Generated: $generatedAt" -FontSize 12 -Color '#555' -Alignment center
+            New-HTMLText -Text $headerLine -FontSize 12 -Color '#555' -Alignment center
         }
 
         # NOTE: No New-HTMLSection/Panel before the first New-HTMLTab — PSWriteHTML counts every
@@ -371,7 +393,4 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     Write-Verbose "Dashboard generated: $FilePath"
-    if (-not $Show) {
-        Write-Host "Dashboard saved to: $FilePath"
-    }
 }
