@@ -91,6 +91,23 @@ InModuleScope 'Locksmith2' {
                 Should -Invoke 'New-HTML' -Times 1 -ParameterFilter { $TitleText -match '\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}' }
             }
 
+            It 'should include the module version in the header when available' {
+                $expectedVersion = (Get-Module -Name Locksmith2).Version.ToString()
+                New-LS2Dashboard
+                Should -Invoke 'New-HTMLText' -Times 1 -ParameterFilter { $Text -like "*Version: $expectedVersion*" }
+            }
+
+            It 'should place the version between Computer and Generated in the header' {
+                $expectedVersion = (Get-Module -Name Locksmith2).Version.ToString()
+                New-LS2Dashboard
+                Should -Invoke 'New-HTMLText' -Times 1 -ParameterFilter { $Text -match "Computer:.*Version: $expectedVersion.*Generated:" }
+            }
+
+            It 'should omit the version from the header when the module is not found' {
+                Mock 'Get-Module' { $null } -ParameterFilter { $Name -eq 'Locksmith2' }
+                New-LS2Dashboard
+                Should -Invoke 'New-HTMLText' -Times 1 -ParameterFilter { $Text -notlike '*Version:*' -and $Text -like '*Generated:*' }
+            }
         }
 
         Context 'Clickable summary cards' -Skip:(-not (Get-Module PSWriteHTML -ListAvailable)) {
