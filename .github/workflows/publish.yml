@@ -9,6 +9,7 @@ on:
       - 'Build/**'
       - 'Locksmith2.psm1'
       - 'Locksmith2.psd1'
+      - 'LS2Issue.format.ps1xml'
       - 'LICENSE'
       - '.github/workflows/publish.yml'
   workflow_dispatch:  # Allow manual trigger
