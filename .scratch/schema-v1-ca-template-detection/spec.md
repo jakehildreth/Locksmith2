@@ -2,6 +2,8 @@
 
 Status: wayfinder:map
 
+GitHub: [#98 — SchemaV1: don't recommend supersession for CA-shaped templates](https://github.com/jakehildreth/Locksmith2/issues/98) (raised by @thedxt)
+
 ## Destination
 
 Locksmith2 distinguishes CA-shaped schema v1 certificate templates from end-entity schema v1 templates and emits a remediation message appropriate to each. CA-shaped schema v1 templates are not recommended to be superseded like end-entity templates because supersession has not been observed to work reliably for CA templates in live environments.
