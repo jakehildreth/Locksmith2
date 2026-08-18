@@ -257,7 +257,7 @@ $script:ESCDefinitions = data {
                 "  - https://posts.specterops.io/adcs-esc13-abuse-technique-fda4272fbd53"
             )
 
-            # Fix script template (quick mitigation — Manager Approval)
+            # Fix script template (quick mitigation - Manager Approval)
             FixTemplate        = @(
                 "# Quick mitigation: Enable Manager Approval to require approval before certificate issuance"
                 "`$Object = '`$(DistinguishedName)'"
@@ -713,7 +713,7 @@ $script:ESCDefinitions = data {
         }
 
         ESC15  = @{
-            # ESC15: Enabled schema v1 template with auth EKU — bypasses strong certificate mapping
+            # ESC15: Enabled schema v1 template with auth EKU - bypasses strong certificate mapping
             # (szOID_NTDS_CA_SECURITY_EXT is absent in schema v1 certificates)
             Technique          = 'ESC15'
 
@@ -788,7 +788,7 @@ $script:ESCDefinitions = data {
         }
 
         SchemaV1 = @{
-            # SchemaV1: Enabled schema v1 template without client auth EKU — informational hygiene finding
+            # SchemaV1: Enabled schema v1 template without client auth EKU - informational hygiene finding
             Technique      = 'SchemaV1'
 
             Conditions     = @(
@@ -833,13 +833,13 @@ $script:ESCDefinitions = data {
                     "include the CA security extension (szOID_NTDS_CA_SECURITY_EXT), reducing their compatibility "
                     "with strong certificate mapping requirements.`n`n"
                     "Because this template issues CA certificates, it cannot be safely superseded like an "
-                    "end-entity template — supersession has not been observed to work reliably for CA templates "
+                    "end-entity template - supersession has not been observed to work reliably for CA templates "
                     "in live environments. Replacing SubCA certificates requires planning and testing rather "
                     "than simple supersession. Leave this template in place until a tested replacement plan exists."
                 )
                 FixTemplate    = @(
                     "# No automated fix. This is a CA-shaped schema v1 template."
-                    "# Do NOT supersede this template — supersession is unreliable for CA templates."
+                    "# Do NOT supersede this template - supersession is unreliable for CA templates."
                     "# Replacing SubCA certificates requires planning and testing:"
                     "#   1. Inventory all CAs and subordinate CAs issued from this template."
                     "#   2. Plan CA certificate renewal/replacement against a schema v2+ CA template."
