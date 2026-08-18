@@ -486,6 +486,58 @@ InModuleScope 'Locksmith2' {
 
                 $result.Count | Should -Be 0
             }
+
+            It 'should recommend supersession for end-entity schema v1 templates' {
+                $template = New-MockLS2AdcsObject -Properties @{
+                    SchemaClassName        = 'pKICertificateTemplate'
+                    TemplateSchemaVersion  = 1
+                    Enabled                = $true
+                    AuthenticationEKUExist = $false
+                    IsCATemplate           = $false
+                    distinguishedName      = 'CN=EndEntityV1,CN=Certificate Templates,CN=Public Key Services,CN=Services,CN=Configuration,DC=contoso,DC=com'
+                    Name                   = 'EndEntityV1'
+                }
+                $script:AdcsObjectStore = @{ $template.distinguishedName = $template }
+
+                $result = @(Find-LS2VulnerableTemplate -Technique 'SchemaV1')
+
+                $result[0].Fix | Should -Match 'supersede'
+            }
+
+            It 'should not recommend supersession for CA-shaped schema v1 templates' {
+                $template = New-MockLS2AdcsObject -Properties @{
+                    SchemaClassName        = 'pKICertificateTemplate'
+                    TemplateSchemaVersion  = 1
+                    Enabled                = $true
+                    AuthenticationEKUExist = $false
+                    IsCATemplate           = $true
+                    distinguishedName      = 'CN=SubCAV1,CN=Certificate Templates,CN=Public Key Services,CN=Services,CN=Configuration,DC=contoso,DC=com'
+                    Name                   = 'SubCAV1'
+                }
+                $script:AdcsObjectStore = @{ $template.distinguishedName = $template }
+
+                $result = @(Find-LS2VulnerableTemplate -Technique 'SchemaV1')
+
+                # CA-shaped templates must not contain supersession instructions
+                $result[0].Fix | Should -Not -Match 'configure the old template to be superseded'
+            }
+
+            It 'should mention planning and testing in the issue text for CA-shaped schema v1 templates' {
+                $template = New-MockLS2AdcsObject -Properties @{
+                    SchemaClassName        = 'pKICertificateTemplate'
+                    TemplateSchemaVersion  = 1
+                    Enabled                = $true
+                    AuthenticationEKUExist = $false
+                    IsCATemplate           = $true
+                    distinguishedName      = 'CN=SubCAV1,CN=Certificate Templates,CN=Public Key Services,CN=Services,CN=Configuration,DC=contoso,DC=com'
+                    Name                   = 'SubCAV1'
+                }
+                $script:AdcsObjectStore = @{ $template.distinguishedName = $template }
+
+                $result = @(Find-LS2VulnerableTemplate -Technique 'SchemaV1')
+
+                $result[0].Issue | Should -Match 'planning and testing'
+            }
         }
     }
 }

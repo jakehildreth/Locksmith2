@@ -70,6 +70,7 @@
     [bool]$AuditingIncomplete
     [object[]]$DisableExtensionList
     [Nullable[bool]]$SecurityExtensionDisabled
+    [bool]$IsCATemplate
     [object[]]$WebEnrollmentEndpoints
     [Nullable[bool]]$HasLinkedGroupOIDPolicy  # true when ≥1 CertificatePolicy OID links to a group
     [string[]]$LinkedGroupOIDPolicies         # group DNs linked via OID application policies
@@ -166,6 +167,7 @@
         $this.SANFlagEnabled = $null
         $this.AuditFilter = $null
         $this.DisableExtensionList = @()
+        $this.IsCATemplate = $false
         
         # Initialize CA-specific properties
         $this.CAAdministrators = @()
