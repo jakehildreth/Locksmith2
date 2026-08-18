@@ -19,14 +19,18 @@ Locksmith2 distinguishes CA-shaped schema v1 certificate templates from end-enti
 
 ## Decisions so far
 
-_None recorded yet._
+- Add a new `IsCATemplate` property ([bool], defaults `$false`) to `LS2AdcsObject`. Rationale: every synthetic property in the class (`Enabled`, `AuthenticationEKUExist`, `DangerousEditor`, etc.) is declared on the class and set by a `Set-*` function — computed inline in Find functions is not an established pattern, and PS class properties cannot be ad-hoc added later without `Add-Member` hacks.
+- Wire enrichment via a new `Set-IsCATemplate` function in `Private/Set/`, inserted into the existing template pipeline in `Initialize-AdcsObjectStore`. Rationale: one-function-per-file rule, matches the `Set-TemplateEnabled` precedent, and keeps Find functions data-only. Implementation: `$_.IsCATemplate = ($_.pKIDefaultKeySpec -eq 2)` for template objects.
+- Do NOT change SchemaV1 `Conditions`. The property does not affect which templates match the technique — CA-shaped schema v1 templates are still findings, just with different remediation text. Branching belongs in the Find function/issue text, not the data Conditions.
+- Find function: in the SchemaV1 branch of `Find-LS2VulnerableTemplate`, select Issue/Fix/Revert text based on `$template.IsCATemplate`. Since `ESCDefinitions.ps1` holds one IssueTemplate per technique, add a sibling key (e.g. `CAOverride = @{ IssueTemplate = ...; FixTemplate = ...; RevertTemplate = ... }`) inside the SchemaV1 entry rather than a new top-level technique — keeps the technique list clean and the data-driven pattern intact.
 
 ## Not yet specified
 
-- Exact wording of the CA-shaped schema v1 template issue/fix/revert text.
-- Whether to add a new computed property (`IsCATemplate`) to `LS2AdcsObject` or compute it inline in `Find-LS2VulnerableTemplate`.
-- Where to wire the enrichment (existing `Set-*` pipeline vs. a new `Set-IsCATemplate` function).
-- Test coverage: unit tests for `Set-IsCATemplate` (if created) and `Find-LS2VulnerableTemplate` SchemaV1 branch for both CA and non-CA schema v1 templates.
+- Test coverage: unit tests for `Set-IsCATemplate` and `Find-LS2VulnerableTemplate` SchemaV1 branch for both CA and non-CA schema v1 templates.
+
+### CA-shaped wording decision
+
+Leave the CA template in place. Issue text states that replacing SubCA certificates requires planning and testing rather than simple supersession; Fix script contains no supersession instructions — awareness/documentation only.
 
 ## Out of scope
 

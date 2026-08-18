@@ -374,11 +374,15 @@
 
             $forestName = Get-ForestNameFromDN -DistinguishedName $template.distinguishedName
 
-            $issueText = ($config.IssueTemplate -join '') `
+            # Resolve any technique Overrides (e.g., CA-shaped schema v1 templates get
+            # alternate text — supersession is unreliable for CA templates)
+            $issueConfig = Get-IssueTextOverride -Config $config -AdcsObject $template
+
+            $issueText = ($issueConfig.IssueTemplate -join '') `
                 -replace '\$\(TemplateName\)', $templateName
 
-            $fixScript  = ($config.FixTemplate  -join "`n")
-            $revertScript = ($config.RevertTemplate -join "`n")
+            $fixScript  = ($issueConfig.FixTemplate  -join "`n")
+            $revertScript = ($issueConfig.RevertTemplate -join "`n")
 
             $issue = [LS2Issue]@{
                 Technique         = $Technique

@@ -80,6 +80,7 @@
         Set-ManagerApprovalNotRequired |
         Set-AuthorizedSignatureNotRequired |
         Set-TemplateEnabled |
+        Set-IsCATemplate |
         Set-Owner |
         Set-HasNonStandardOwner
         
