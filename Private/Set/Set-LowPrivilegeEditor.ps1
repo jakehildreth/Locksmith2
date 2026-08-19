@@ -113,6 +113,12 @@
                     if ($isDangerousAce.IsDangerous) {
                         # Now check if the principal holding this ACE is low-privilege
                         $aceSid = $ace.IdentityReference | Convert-IdentityReferenceToSid
+                        # Suppress ESC5a false positive: a CA host's own computer account
+                        # legitimately holds rights on its own CA object (#99)
+                        if ($_.ComputerPrincipal -and $aceSid.Value -eq $_.ComputerPrincipal) {
+                            Write-Verbose "Skipping ACE for CA host's own computer account: $($aceSid.Value)"
+                            continue
+                        }
                         $isLowPrivilegePrincipal = $aceSid | Test-IsLowPrivilegePrincipal
                         if ($isLowPrivilegePrincipal) {
                             Write-Verbose "Low-privilege template editor found: $($ace.IdentityReference) ($($isDangerousAce.MatchedPermission))"

@@ -9,7 +9,7 @@
     FormatsToProcess=@('LS2Issue.format.ps1xml')
     FunctionsToExport=@('*')
     GUID='e32f7d0d-2b10-4db2-b776-a193958e3d69'
-    ModuleVersion='2026.10.61822'
+    ModuleVersion='2026.10.251219'
     PowerShellVersion='5.1'
     PrivateData=@{
         PSData=@{

@@ -108,6 +108,12 @@
                     if ($isDangerousAce.IsDangerous) {
                         # Now check if the principal holding this ACE is dangerous
                         $aceSid = $ace.IdentityReference | Convert-IdentityReferenceToSid
+                        # Suppress ESC5a false positive: a CA host's own computer account
+                        # legitimately holds rights on its own CA object (#99)
+                        if ($_.ComputerPrincipal -and $aceSid.Value -eq $_.ComputerPrincipal) {
+                            Write-Verbose "Skipping ACE for CA host's own computer account: $($aceSid.Value)"
+                            continue
+                        }
                         $isDangerousPrincipal = $aceSid | Test-IsDangerousPrincipal
                         if ($isDangerousPrincipal) {
                             Write-Verbose "Dangerous template editor found: $($ace.IdentityReference) ($($isDangerousAce.MatchedPermission))"
