@@ -103,5 +103,31 @@ Describe 'Set-CAInterfaceFlags' -Tag 'Unit' {
                 Should -Invoke Get-PSCInterfaceFlag -Times 1 -Exactly -ParameterFilter { $CAFullName -eq 'contoso.com\MyCA' }
             }
         }
+
+        Context 'Query failure must not produce an ESC11 finding (GH #92 pattern)' {
+            It 'should set RPCEncryptionNotRequired to $null when Get-PSCInterfaceFlag throws' {
+                $ca = New-MockLS2AdcsObject -Properties @{
+                    objectClass     = @('top', 'pKIEnrollmentService')
+                    SchemaClassName = 'pKIEnrollmentService'
+                    CAFullName      = 'contoso.com\MyCA'
+                    cn              = 'MyCA'
+                }
+                Mock Get-PSCInterfaceFlag { throw 'certutil -getreg failed: RPC server unavailable' }
+                $result = $ca | Set-CAInterfaceFlags
+                $result.RPCEncryptionNotRequired | Should -BeNullOrEmpty
+            }
+
+            It 'should set RPCEncryptionNotRequired to $null when Get-PSCInterfaceFlag returns no results' {
+                $ca = New-MockLS2AdcsObject -Properties @{
+                    objectClass     = @('top', 'pKIEnrollmentService')
+                    SchemaClassName = 'pKIEnrollmentService'
+                    CAFullName      = 'contoso.com\MyCA'
+                    cn              = 'MyCA'
+                }
+                Mock Get-PSCInterfaceFlag { $null }
+                $result = $ca | Set-CAInterfaceFlags
+                $result.RPCEncryptionNotRequired | Should -BeNullOrEmpty
+            }
+        }
     }
 }

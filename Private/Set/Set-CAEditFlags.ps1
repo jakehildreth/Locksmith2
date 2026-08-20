@@ -1,4 +1,4 @@
-﻿function Set-CAEditFlags {
+function Set-CAEditFlags {
     <#
         .SYNOPSIS
         Adds EditFlags configuration properties to AD CS Certification Authority objects.
@@ -77,31 +77,38 @@
                 }
                 
                 Write-Verbose "  Querying EditFlags for: $caFullName"
-                
+
+                $caObject = $_
                 try {
                     # Query EditFlags using PSCertutil
                     $editFlags = Get-PSCEditFlag -CAFullName $caFullName -ErrorAction Stop
-                    
+
                     if ($editFlags) {
                         Write-Verbose "  Retrieved $(@($editFlags).Count) EditFlags"
-                        
+
                         # Check specifically for EDITF_ATTRIBUTESUBJECTALTNAME2
                         $sANFlag = $editFlags | Where-Object { $_.EditFlag -eq 'EDITF_ATTRIBUTESUBJECTALTNAME2' }
                         $sANFlagEnabled = if ($sANFlag) { $sANFlag.Enabled } else { $false }
-                        
+
                         Write-Verbose "  EDITF_ATTRIBUTESUBJECTALTNAME2 is $(if ($sANFlagEnabled) { 'enabled' } else { 'disabled' })"
-                        
+
                         # Set properties directly on the LS2AdcsObject (same reference as store)
-                        $_.EditFlags = $editFlags
-                        $_.SANFlagEnabled = $sANFlagEnabled
-                        Write-Verbose "  Updated $($_.distinguishedName) with EditFlags data"
-                        
+                        $caObject.EditFlags = $editFlags
+                        $caObject.SANFlagEnabled = $sANFlagEnabled
+                        Write-Verbose "  Updated $($caObject.distinguishedName) with EditFlags data"
+
                     } else {
                         Write-Verbose "  No EditFlags returned from Get-PSCEditFlag"
+                        # Unknown state: leave tri-state properties $null so detection does not treat failure as clean
+                        $caObject.EditFlags = $null
+                        $caObject.SANFlagEnabled = $null
                     }
-                    
+
                 } catch {
                     Write-Verbose "  Failed to query EditFlags for '$caFullName': $($_.Exception.Message)"
+                    # Unknown state: leave tri-state properties $null so detection does not treat failure as clean
+                    $caObject.EditFlags = $null
+                    $caObject.SANFlagEnabled = $null
                     # Continue processing other CAs
                 }
                 
