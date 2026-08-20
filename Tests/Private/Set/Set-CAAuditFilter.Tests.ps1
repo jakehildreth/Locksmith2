@@ -120,5 +120,31 @@ Describe 'Set-CAAuditFilter' -Tag 'Unit' {
                 $result.AuditingIncomplete | Should -BeTrue
             }
         }
+
+        Context 'Query failure must not produce an Auditing finding (GH #92)' {
+            It 'should set AuditingIncomplete to $null when Get-PSCAuditFilter throws' {
+                $ca = New-MockLS2AdcsObject -Properties @{
+                    objectClass     = @('top', 'pKIEnrollmentService')
+                    SchemaClassName = 'pKIEnrollmentService'
+                    CAFullName      = 'contoso.com\MyCA'
+                    cn              = 'MyCA'
+                }
+                Mock Get-PSCAuditFilter { throw 'certutil -getreg failed: RPC server unavailable' }
+                $result = $ca | Set-CAAuditFilter
+                $result.AuditingIncomplete | Should -BeNullOrEmpty
+            }
+
+            It 'should set AuditingIncomplete to $null when Get-PSCAuditFilter returns null' {
+                $ca = New-MockLS2AdcsObject -Properties @{
+                    objectClass     = @('top', 'pKIEnrollmentService')
+                    SchemaClassName = 'pKIEnrollmentService'
+                    CAFullName      = 'contoso.com\MyCA'
+                    cn              = 'MyCA'
+                }
+                Mock Get-PSCAuditFilter { $null }
+                $result = $ca | Set-CAAuditFilter
+                $result.AuditingIncomplete | Should -BeNullOrEmpty
+            }
+        }
     }
 }

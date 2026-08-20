@@ -1,4 +1,4 @@
-﻿function Set-CAInterfaceFlags {
+function Set-CAInterfaceFlags {
     <#
         .SYNOPSIS
         Adds InterfaceFlags configuration properties to AD CS Certification Authority objects.
@@ -77,31 +77,38 @@
                 }
                 
                 Write-Verbose "  Querying InterfaceFlags for: $caFullName"
-                
+
+                $caObject = $_
                 try {
                     # Query InterfaceFlags using PSCertutil
                     $interfaceFlags = Get-PSCInterfaceFlag -CAFullName $caFullName -ErrorAction Stop
-                    
+
                     if ($interfaceFlags) {
                         Write-Verbose "  Retrieved $(@($interfaceFlags).Count) InterfaceFlags"
-                        
+
                         # Check specifically for IF_ENFORCEENCRYPTICERTREQUEST
                         $encryptionFlag = $interfaceFlags | Where-Object { $_.InterfaceFlag.ToString() -eq 'IF_ENFORCEENCRYPTICERTREQUEST' }
                         $rpcEncryptionNotRequired = if ($encryptionFlag) { -not $encryptionFlag.Enabled } else { $true }
-                        
+
                         Write-Verbose "  IF_ENFORCEENCRYPTICERTREQUEST is $(if ($rpcEncryptionNotRequired) { 'disabled or missing - RPC encryption not required' } else { 'enabled - RPC encryption required' })"
-                        
+
                         # Set properties directly on the LS2AdcsObject (same reference as store)
-                        $_.InterfaceFlags = $interfaceFlags
-                        $_.RPCEncryptionNotRequired = $rpcEncryptionNotRequired
-                        Write-Verbose "  Updated $($_.distinguishedName) with InterfaceFlags data"
-                        
+                        $caObject.InterfaceFlags = $interfaceFlags
+                        $caObject.RPCEncryptionNotRequired = $rpcEncryptionNotRequired
+                        Write-Verbose "  Updated $($caObject.distinguishedName) with InterfaceFlags data"
+
                     } else {
                         Write-Verbose "  No InterfaceFlags returned from Get-PSCInterfaceFlag"
+                        # Unknown state: leave tri-state properties $null so detection does not treat failure as clean
+                        $caObject.InterfaceFlags = $null
+                        $caObject.RPCEncryptionNotRequired = $null
                     }
-                    
+
                 } catch {
                     Write-Verbose "  Failed to query InterfaceFlags for '$caFullName': $($_.Exception.Message)"
+                    # Unknown state: leave tri-state properties $null so detection does not treat failure as clean
+                    $caObject.InterfaceFlags = $null
+                    $caObject.RPCEncryptionNotRequired = $null
                     # Continue processing other CAs
                 }
                 

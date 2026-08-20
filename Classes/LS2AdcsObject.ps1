@@ -67,7 +67,7 @@
     [Nullable[bool]]$SANFlagEnabled
     [object[]]$InterfaceFlags
     [Nullable[int]]$AuditFilter
-    [bool]$AuditingIncomplete
+    [Nullable[bool]]$AuditingIncomplete
     [object[]]$DisableExtensionList
     [Nullable[bool]]$SecurityExtensionDisabled
     [object[]]$WebEnrollmentEndpoints

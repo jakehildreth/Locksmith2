@@ -12,6 +12,13 @@ BeforeAll {
 
 Describe 'Set-CADisableExtensionList' -Tag 'Unit' {
     InModuleScope 'Locksmith2' {
+        BeforeAll {
+            # Stub Get-PSCDisableExtensionList so Pester can mock it even when PSCertutil is not loaded
+            if (-not (Get-Command Get-PSCDisableExtensionList -ErrorAction SilentlyContinue)) {
+                function script:Get-PSCDisableExtensionList { param([string]$CAFullName) $null }
+            }
+        }
+
         BeforeEach {
             $script:IssueStore = @{}; $script:PrincipalStore = @{}; $script:AdcsObjectStore = @{}
             $script:DomainStore = @{}; $script:SafePrincipals = @(); $script:DangerousPrincipals = @()
@@ -109,6 +116,20 @@ Describe 'Set-CADisableExtensionList' -Tag 'Unit' {
                 Mock Get-PSCDisableExtensionList { @() } -ParameterFilter { $CAFullName -eq 'contoso.com\MyCA' }
                 $null = $ca | Set-CADisableExtensionList
                 Should -Invoke Get-PSCDisableExtensionList -Times 1 -Exactly -ParameterFilter { $CAFullName -eq 'contoso.com\MyCA' }
+            }
+        }
+
+        Context 'Query failure must not produce an ESC16 finding (GH #92 pattern)' {
+            It 'should set SecurityExtensionDisabled to $null when Get-PSCDisableExtensionList throws' {
+                $ca = New-MockLS2AdcsObject -Properties @{
+                    objectClass     = @('top', 'pKIEnrollmentService')
+                    SchemaClassName = 'pKIEnrollmentService'
+                    CAFullName      = 'contoso.com\MyCA'
+                    cn              = 'MyCA'
+                }
+                Mock Get-PSCDisableExtensionList { throw 'certutil -getreg failed: RPC server unavailable' }
+                $result = $ca | Set-CADisableExtensionList
+                $result.SecurityExtensionDisabled | Should -BeNullOrEmpty
             }
         }
     }
