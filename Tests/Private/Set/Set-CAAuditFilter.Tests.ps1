@@ -1,4 +1,4 @@
-﻿BeforeDiscovery {
+BeforeDiscovery {
     $ModuleRoot = Split-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) -Parent
     $ls2Manifest = if ($env:LS2_MODULE_ROOT) { Join-Path $env:LS2_MODULE_ROOT 'Locksmith2.psd1' } else { Join-Path $ModuleRoot 'Locksmith2.psd1' }
     Import-Module $ls2Manifest -Force -ErrorAction Stop
@@ -118,6 +118,32 @@ Describe 'Set-CAAuditFilter' -Tag 'Unit' {
                 Mock Get-PSCAuditFilter { [PSCustomObject]@{ AuditFilter = 63 } }
                 $result = $ca | Set-CAAuditFilter
                 $result.AuditingIncomplete | Should -BeTrue
+            }
+        }
+
+        Context 'Query failure must not produce an Auditing finding (GH #92)' {
+            It 'should set AuditingIncomplete to $null when Get-PSCAuditFilter throws' {
+                $ca = New-MockLS2AdcsObject -Properties @{
+                    objectClass     = @('top', 'pKIEnrollmentService')
+                    SchemaClassName = 'pKIEnrollmentService'
+                    CAFullName      = 'contoso.com\MyCA'
+                    cn              = 'MyCA'
+                }
+                Mock Get-PSCAuditFilter { throw 'certutil -getreg failed: RPC server unavailable' }
+                $result = $ca | Set-CAAuditFilter
+                $result.AuditingIncomplete | Should -BeNullOrEmpty
+            }
+
+            It 'should set AuditingIncomplete to $null when Get-PSCAuditFilter returns null' {
+                $ca = New-MockLS2AdcsObject -Properties @{
+                    objectClass     = @('top', 'pKIEnrollmentService')
+                    SchemaClassName = 'pKIEnrollmentService'
+                    CAFullName      = 'contoso.com\MyCA'
+                    cn              = 'MyCA'
+                }
+                Mock Get-PSCAuditFilter { $null }
+                $result = $ca | Set-CAAuditFilter
+                $result.AuditingIncomplete | Should -BeNullOrEmpty
             }
         }
     }

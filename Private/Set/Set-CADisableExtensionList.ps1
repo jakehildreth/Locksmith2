@@ -1,4 +1,4 @@
-﻿function Set-CADisableExtensionList {
+function Set-CADisableExtensionList {
     <#
     .SYNOPSIS
         Queries and stores the Disable Extension List configuration for each Certification Authority.
@@ -43,16 +43,17 @@
 
     process {
         $AdcsObject | Where-Object { $_.IsCertificationAuthority() } | ForEach-Object {
+            $caObject = $_
             try {
-                $caName = $_.cn
+                $caName = $caObject.cn
                 Write-Verbose "Processing CA: $caName"
-                
-                $dn = $_.distinguishedName
 
-                $caFullName = $_.CAFullName
+                $dn = $caObject.distinguishedName
+
+                $caFullName = $caObject.CAFullName
                 if ([string]::IsNullOrEmpty($caFullName)) {
                     Write-Warning "CAFullName is empty for CA: $dn"
-                    $_
+                    $caObject
                     return
                 }
 
@@ -60,7 +61,7 @@
 
                 # Query DisableExtensionList using PSCertutil
                 $disableExtensionListResult = Get-PSCDisableExtensionList -CAFullName $caFullName -ErrorAction Stop
-                
+
                 # Get-PSCDisableExtensionList returns an array of objects with DisabledExtension property
                 # or $null if no extensions are disabled
                 # Force array wrapping with @() for PS 5.1 compatibility (.Count on single objects)
@@ -68,38 +69,38 @@
                     # Extract the extension OIDs/names into an array
                     $disabledExtensions = $disableExtensionListResult | ForEach-Object { $_.DisabledExtension }
                     Write-Verbose "  Retrieved $($disabledExtensions.Count) disabled extension(s): $($disabledExtensions -join ', ')"
-                    
+
                     # Check if the Microsoft Certificate Template Information extension is disabled
                     # OID: 1.3.6.1.4.1.311.25.2 (szOID_CERTIFICATE_TEMPLATE)
                     $securityExtensionDisabled = $disabledExtensions -contains '1.3.6.1.4.1.311.25.2'
-                    
+
                     if ($securityExtensionDisabled) {
                         Write-Verbose "  CRITICAL: Security extension (1.3.6.1.4.1.311.25.2) is DISABLED"
                     } else {
                         Write-Verbose "  Security extension (1.3.6.1.4.1.311.25.2) is enabled"
                     }
-                    
+
                     # Set properties directly on the LS2AdcsObject (same reference as store)
-                    $_.DisableExtensionList = $disabledExtensions
-                    $_.SecurityExtensionDisabled = $securityExtensionDisabled
-                    Write-Verbose "  Updated $($_.distinguishedName) with DisableExtensionList and SecurityExtensionDisabled"
+                    $caObject.DisableExtensionList = $disabledExtensions
+                    $caObject.SecurityExtensionDisabled = $securityExtensionDisabled
+                    Write-Verbose "  Updated $($caObject.distinguishedName) with DisableExtensionList and SecurityExtensionDisabled"
                 } else {
                     # No extensions disabled - set directly
                     Write-Verbose "  No extensions disabled on this CA"
-                    $_.DisableExtensionList = @()
-                    $_.SecurityExtensionDisabled = $false
-                    Write-Verbose "  Updated $($_.distinguishedName) with empty DisableExtensionList"
+                    $caObject.DisableExtensionList = @()
+                    $caObject.SecurityExtensionDisabled = $false
+                    Write-Verbose "  Updated $($caObject.distinguishedName) with empty DisableExtensionList"
                 }
             } catch {
                 Write-Verbose "  Failed to query DisableExtensionList for '$caFullName': $($_.Exception.Message)"
-                
-                # Set to null on error
-                $_.DisableExtensionList = $null
-                $_.SecurityExtensionDisabled = $null
+
+                # Unknown state: leave tri-state properties $null so detection does not treat failure as clean
+                $caObject.DisableExtensionList = $null
+                $caObject.SecurityExtensionDisabled = $null
             }
-            
+
             # Always return the object to continue the pipeline
-            $_
+            $caObject
         }
     }
 

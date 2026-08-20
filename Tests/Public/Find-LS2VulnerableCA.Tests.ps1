@@ -1,4 +1,4 @@
-﻿#requires -Version 5.1
+#requires -Version 5.1
 BeforeDiscovery {
     $ModuleRoot = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
     $ls2Manifest = if ($env:LS2_MODULE_ROOT) { Join-Path $env:LS2_MODULE_ROOT 'Locksmith2.psd1' } else { Join-Path $ModuleRoot 'Locksmith2.psd1' }
@@ -368,6 +368,23 @@ InModuleScope 'Locksmith2' {
                     distinguishedName  = 'CN=SafeCA,...'
                 }
                 $script:AdcsObjectStore = @{ $safeCA.distinguishedName = $safeCA }
+
+                $result = @(Find-LS2VulnerableCA -Technique 'Auditing')
+
+                $result.Count | Should -Be 0
+            }
+
+            It 'should not return an issue when AuditingIncomplete is $null (query failed — GH #92)' {
+                $unknownCA = New-MockLS2AdcsObject -Properties @{
+                    objectClass        = @('top', 'pKIEnrollmentService')
+                    SchemaClassName    = 'pKIEnrollmentService'
+                    CAFullName         = 'CONTOSO\UnreachableCA'
+                    cn                 = 'UnreachableCA'
+                    AuditingIncomplete = $null
+                    AuditFilter        = $null
+                    distinguishedName  = 'CN=UnreachableCA,...'
+                }
+                $script:AdcsObjectStore = @{ $unknownCA.distinguishedName = $unknownCA }
 
                 $result = @(Find-LS2VulnerableCA -Technique 'Auditing')
 

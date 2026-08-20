@@ -1,4 +1,4 @@
-﻿class LS2AdcsObject {
+class LS2AdcsObject {
     # Common properties for all AD CS objects
     [string]$distinguishedName
     [string[]]$objectClass
@@ -67,7 +67,7 @@
     [Nullable[bool]]$SANFlagEnabled
     [object[]]$InterfaceFlags
     [Nullable[int]]$AuditFilter
-    [bool]$AuditingIncomplete
+    [Nullable[bool]]$AuditingIncomplete
     [object[]]$DisableExtensionList
     [Nullable[bool]]$SecurityExtensionDisabled
     [object[]]$WebEnrollmentEndpoints

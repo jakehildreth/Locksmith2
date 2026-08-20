@@ -1,4 +1,4 @@
-﻿function Set-CAAuditFilter {
+function Set-CAAuditFilter {
     <#
         .SYNOPSIS
         Adds AuditFilter configuration properties to AD CS Certification Authority objects.
@@ -78,24 +78,31 @@
                 
                 Write-Verbose "  Querying AuditFilter for: $caFullName"
                 
+                $caObject = $_
                 try {
                     # Query AuditFilter using PSCertutil
                     $auditFilterResult = Get-PSCAuditFilter -CAFullName $caFullName -ErrorAction Stop
-                    
+
                     if ($auditFilterResult -and $null -ne $auditFilterResult.AuditFilter) {
                         $auditFilter = $auditFilterResult.AuditFilter
                         Write-Verbose "  Retrieved AuditFilter: $auditFilter"
-                        
+
                         # Set the property directly on the LS2AdcsObject (same reference as store)
-                        $_.AuditFilter = $auditFilter
-                        $_.AuditingIncomplete = ($auditFilter -ne 127)
-                        Write-Verbose "  Updated $($_.distinguishedName) with AuditFilter data (AuditingIncomplete=$($_.AuditingIncomplete))"
-                        
+                        $caObject.AuditFilter = $auditFilter
+                        $caObject.AuditingIncomplete = ($auditFilter -ne 127)
+                        Write-Verbose "  Updated $($caObject.distinguishedName) with AuditFilter data (AuditingIncomplete=$($caObject.AuditingIncomplete))"
+
                     } else {
                         Write-Verbose "  No AuditFilter returned from Get-PSCAuditFilter"
+                        # Unknown state: leave tri-state properties $null so detection does not treat failure as clean (GH #92)
+                        $caObject.AuditFilter = $null
+                        $caObject.AuditingIncomplete = $null
                     }
                 } catch {
                     Write-Verbose "  Failed to query AuditFilter for '$caFullName': $($_.Exception.Message)"
+                    # Unknown state: leave tri-state properties $null so detection does not treat failure as clean (GH #92)
+                    $caObject.AuditFilter = $null
+                    $caObject.AuditingIncomplete = $null
                 }
             } catch {
                 Write-Warning "Error processing CA: $($_.Exception.Message)"

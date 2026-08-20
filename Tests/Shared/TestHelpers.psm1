@@ -1,4 +1,4 @@
-﻿#requires -Version 5.1
+#requires -Version 5.1
 <#
 .SYNOPSIS
     Shared test helpers for Locksmith2 Pester tests.
@@ -106,7 +106,7 @@ function New-MockLS2AdcsObject {
     $obj.SANFlagEnabled           = $null
     $obj.InterfaceFlags           = @()
     $obj.AuditFilter              = $null
-    $obj.AuditingIncomplete       = $false
+    $obj.AuditingIncomplete       = $null
     $obj.DisableExtensionList     = @()
     $obj.SecurityExtensionDisabled = $null
     $obj.HasLinkedGroupOIDPolicy  = $null
