@@ -105,5 +105,31 @@ Describe 'Set-CAEditFlags' -Tag 'Unit' {
                 Should -Invoke Get-PSCEditFlag -Times 1 -Exactly -ParameterFilter { $CAFullName -eq 'contoso.com\MyCA' }
             }
         }
+
+        Context 'Query failure must not produce an ESC6 finding (GH #92 pattern)' {
+            It 'should set SANFlagEnabled to $null when Get-PSCEditFlag throws' {
+                $ca = New-MockLS2AdcsObject -Properties @{
+                    objectClass     = @('top', 'pKIEnrollmentService')
+                    SchemaClassName = 'pKIEnrollmentService'
+                    CAFullName      = 'contoso.com\MyCA'
+                    cn              = 'MyCA'
+                }
+                Mock Get-PSCEditFlag { throw 'certutil -getreg failed: RPC server unavailable' }
+                $result = $ca | Set-CAEditFlags
+                $result.SANFlagEnabled | Should -BeNullOrEmpty
+            }
+
+            It 'should set SANFlagEnabled to $null when Get-PSCEditFlag returns no results' {
+                $ca = New-MockLS2AdcsObject -Properties @{
+                    objectClass     = @('top', 'pKIEnrollmentService')
+                    SchemaClassName = 'pKIEnrollmentService'
+                    CAFullName      = 'contoso.com\MyCA'
+                    cn              = 'MyCA'
+                }
+                Mock Get-PSCEditFlag { $null }
+                $result = $ca | Set-CAEditFlags
+                $result.SANFlagEnabled | Should -BeNullOrEmpty
+            }
+        }
     }
 }

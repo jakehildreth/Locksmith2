@@ -106,7 +106,7 @@ function New-MockLS2AdcsObject {
     $obj.SANFlagEnabled           = $null
     $obj.InterfaceFlags           = @()
     $obj.AuditFilter              = $null
-    $obj.AuditingIncomplete       = $false
+    $obj.AuditingIncomplete       = $null
     $obj.DisableExtensionList     = @()
     $obj.SecurityExtensionDisabled = $null
     $obj.IsCATemplate             = $false

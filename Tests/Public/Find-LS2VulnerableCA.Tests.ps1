@@ -374,6 +374,23 @@ InModuleScope 'Locksmith2' {
                 $result.Count | Should -Be 0
             }
 
+            It 'should not return an issue when AuditingIncomplete is $null (query failed — GH #92)' {
+                $unknownCA = New-MockLS2AdcsObject -Properties @{
+                    objectClass        = @('top', 'pKIEnrollmentService')
+                    SchemaClassName    = 'pKIEnrollmentService'
+                    CAFullName         = 'CONTOSO\UnreachableCA'
+                    cn                 = 'UnreachableCA'
+                    AuditingIncomplete = $null
+                    AuditFilter        = $null
+                    distinguishedName  = 'CN=UnreachableCA,...'
+                }
+                $script:AdcsObjectStore = @{ $unknownCA.distinguishedName = $unknownCA }
+
+                $result = @(Find-LS2VulnerableCA -Technique 'Auditing')
+
+                $result.Count | Should -Be 0
+            }
+
             It 'should return nothing when Initialize-LS2Scan returns false' {
                 Mock 'Initialize-LS2Scan' { $false }
                 $result = @(Find-LS2VulnerableCA -Technique 'Auditing')
