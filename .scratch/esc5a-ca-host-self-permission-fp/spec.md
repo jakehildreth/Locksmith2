@@ -18,13 +18,12 @@ ESC5a (Vulnerable PKI Object Access Control) no longer reports findings where th
 
 ## Decisions so far
 
-_None recorded yet._
+- Suppress in the `Set-*` enrichment (`Set-DangerousEditor`, `Set-LowPrivilegeEditor`), own-CA only: skip ACEs where the ACE's IdentityReference SID equals the object's own `ComputerPrincipal`. Rationale: one guard per shared function fixes all consumers (Find functions, dashboard, risk scoring) at once; `ComputerPrincipal` (host computer SID) is already populated by `Set-CAComputerPrincipal` earlier in the pipeline, so no new lookup infrastructure is needed.
+- Scope is own-CA only. A CA host account with write rights on a *different* CA object remains a finding.
+- Non-CA objects (templates, containers) are unaffected — they have no `ComputerPrincipal`, so the guard is a null check.
 
 ## Not yet specified
 
-- Where to suppress: filter ACEs in the `Set-*` enrichment that populates `DangerousEditor`/`LowPrivilegeEditor` vs. skip in `Find-LS2VulnerableObject`'s ESC5a evaluation.
-- How to resolve the CA host computer account reliably (dNSHostName → computer account lookup vs. existing store correlation).
-- Whether suppression applies only when the object is the host's *own* CA, or any CA object.
 - Test coverage: unit tests with mock ACEs where `IdentityReference` is the CA host account in both NTAccount and SID forms.
 
 ## Out of scope
