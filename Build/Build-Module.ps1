@@ -18,6 +18,8 @@
     [string]$GitHubRepository = 'Locksmith2'
 )
 
+$ErrorActionPreference = 'Stop'
+
 # The VS Code PowerShell Extension pre-loads PSScriptAnalyzer into the host
 # process. PSPublishModule imports PSScriptAnalyzer internally, and loading a
 # second copy of its assembly into the same appdomain throws an assembly-already-
