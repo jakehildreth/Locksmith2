@@ -42,21 +42,20 @@ if ($Host.Name -eq 'Visual Studio Code Host' -or
     exit $LASTEXITCODE
 }
 
-if (Get-Module -Name 'PSPublishModule' -ListAvailable) {
+if (Get-Module -Name 'PSPublishModule' -ListAvailable | Where-Object { $_.Version -ge [version]'3.0.153' }) {
     Write-Verbose 'PSPublishModule is installed.'
 } else {
     Write-Verbose 'PSPublishModule is not installed. Attempting installation.'
     try {
         Install-Module -Name Pester -AllowClobber -Scope CurrentUser -SkipPublisherCheck -Force
         Install-Module -Name PSScriptAnalyzer -AllowClobber -Scope CurrentUser -Force
-        Install-Module -Name PSPublishModule -MaximumVersion 2.0.27 -AllowClobber -Scope CurrentUser -Force -SkipPublisherCheck
+        Install-Module -Name PSPublishModule -MinimumVersion 3.0.153 -AllowClobber -Scope CurrentUser -Force -SkipPublisherCheck -ErrorAction Stop
     } catch {
-        Write-Error "PSPublishModule installation failed. $_"
+        throw "PSPublishModule installation failed. $_"
     }
 }
 
-# Update-Module -Name PSPublishModule
-Import-Module -Name PSPublishModule -Force
+Import-Module -Name PSPublishModule -MinimumVersion 3.0.153 -Force -ErrorAction Stop
 
 # Ensure vendored dependencies are available so PSPublishModule can resolve
 # function calls to their source module during analysis (required for
@@ -70,7 +69,7 @@ foreach ($depName in @('PSWriteHTML', 'PSCertutil')) {
 
 $CopyrightYear = if ($Calver) { $CalVer.Split('.')[0] } else { (Get-Date -Format yyyy) }
 
-Build-Module -ModuleName 'Locksmith2' {
+Build-Module -ModuleName 'Locksmith2' -ErrorAction Stop {
     # Usual defaults as per standard module
     # Always use 3-part CalVer: yyyy.M.dHHmm (e.g., 2026.4.70225)
     # Prerelease builds append -pre to the version string.
@@ -168,7 +167,7 @@ Build-Module -ModuleName 'Locksmith2' {
     New-ConfigurationFormat -ApplyTo 'OnMergePSD1' -PSD1Style 'Minimal'
 
     # configuration for documentation, at the same time it enables documentation processing
-    New-ConfigurationDocumentation -Enable:$false -StartClean -UpdateWhenNew -PathReadme 'Docs\Readme.md' -Path 'Docs'
+    New-ConfigurationDocumentation -Enable:$false -PathReadme 'Docs\Readme.md' -Path 'Docs'
     New-ConfigurationImportModule -ImportSelf -ImportRequiredModules
 
     New-ConfigurationBuild -Enable:$true -SignModule:$false -DeleteTargetModuleBeforeBuild -MergeModuleOnBuild -MergeFunctionsFromApprovedModules -DoNotAttemptToFixRelativePaths -UseWildcardForFunctions
