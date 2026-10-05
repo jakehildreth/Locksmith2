@@ -44,20 +44,20 @@ if ($Host.Name -eq 'Visual Studio Code Host' -or
     exit $LASTEXITCODE
 }
 
-if (Get-Module -Name 'PSPublishModule' -ListAvailable | Where-Object { $_.Version -ge [version]'3.0.153' }) {
+if (Get-Module -Name 'PSPublishModule' -ListAvailable | Where-Object { $_.Version -ge [version]'3.0.155' }) {
     Write-Verbose 'PSPublishModule is installed.'
 } else {
     Write-Verbose 'PSPublishModule is not installed. Attempting installation.'
     try {
         Install-Module -Name Pester -AllowClobber -Scope CurrentUser -SkipPublisherCheck -Force
         Install-Module -Name PSScriptAnalyzer -AllowClobber -Scope CurrentUser -Force
-        Install-Module -Name PSPublishModule -MinimumVersion 3.0.153 -AllowClobber -Scope CurrentUser -Force -SkipPublisherCheck -ErrorAction Stop
+        Install-Module -Name PSPublishModule -MinimumVersion 3.0.155 -AllowClobber -Scope CurrentUser -Force -SkipPublisherCheck -ErrorAction Stop
     } catch {
         throw "PSPublishModule installation failed. $_"
     }
 }
 
-Import-Module -Name PSPublishModule -MinimumVersion 3.0.153 -Force -ErrorAction Stop
+Import-Module -Name PSPublishModule -MinimumVersion 3.0.155 -Force -ErrorAction Stop
 
 # Ensure vendored dependencies are available so PSPublishModule can resolve
 # function calls to their source module during analysis (required for
