@@ -102,7 +102,9 @@
         Set-DangerousCACertificateManager |
         Set-LowPrivilegeCACertificateManager |
         Set-Owner |
-        Set-HasNonStandardOwner
+        Set-HasNonStandardOwner | 
+        Set-DangerousEditor |
+        Set-LowPrivilegeEditor
         
         # Process all other infrastructure objects for non-standard owners
         $OtherObjects = $script:AdcsObjectStore.Values | Where-Object {
