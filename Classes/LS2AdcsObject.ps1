@@ -74,6 +74,10 @@
     [object[]]$WebEnrollmentEndpoints
     [Nullable[bool]]$HasLinkedGroupOIDPolicy  # true when ≥1 CertificatePolicy OID links to a group
     [string[]]$LinkedGroupOIDPolicies         # group DNs linked via OID application policies
+
+    # Identity of the CA behind an object, used to tie AIA / CDP objects to their CA
+    [string[]]$CACertificateSubject           # subject DNs of cACertificate values (CA, AIA, Certification Authorities objects)
+    [string]$CRLIssuer                        # issuer DN of the CRL on a cRLDistributionPoint object
     
     # Schema class name for easy type checking
     [string]$SchemaClassName
@@ -134,6 +138,18 @@
             $this.ObjectSecurity = $null
             $this.Owner = $null
         }
+
+        # CA identity: certificate subjects and CRL issuer (parsed here so the raw blobs aren't kept)
+        $this.CACertificateSubject = if ($DirectoryEntry.Properties.Contains('cACertificate')) {
+            [LS2AdcsObject]::GetCertificateSubjects(@($DirectoryEntry.Properties['cACertificate']))
+        } else { @() }
+        $crlBytes = $null
+        foreach ($crlAttribute in 'certificateRevocationList', 'deltaRevocationList') {
+            if (-not $crlBytes -and $DirectoryEntry.Properties.Contains($crlAttribute)) {
+                $crlBytes = $DirectoryEntry.Properties[$crlAttribute][0]
+            }
+        }
+        $this.CRLIssuer = if ($crlBytes) { [LS2AdcsObject]::GetCRLIssuer([byte[]]$crlBytes) } else { $null }
         
         # Initialize HasNonStandardOwner (preserve value if already set by Set-HasNonStandardOwner)
         if ($DirectoryEntry.PSObject.Properties['HasNonStandardOwner'] -and $null -ne $DirectoryEntry.HasNonStandardOwner) {
@@ -190,6 +206,62 @@
     # Method to check if this is a CA
     [bool] IsCertificationAuthority() {
         return $this.objectClass -contains 'pKIEnrollmentService'
+    }
+
+    # Distinct subject DNs of DER-encoded certificates; values that don't parse are skipped
+    static [string[]] GetCertificateSubjects([object[]]$RawCertificates) {
+        $subjects = [System.Collections.Generic.List[string]]::new()
+        foreach ($raw in $RawCertificates) {
+            try {
+                $certificate = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new([byte[]]$raw)
+                $subject = $certificate.SubjectName.Name
+                if (-not $subjects.Contains($subject)) { $subjects.Add($subject) }
+            } catch {
+                continue
+            }
+        }
+        return $subjects.ToArray()
+    }
+
+    # Reads [tag, header length, content length] of the DER element at $Offset
+    static [int[]] ReadDerHeader([byte[]]$Data, [int]$Offset) {
+        $length = [int]$Data[$Offset + 1]
+        $headerLength = 2
+        if ($length -band 0x80) {
+            $lengthByteCount = $length -band 0x7F
+            $length = 0
+            for ($i = 0; $i -lt $lengthByteCount; $i++) {
+                $length = ($length -shl 8) -bor [int]$Data[$Offset + 2 + $i]
+            }
+            $headerLength = 2 + $lengthByteCount
+        }
+        return @([int]$Data[$Offset], $headerLength, $length)
+    }
+
+    # Issuer DN of a DER-encoded CRL, or $null if it can't be parsed
+    # CertificateList ::= SEQUENCE { tbsCertList SEQUENCE { version INTEGER OPTIONAL, signature SEQUENCE, issuer Name, ... }, ... }
+    static [string] GetCRLIssuer([byte[]]$Crl) {
+        try {
+            $certificateList = [LS2AdcsObject]::ReadDerHeader($Crl, 0)
+            $tbsOffset = $certificateList[1]
+            $tbs = [LS2AdcsObject]::ReadDerHeader($Crl, $tbsOffset)
+            $offset = $tbsOffset + $tbs[1]
+            $element = [LS2AdcsObject]::ReadDerHeader($Crl, $offset)
+            if ($element[0] -eq 0x02) {
+                $offset += $element[1] + $element[2]
+                $element = [LS2AdcsObject]::ReadDerHeader($Crl, $offset)
+            }
+            $offset += $element[1] + $element[2]
+            $issuer = [LS2AdcsObject]::ReadDerHeader($Crl, $offset)
+            $issuerLength = $issuer[1] + $issuer[2]
+            if ($issuerLength -le 2 -or ($offset + $issuerLength) -gt $Crl.Length) {
+                return $null
+            }
+            $issuerBytes = [byte[]]$Crl[$offset..($offset + $issuerLength - 1)]
+            return [System.Security.Cryptography.X509Certificates.X500DistinguishedName]::new($issuerBytes).Name
+        } catch {
+            return $null
+        }
     }
     
     # Method to get a friendly name for logging

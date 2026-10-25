@@ -175,4 +175,92 @@ Describe 'LS2AdcsObject class' -Tag 'Unit' {
             $obj.AuditFilter | Should -Be 127
         }
     }
+
+    Describe 'CA identity helpers' {
+        BeforeAll {
+            function New-DerElement {
+                param([byte]$Tag, [byte[]]$Content)
+                $len = $Content.Length
+                $lenBytes = if ($len -lt 128) { , [byte]$len }
+                elseif ($len -lt 256) { [byte[]](0x81, $len) }
+                else { [byte[]](0x82, ($len -shr 8), ($len -band 0xFF)) }
+                [byte[]](@($Tag) + $lenBytes + $Content)
+            }
+
+            # Minimal CertificateList: only the parts the parser walks (tbsCertList up to issuer)
+            function New-TestCrl {
+                param([string]$IssuerDn, [switch]$WithVersion)
+                $issuer = ([System.Security.Cryptography.X509Certificates.X500DistinguishedName]::new($IssuerDn)).RawData
+                $sigAlg = New-DerElement 0x30 ([byte[]](0x06, 0x09, 0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x01, 0x0B, 0x05, 0x00))
+                $thisUpdate = New-DerElement 0x17 ([System.Text.Encoding]::ASCII.GetBytes('260101000000Z'))
+                $version = if ($WithVersion) { [byte[]](0x02, 0x01, 0x01) } else { [byte[]]@() }
+                $tbs = New-DerElement 0x30 ([byte[]]($version + $sigAlg + $issuer + $thisUpdate))
+                New-DerElement 0x30 ([byte[]]($tbs + $sigAlg + [byte[]](0x03, 0x02, 0x00, 0x00)))
+            }
+
+            function New-TestCaCertBytes {
+                param([string]$SubjectDn)
+                $rsa = [System.Security.Cryptography.RSA]::Create(2048)
+                $request = [System.Security.Cryptography.X509Certificates.CertificateRequest]::new(
+                    $SubjectDn, $rsa,
+                    [System.Security.Cryptography.HashAlgorithmName]::SHA256,
+                    [System.Security.Cryptography.RSASignaturePadding]::Pkcs1)
+                $cert = $request.CreateSelfSigned([DateTimeOffset]::UtcNow.AddDays(-1), [DateTimeOffset]::UtcNow.AddDays(30))
+                $cert.RawData
+            }
+        }
+
+        Describe 'GetCRLIssuer()' {
+            It 'should return the issuer DN from a CRL' {
+                $crl = New-TestCrl -IssuerDn 'CN=Contoso-CA, DC=contoso, DC=com'
+                [LS2AdcsObject]::GetCRLIssuer($crl) | Should -Be ([System.Security.Cryptography.X509Certificates.X500DistinguishedName]::new('CN=Contoso-CA, DC=contoso, DC=com')).Name
+            }
+
+            It 'should skip the optional version field' {
+                $crl = New-TestCrl -IssuerDn 'CN=Contoso-CA, DC=contoso, DC=com' -WithVersion
+                [LS2AdcsObject]::GetCRLIssuer($crl) | Should -Be ([System.Security.Cryptography.X509Certificates.X500DistinguishedName]::new('CN=Contoso-CA, DC=contoso, DC=com')).Name
+            }
+
+            It 'should handle long-form lengths' {
+                $longDn = 'CN=' + ('A' * 150) + ', DC=contoso, DC=com'
+                $crl = New-TestCrl -IssuerDn $longDn
+                [LS2AdcsObject]::GetCRLIssuer($crl) | Should -Be ([System.Security.Cryptography.X509Certificates.X500DistinguishedName]::new($longDn)).Name
+            }
+
+            It 'should return null for garbage' {
+                [LS2AdcsObject]::GetCRLIssuer([byte[]](1, 2, 3)) | Should -BeNullOrEmpty
+            }
+
+            It 'should return null for an empty array' {
+                [LS2AdcsObject]::GetCRLIssuer([byte[]]@()) | Should -BeNullOrEmpty
+            }
+        }
+
+        Describe 'GetCertificateSubjects()' {
+            It 'should return the subject of each certificate' {
+                $a = New-TestCaCertBytes -SubjectDn 'CN=Contoso-CA, DC=contoso, DC=com'
+                $b = New-TestCaCertBytes -SubjectDn 'CN=Fabrikam-CA, DC=contoso, DC=com'
+                $subjects = [LS2AdcsObject]::GetCertificateSubjects(@($a, $b))
+                $subjects | Should -Contain ([System.Security.Cryptography.X509Certificates.X500DistinguishedName]::new('CN=Contoso-CA, DC=contoso, DC=com')).Name
+                $subjects | Should -Contain ([System.Security.Cryptography.X509Certificates.X500DistinguishedName]::new('CN=Fabrikam-CA, DC=contoso, DC=com')).Name
+            }
+
+            It 'should collapse renewed certificates with the same subject' {
+                $a = New-TestCaCertBytes -SubjectDn 'CN=Contoso-CA, DC=contoso, DC=com'
+                $b = New-TestCaCertBytes -SubjectDn 'CN=Contoso-CA, DC=contoso, DC=com'
+                @([LS2AdcsObject]::GetCertificateSubjects(@($a, $b))).Count | Should -Be 1
+            }
+
+            It 'should skip values that are not certificates' {
+                $a = New-TestCaCertBytes -SubjectDn 'CN=Contoso-CA, DC=contoso, DC=com'
+                @([LS2AdcsObject]::GetCertificateSubjects(@([byte[]](1, 2, 3), $a))).Count | Should -Be 1
+            }
+        }
+
+        It 'should match a CRL issuer to the subject of that CA''s certificate' {
+            $cert = New-TestCaCertBytes -SubjectDn 'CN=Contoso-CA, DC=contoso, DC=com'
+            $crl = New-TestCrl -IssuerDn 'CN=Contoso-CA, DC=contoso, DC=com'
+            [LS2AdcsObject]::GetCertificateSubjects(@(, $cert)) | Should -Contain ([LS2AdcsObject]::GetCRLIssuer($crl))
+        }
+    }
 }
