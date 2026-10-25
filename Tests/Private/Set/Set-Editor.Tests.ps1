@@ -178,6 +178,40 @@ Describe 'Set-DangerousEditor' -Tag 'Unit' {
                 $result.DangerousEditor | Should -Not -Contain $hostSid
             }
 
+            It 'should exclude the CA host account on the CA''s own AIA and CDP objects but not on another host''s' {
+                $hostSid = 'S-1-5-21-1-2-3-1001'
+                $pks = 'CN=Public Key Services,CN=Services,CN=Configuration,DC=contoso,DC=com'
+                $ca = New-MockLS2AdcsObject -Properties @{
+                    objectClass       = @('top', 'pKIEnrollmentService')
+                    SchemaClassName   = 'pKIEnrollmentService'
+                    cn                = 'Contoso-CA'
+                    distinguishedName = "CN=Contoso-CA,CN=Enrollment Services,$pks"
+                    dNSHostName       = 'ca01.contoso.com'
+                    ComputerPrincipal = $hostSid
+                }
+                $script:AdcsObjectStore[$ca.distinguishedName] = $ca
+                $mockSid = [PSCustomObject]@{ Value = $hostSid }
+                Mock Test-IsDangerousAce { [PSCustomObject]@{ IsDangerous = $true; MatchedPermission = 'GenericAll' } }
+                Mock Convert-IdentityReferenceToSid { $mockSid }
+                Mock Test-IsDangerousPrincipal { $true }
+                Mock Resolve-Principal { }
+
+                $objects = @(
+                    @{ Dn = "CN=Contoso-CA,CN=AIA,$pks"; Cn = 'Contoso-CA'; Expected = $false }
+                    @{ Dn = "CN=Contoso-CA,CN=CA01,CN=CDP,$pks"; Cn = 'Contoso-CA'; Expected = $false }
+                    @{ Dn = "CN=Other-CA,CN=AIA,$pks"; Cn = 'Other-CA'; Expected = $true }
+                )
+                foreach ($o in $objects) {
+                    $obj = New-MockLS2AdcsObject -Properties @{
+                        objectClass = @('top', 'certificationAuthority'); SchemaClassName = 'certificationAuthority'
+                        cn = $o.Cn; distinguishedName = $o.Dn
+                    }
+                    Add-Member -InputObject $obj -MemberType NoteProperty -Name 'ObjectSecurity' -Value (New-MockObjectSecurity -Access @((New-MockAce -IdentityReference $hostSid))) -Force
+                    $result = $obj | Set-DangerousEditor
+                    [bool]$result.DangerousEditor | Should -Be $o.Expected -Because $o.Dn
+                }
+            }
+
             It 'should not filter when ComputerPrincipal is null (non-CA objects)' {
                 $ace = New-MockAce -IdentityReference 'S-1-5-21-1-2-3-999'
                 $template = New-MockLS2AdcsObject -Properties @{ SchemaClassName = 'pKICertificateTemplate' }
@@ -306,6 +340,40 @@ Describe 'Set-LowPrivilegeEditor' -Tag 'Unit' {
                 $result = $ca | Set-LowPrivilegeEditor
                 $result.LowPrivilegeEditor | Should -Contain $otherSid
                 $result.LowPrivilegeEditor | Should -Not -Contain $hostSid
+            }
+
+            It 'should exclude the CA host account on the CA''s own AIA and CDP objects but not on another host''s' {
+                $hostSid = 'S-1-5-21-1-2-3-1001'
+                $pks = 'CN=Public Key Services,CN=Services,CN=Configuration,DC=contoso,DC=com'
+                $ca = New-MockLS2AdcsObject -Properties @{
+                    objectClass       = @('top', 'pKIEnrollmentService')
+                    SchemaClassName   = 'pKIEnrollmentService'
+                    cn                = 'Contoso-CA'
+                    distinguishedName = "CN=Contoso-CA,CN=Enrollment Services,$pks"
+                    dNSHostName       = 'ca01.contoso.com'
+                    ComputerPrincipal = $hostSid
+                }
+                $script:AdcsObjectStore[$ca.distinguishedName] = $ca
+                $mockSid = [PSCustomObject]@{ Value = $hostSid }
+                Mock Test-IsDangerousAce { [PSCustomObject]@{ IsDangerous = $true; MatchedPermission = 'GenericAll' } }
+                Mock Convert-IdentityReferenceToSid { $mockSid }
+                Mock Test-IsLowPrivilegePrincipal { $true }
+                Mock Resolve-Principal { }
+
+                $objects = @(
+                    @{ Dn = "CN=Contoso-CA,CN=AIA,$pks"; Cn = 'Contoso-CA'; Expected = $false }
+                    @{ Dn = "CN=Contoso-CA,CN=CA01,CN=CDP,$pks"; Cn = 'Contoso-CA'; Expected = $false }
+                    @{ Dn = "CN=Other-CA,CN=AIA,$pks"; Cn = 'Other-CA'; Expected = $true }
+                )
+                foreach ($o in $objects) {
+                    $obj = New-MockLS2AdcsObject -Properties @{
+                        objectClass = @('top', 'certificationAuthority'); SchemaClassName = 'certificationAuthority'
+                        cn = $o.Cn; distinguishedName = $o.Dn
+                    }
+                    Add-Member -InputObject $obj -MemberType NoteProperty -Name 'ObjectSecurity' -Value (New-MockObjectSecurity -Access @((New-MockAce -IdentityReference $hostSid))) -Force
+                    $result = $obj | Set-LowPrivilegeEditor
+                    [bool]$result.LowPrivilegeEditor | Should -Be $o.Expected -Because $o.Dn
+                }
             }
         }
     }

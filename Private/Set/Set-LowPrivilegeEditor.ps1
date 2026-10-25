@@ -102,6 +102,7 @@
                 
                 # Determine object class for ACE testing
                 $objectClass = $_.SchemaClassName
+                $ownHostSids = @(Get-OwningCAHostSid -AdcsObject $_)
                 
                 [array]$lowPrivilegeIdentityReference = foreach ($ace in $_.ObjectSecurity.Access) {
                     # Test if ACE grants dangerous write permissions first
@@ -113,9 +114,9 @@
                     if ($isDangerousAce.IsDangerous) {
                         # Now check if the principal holding this ACE is low-privilege
                         $aceSid = $ace.IdentityReference | Convert-IdentityReferenceToSid
-                        # Suppress ESC5a false positive: a CA host's own computer account
-                        # legitimately holds rights on its own CA object (#99)
-                        if ($_.ComputerPrincipal -and $aceSid.Value -eq $_.ComputerPrincipal) {
+                        # A CA host's own computer account legitimately manages the AD objects
+                        # that belong to its CA (CA object, AIA, CDP, KRA, ...) (#99)
+                        if ($ownHostSids -contains $aceSid.Value) {
                             Write-Verbose "Skipping ACE for CA host's own computer account: $($aceSid.Value)"
                             continue
                         }

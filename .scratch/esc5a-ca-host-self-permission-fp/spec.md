@@ -18,9 +18,9 @@ ESC5a (Vulnerable PKI Object Access Control) no longer reports findings where th
 
 ## Decisions so far
 
-- Suppress in the `Set-*` enrichment (`Set-DangerousEditor`, `Set-LowPrivilegeEditor`), own-CA only: skip ACEs where the ACE's IdentityReference SID equals the object's own `ComputerPrincipal`. Rationale: one guard per shared function fixes all consumers (Find functions, dashboard, risk scoring) at once; `ComputerPrincipal` (host computer SID) is already populated by `Set-CAComputerPrincipal` earlier in the pipeline, so no new lookup infrastructure is needed.
-- Scope is own-CA only. A CA host account with write rights on a *different* CA object remains a finding.
-- Non-CA objects (templates, containers) are unaffected — they have no `ComputerPrincipal`, so the guard is a null check.
+- Suppress in the `Set-*` enrichment (`Set-DangerousEditor`, `Set-LowPrivilegeEditor`) via the shared `Get-OwningCAHostSid` helper: skip ACEs whose IdentityReference SID is the host of the CA that owns the object. Rationale: one guard per shared function fixes all consumers (Find functions, dashboard, risk scoring) at once; `ComputerPrincipal` (host computer SID) is already populated by `Set-CAComputerPrincipal`, and infrastructure objects are processed after all CAs.
+- Scope is *objects belonging to the host's own CA*: the pKIEnrollmentService object, the CA's AIA / KRA / Certification Authorities objects (matched on CA `cn`, optional `(n)` key-index suffix), and the host's CDP container (`CN=<host>,CN=CDP`) plus everything under it. A CA host account with rights on a *different* CA's objects remains a finding.
+- Templates and shared containers (`CN=CDP`, `CN=OID`, NTAuthCertificates, etc.) are unaffected.
 
 ## Not yet specified
 
