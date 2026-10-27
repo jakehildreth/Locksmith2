@@ -37,6 +37,50 @@ InModuleScope 'Locksmith2' {
             }
         }
 
+        Context 'Endpoint existence probe (local HttpListener)' {
+            BeforeAll {
+                $script:port = Get-Random -Minimum 20000 -Maximum 40000
+                $script:serverJob = Start-Job -ArgumentList $script:port -ScriptBlock {
+                    param($port)
+                    $listener = [System.Net.HttpListener]::new()
+                    $listener.Prefixes.Add("http://localhost:$port/")
+                    $listener.Start()
+                    try {
+                        while ($true) {
+                            $ctx = $listener.GetContext()
+                            $ctx.Response.StatusCode = if ($ctx.Request.Url.AbsolutePath -eq '/certsrv/') { 401 } else { 404 }
+                            $ctx.Response.Close()
+                        }
+                    } finally {
+                        $listener.Stop()
+                    }
+                }
+                $deadline = [datetime]::UtcNow.AddSeconds(10)
+                do {
+                    Start-Sleep -Milliseconds 200
+                    $ready = $null -ne (Get-WebEnrollmentEndpointStatus -Url "http://localhost:$($script:port)/certsrv/")
+                } until ($ready -or [datetime]::UtcNow -gt $deadline)
+            }
+            AfterAll {
+                Stop-Job $script:serverJob
+                Remove-Job $script:serverJob -Force
+            }
+
+            It 'should return null when nothing is listening' {
+                Get-WebEnrollmentEndpointStatus -Url 'http://localhost:1/certsrv/' | Should -BeNullOrEmpty
+            }
+
+            It 'should return null when the server answers 404 (path not served)' {
+                $result = Get-WebEnrollmentEndpointStatus -Url "http://localhost:$($script:port)/missing/"
+                $result | Should -BeNullOrEmpty
+            }
+
+            It 'should return the endpoint when the server answers 401 (auth challenge)' {
+                $result = Get-WebEnrollmentEndpointStatus -Url "http://localhost:$($script:port)/certsrv/"
+                $result.URL | Should -Be "http://localhost:$($script:port)/certsrv/"
+            }
+        }
+
         Context 'NTLM detection (HTTPS)' {
             It 'should return NtlmOffered=$true or $false for a responding HTTPS endpoint' -Skip:([string]::IsNullOrEmpty($script:TestCaHost)) {
                 $url = "https://$($script:TestCaHost)/certsrv/"
