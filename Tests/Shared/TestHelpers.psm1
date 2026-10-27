@@ -112,6 +112,8 @@ function New-MockLS2AdcsObject {
     $obj.IsCATemplate             = $false
     $obj.HasLinkedGroupOIDPolicy  = $null
     $obj.LinkedGroupOIDPolicies   = @()
+    $obj.CACertificateSubject     = @()
+    $obj.CRLIssuer                = $null
 
     foreach ($key in $Properties.Keys) {
         $obj.$key = $Properties[$key]

@@ -18,13 +18,12 @@ ESC5a (Vulnerable PKI Object Access Control) no longer reports findings where th
 
 ## Decisions so far
 
-_None recorded yet._
+- Suppress in the `Set-*` enrichment (`Set-DangerousEditor`, `Set-LowPrivilegeEditor`) via the shared `Get-OwningCAHostSid` helper: skip ACEs whose IdentityReference SID is the host of the CA that owns the object. Rationale: one guard per shared function fixes all consumers (Find functions, dashboard, risk scoring) at once; `ComputerPrincipal` (host computer SID) is already populated by `Set-CAComputerPrincipal`, and infrastructure objects are processed after all CAs.
+- Scope is *objects belonging to the host's own CA*: the pKIEnrollmentService object, the CA's AIA / KRA / Certification Authorities objects (matched on CA `cn`, optional `(n)` key-index suffix), and the host's CDP container (`CN=<host>,CN=CDP`) plus everything under it. A CA host account with rights on a *different* CA's objects remains a finding.
+- Templates and shared containers (`CN=CDP`, `CN=OID`, NTAuthCertificates, etc.) are unaffected.
 
 ## Not yet specified
 
-- Where to suppress: filter ACEs in the `Set-*` enrichment that populates `DangerousEditor`/`LowPrivilegeEditor` vs. skip in `Find-LS2VulnerableObject`'s ESC5a evaluation.
-- How to resolve the CA host computer account reliably (dNSHostName → computer account lookup vs. existing store correlation).
-- Whether suppression applies only when the object is the host's *own* CA, or any CA object.
 - Test coverage: unit tests with mock ACEs where `IdentityReference` is the CA host account in both NTAccount and SID forms.
 
 ## Out of scope
