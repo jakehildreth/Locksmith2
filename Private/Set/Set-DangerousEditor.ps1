@@ -97,6 +97,7 @@
                 
                 # Determine object class for ACE testing
                 $objectClass = $_.SchemaClassName
+                $ownHostSids = @(Get-OwningCAHostSid -AdcsObject $_)
                 
                 [array]$dangerousIdentityReference = foreach ($ace in $_.ObjectSecurity.Access) {
                     # Test if ACE grants dangerous write permissions first
@@ -108,6 +109,12 @@
                     if ($isDangerousAce.IsDangerous) {
                         # Now check if the principal holding this ACE is dangerous
                         $aceSid = $ace.IdentityReference | Convert-IdentityReferenceToSid
+                        # A CA host's own computer account legitimately manages the AD objects
+                        # that belong to its CA (CA object, AIA, CDP, KRA, ...) (#99)
+                        if ($ownHostSids -contains $aceSid.Value) {
+                            Write-Verbose "Skipping ACE for CA host's own computer account: $($aceSid.Value)"
+                            continue
+                        }
                         $isDangerousPrincipal = $aceSid | Test-IsDangerousPrincipal
                         if ($isDangerousPrincipal) {
                             Write-Verbose "Dangerous template editor found: $($ace.IdentityReference) ($($isDangerousAce.MatchedPermission))"
