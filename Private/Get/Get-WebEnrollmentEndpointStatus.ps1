@@ -10,7 +10,9 @@
         offered and whether Extended Protection for Authentication (EPA) is not required.
 
         Probe 1 (anonymous GET):
-          - Determines whether the endpoint exists.
+          - Determines whether the endpoint exists: only HTTP 200 or 401 count. Any other
+            status (404, 403, 3xx, 5xx) returns $null, so a web server without the path
+            is not reported.
           - Reads the WWW-Authenticate header to detect NTLM.
           - HTTP endpoints stop here; NtlmOffered and EpaNotRequired are both $null.
 
@@ -44,6 +46,9 @@
         [string]$Url
     )
 
+    # PS 5.1 does not preload System.Net.Http; without it every probe falls through and reports a false endpoint
+    Add-Type -AssemblyName System.Net.Http
+
     $isHttps = $Url -match '^https://'
 
     # --- Probe 1: anonymous GET ---
@@ -71,6 +76,13 @@
         $anonClient.Timeout = [System.TimeSpan]::FromSeconds(10)
 
         $anonResponse = $anonClient.GetAsync($Url).GetAwaiter().GetResult()
+
+        # A listening web server is not an enrollment endpoint: 404s, redirects, 403s etc. mean the path isn't served
+        $anonStatus = [int]$anonResponse.StatusCode
+        if ($anonStatus -ne 200 -and $anonStatus -ne 401) {
+            Write-Verbose "Get-WebEnrollmentEndpointStatus: $Url returned HTTP $anonStatus - endpoint not present"
+            return $null
+        }
 
         if ($isHttps) {
             # Detect NTLM in WWW-Authenticate
