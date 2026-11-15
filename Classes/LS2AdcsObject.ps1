@@ -70,6 +70,7 @@
     [Nullable[bool]]$AuditingIncomplete
     [object[]]$DisableExtensionList
     [Nullable[bool]]$SecurityExtensionDisabled
+    [Nullable[bool]]$CDPExtensionDisabled
     [bool]$IsCATemplate
     [object[]]$WebEnrollmentEndpoints
     [Nullable[bool]]$HasLinkedGroupOIDPolicy  # true when ≥1 CertificatePolicy OID links to a group

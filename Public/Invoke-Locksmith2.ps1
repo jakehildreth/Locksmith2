@@ -8,7 +8,7 @@
         for security misconfigurations documented as ESC (Escalation) techniques. It scans:
 
         - Certificate templates (ESC1, ESC2, ESC3, ESC4, ESC9)
-        - Certification Authorities (ESC6, ESC7a, ESC7m, ESC11, ESC16)
+        - Certification Authorities (ESC6, ESC7a, ESC7m, ESC11, ESC16, CDPExtensionDisabled)
         - PKI container objects (ESC5)
 
         The function initializes four module-level stores:
@@ -180,7 +180,7 @@
         [switch]$Rescan,
         [switch]$Force,
         [Parameter()]
-        [ValidateSet('All', 'Auditing', 'ESC1', 'ESC2', 'ESC3', 'ESC3c1', 'ESC3c2', 'ESC4', 'ESC4a', 'ESC4o', 'ESC5', 'ESC5a', 'ESC5o', 'ESC6', 'ESC7', 'ESC7a', 'ESC7m', 'ESC8', 'ESC9', 'ESC11', 'ESC13', 'ESC15', 'EKUwu', 'ESC16', 'SchemaV1')]
+        [ValidateSet('All', 'Auditing', 'CDPExtensionDisabled', 'ESC1', 'ESC2', 'ESC3', 'ESC3c1', 'ESC3c2', 'ESC4', 'ESC4a', 'ESC4o', 'ESC5', 'ESC5a', 'ESC5o', 'ESC6', 'ESC7', 'ESC7a', 'ESC7m', 'ESC8', 'ESC9', 'ESC11', 'ESC13', 'ESC15', 'EKUwu', 'ESC16', 'SchemaV1')]
         [string[]]$Scans = 'All'
     )
 
@@ -233,7 +233,7 @@
     $techniques = @(
         'ESC1', 'ESC2', 'ESC3c1', 'ESC3c2', 'ESC4a', 'ESC4o',
         'ESC5a', 'ESC5o', 'ESC6', 'ESC7a', 'ESC7m', 'ESC8', 'ESC9', 'ESC11', 'ESC13', 'ESC15', 'ESC16',
-        'Auditing', 'SchemaV1'
+        'Auditing', 'SchemaV1', 'CDPExtensionDisabled'
     )
 
     if ($Scans -contains 'All') {

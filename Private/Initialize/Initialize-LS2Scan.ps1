@@ -15,7 +15,7 @@
         2. IssueStore Population:
            - Checks if IssueStore contains vulnerability data
            - If empty, runs a complete vulnerability scan across all techniques
-           - Scans templates (ESC1-ESC4, ESC9), CAs (ESC6, ESC7a/m, ESC11, ESC16), and objects (ESC5a/o)
+           - Scans templates (ESC1-ESC4, ESC9), CAs (ESC6, ESC7a/m, ESC11, ESC16, CDPExtensionDisabled), and objects (ESC5a/o)
 
         After this function completes successfully, both stores are guaranteed to be populated
         and ready for vulnerability queries.
@@ -140,7 +140,7 @@
 
     # Determine which techniques to scan; default to the full supported set
     $allTemplateTechniques = @('ESC1', 'ESC2', 'ESC3c1', 'ESC3c2', 'ESC9', 'ESC4a', 'ESC4o', 'ESC13', 'ESC15', 'SchemaV1')
-    $allCATechniques       = @('ESC6', 'ESC7a', 'ESC7m', 'ESC8', 'ESC11', 'ESC16', 'Auditing')
+    $allCATechniques       = @('ESC6', 'ESC7a', 'ESC7m', 'ESC8', 'ESC11', 'ESC16', 'Auditing', 'CDPExtensionDisabled')
     $allObjectTechniques   = @('ESC5a', 'ESC5o')
 
     if ($resolvedScans) {

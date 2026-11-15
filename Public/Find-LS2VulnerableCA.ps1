@@ -13,6 +13,7 @@
         ESC8: Detects vulnerable web enrollment endpoints (HTTP always; HTTPS if NTLM offered or EPA not required)
         ESC11: Detects CAs that don't require RPC encryption
         ESC16: Detects CAs with disabled CRL/AIA extensions
+        CDPExtensionDisabled: Detects CAs with the CDP extension (2.5.29.31) disabled (Zombie Certificate prerequisite)
 
     .PARAMETER Technique
         ESC technique name to scan for (e.g., 'ESC6', 'ESC7a', 'ESC7m', 'ESC8', 'ESC11', 'ESC16')
@@ -75,6 +76,7 @@
         - ESC8: Vulnerable web enrollment endpoints
         - ESC11: Missing RPC encryption requirement
         - ESC16: Disabled CRL/AIA security extensions
+        - CDPExtensionDisabled: CDP extension (2.5.29.31) disabled; issued certificates cannot be revocation-checked
 
     .LINK
         Find-LS2VulnerableTemplate
@@ -88,7 +90,7 @@
     [CmdletBinding()]
     param(
         [Parameter()]
-        [ValidateSet('ESC6', 'ESC7a', 'ESC7m', 'ESC8', 'ESC11', 'ESC16', 'Auditing')]
+        [ValidateSet('ESC6', 'ESC7a', 'ESC7m', 'ESC8', 'ESC11', 'ESC16', 'Auditing', 'CDPExtensionDisabled')]
         [string]$Technique,
         
         [Parameter()]
@@ -120,7 +122,7 @@
     if (-not $Technique) {
         Write-Verbose "No technique specified. Returning all CA issues..."
         $allIssues = Get-FlattenedIssues
-        $caTechniques = @('ESC6', 'ESC7a', 'ESC7m', 'ESC8', 'ESC11', 'ESC16', 'Auditing')
+        $caTechniques = @('ESC6', 'ESC7a', 'ESC7m', 'ESC8', 'ESC11', 'ESC16', 'Auditing', 'CDPExtensionDisabled')
         $caIssues = $allIssues | Where-Object { $_.Technique -in $caTechniques }
         
         if ($ExpandGroups) {

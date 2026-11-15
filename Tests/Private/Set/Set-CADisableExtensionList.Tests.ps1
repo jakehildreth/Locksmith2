@@ -105,6 +105,75 @@ Describe 'Set-CADisableExtensionList' -Tag 'Unit' {
             }
         }
 
+        Context 'CDP extension (2.5.29.31) is disabled' {
+            It 'should set CDPExtensionDisabled=$true when CDP OID is in disable list' {
+                $ca = New-MockLS2AdcsObject -Properties @{
+                    objectClass     = @('top', 'pKIEnrollmentService')
+                    SchemaClassName = 'pKIEnrollmentService'
+                    CAFullName      = 'contoso.com\MyCA'
+                    cn              = 'MyCA'
+                }
+                $mockList = @([PSCustomObject]@{ DisabledExtension = '2.5.29.31' })
+                Mock Get-PSCDisableExtensionList { $mockList }
+                $result = $ca | Set-CADisableExtensionList
+                $result.CDPExtensionDisabled | Should -BeTrue
+            }
+
+            It 'should leave SecurityExtensionDisabled=$false when only CDP OID is disabled' {
+                $ca = New-MockLS2AdcsObject -Properties @{
+                    objectClass     = @('top', 'pKIEnrollmentService')
+                    SchemaClassName = 'pKIEnrollmentService'
+                    CAFullName      = 'contoso.com\MyCA'
+                    cn              = 'MyCA'
+                }
+                $mockList = @([PSCustomObject]@{ DisabledExtension = '2.5.29.31' })
+                Mock Get-PSCDisableExtensionList { $mockList }
+                $result = $ca | Set-CADisableExtensionList
+                $result.SecurityExtensionDisabled | Should -BeFalse
+            }
+        }
+
+        Context 'CDP extension is NOT disabled' {
+            It 'should set CDPExtensionDisabled=$false when other OIDs are disabled' {
+                $ca = New-MockLS2AdcsObject -Properties @{
+                    objectClass     = @('top', 'pKIEnrollmentService')
+                    SchemaClassName = 'pKIEnrollmentService'
+                    CAFullName      = 'contoso.com\MyCA'
+                    cn              = 'MyCA'
+                }
+                $mockList = @([PSCustomObject]@{ DisabledExtension = '1.3.6.1.5.5.7.48.1' })
+                Mock Get-PSCDisableExtensionList { $mockList }
+                $result = $ca | Set-CADisableExtensionList
+                $result.CDPExtensionDisabled | Should -BeFalse
+            }
+
+            It 'should set CDPExtensionDisabled=$false when no extensions are disabled' {
+                $ca = New-MockLS2AdcsObject -Properties @{
+                    objectClass     = @('top', 'pKIEnrollmentService')
+                    SchemaClassName = 'pKIEnrollmentService'
+                    CAFullName      = 'contoso.com\MyCA'
+                    cn              = 'MyCA'
+                }
+                Mock Get-PSCDisableExtensionList { @() }
+                $result = $ca | Set-CADisableExtensionList
+                $result.CDPExtensionDisabled | Should -BeFalse
+            }
+        }
+
+        Context 'Query failure must not produce a CDPExtensionDisabled finding (GH #92 pattern)' {
+            It 'should set CDPExtensionDisabled to $null when Get-PSCDisableExtensionList throws' {
+                $ca = New-MockLS2AdcsObject -Properties @{
+                    objectClass     = @('top', 'pKIEnrollmentService')
+                    SchemaClassName = 'pKIEnrollmentService'
+                    CAFullName      = 'contoso.com\MyCA'
+                    cn              = 'MyCA'
+                }
+                Mock Get-PSCDisableExtensionList { throw 'certutil -getreg failed: RPC server unavailable' }
+                $result = $ca | Set-CADisableExtensionList
+                $result.CDPExtensionDisabled | Should -BeNullOrEmpty
+            }
+        }
+
         Context 'CAFullName is passed to Get-PSCDisableExtensionList' {
             It 'should call Get-PSCDisableExtensionList with the correct CAFullName' {
                 $ca = New-MockLS2AdcsObject -Properties @{
