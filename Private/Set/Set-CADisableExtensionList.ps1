@@ -6,11 +6,14 @@
     .DESCRIPTION
         This function queries the DisableExtensionList registry value for each CA using PSCertutil's
         Get-PSCDisableExtensionList cmdlet. The DisableExtensionList indicates which certificate extensions
-        are disabled on the CA, which is relevant for ESC16 detection (disabled CRL/AIA extensions).
+        are disabled on the CA, which is relevant for ESC16 detection (disabled security extension) and
+        CDPExtensionDisabled detection (disabled CRL Distribution Points extension, the Zombie
+        Certificate prerequisite).
 
         The function updates the AdcsObjectStore with:
         - DisableExtensionList: Array of disabled extension OIDs
         - SecurityExtensionDisabled: Boolean indicating if the security extension (1.3.6.1.4.1.311.25.2) is disabled
+        - CDPExtensionDisabled: Boolean indicating if the CDP extension (2.5.29.31) is disabled
 
     .PARAMETER AdcsObject
         Pipeline input of LS2AdcsObject instances. Must contain DistinguishedName and CAFullName properties.
@@ -66,8 +69,9 @@
                 # or $null if no extensions are disabled
                 # Force array wrapping with @() for PS 5.1 compatibility (.Count on single objects)
                 if ($disableExtensionListResult -and @($disableExtensionListResult).Count -gt 0) {
-                    # Extract the extension OIDs/names into an array
-                    $disabledExtensions = $disableExtensionListResult | ForEach-Object { $_.DisabledExtension }
+                    # Extract the extension OIDs into an array. certutil returns each entry as
+                    # "OID FriendlyName" (e.g. "2.5.29.31 CRL Distribution Points"); keep only the OID.
+                    $disabledExtensions = $disableExtensionListResult | ForEach-Object { ($_.DisabledExtension -split ' ')[0] }
                     Write-Verbose "  Retrieved $($disabledExtensions.Count) disabled extension(s): $($disabledExtensions -join ', ')"
 
                     # Check if the Microsoft Certificate Template Information extension is disabled
@@ -80,15 +84,28 @@
                         Write-Verbose "  Security extension (1.3.6.1.4.1.311.25.2) is enabled"
                     }
 
+                    # Check if the CRL Distribution Points extension is disabled
+                    # OID: 2.5.29.31 (szOID_CRL_DIST_POINTS) - issued certs get no CDP, so revocation
+                    # status can never be checked (Zombie Certificate prerequisite)
+                    $cdpExtensionDisabled = $disabledExtensions -contains '2.5.29.31'
+
+                    if ($cdpExtensionDisabled) {
+                        Write-Verbose "  CRITICAL: CDP extension (2.5.29.31) is DISABLED"
+                    } else {
+                        Write-Verbose "  CDP extension (2.5.29.31) is enabled"
+                    }
+
                     # Set properties directly on the LS2AdcsObject (same reference as store)
                     $caObject.DisableExtensionList = $disabledExtensions
                     $caObject.SecurityExtensionDisabled = $securityExtensionDisabled
-                    Write-Verbose "  Updated $($caObject.distinguishedName) with DisableExtensionList and SecurityExtensionDisabled"
+                    $caObject.CDPExtensionDisabled = $cdpExtensionDisabled
+                    Write-Verbose "  Updated $($caObject.distinguishedName) with DisableExtensionList, SecurityExtensionDisabled, and CDPExtensionDisabled"
                 } else {
                     # No extensions disabled - set directly
                     Write-Verbose "  No extensions disabled on this CA"
                     $caObject.DisableExtensionList = @()
                     $caObject.SecurityExtensionDisabled = $false
+                    $caObject.CDPExtensionDisabled = $false
                     Write-Verbose "  Updated $($caObject.distinguishedName) with empty DisableExtensionList"
                 }
             } catch {
@@ -97,6 +114,7 @@
                 # Unknown state: leave tri-state properties $null so detection does not treat failure as clean
                 $caObject.DisableExtensionList = $null
                 $caObject.SecurityExtensionDisabled = $null
+                $caObject.CDPExtensionDisabled = $null
             }
 
             # Always return the object to continue the pipeline

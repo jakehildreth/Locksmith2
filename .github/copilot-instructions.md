@@ -10,7 +10,7 @@ applyTo: '**'
 
 **Locksmith2** is an AD CS security scanner for AD Admins, Defensive Security Professionals, and Security Researchers. It detects and remediates AD CS vulnerabilities (ESC techniques) in Active Directory environments.
 
-Detected techniques (as of 2026.5.14): `ESC1`, `ESC2`, `ESC3c1`, `ESC3c2`, `ESC4a`, `ESC4o`, `ESC5a`, `ESC5o`, `ESC6`, `ESC7a`, `ESC7m`, `ESC8`, `ESC9`, `ESC11`, `ESC13`, `ESC15`, `ESC16`, `Auditing`, `SchemaV1`
+Detected techniques (as of 2026.5.14): `ESC1`, `ESC2`, `ESC3c1`, `ESC3c2`, `ESC4a`, `ESC4o`, `ESC5a`, `ESC5o`, `ESC6`, `ESC7a`, `ESC7m`, `ESC8`, `ESC9`, `ESC11`, `ESC13`, `ESC15`, `ESC16`, `Auditing`, `SchemaV1`, `CDPExtensionDisabled`
 
 **Compatibility:** All code must run in both PS 5.1 and PS 7.x. Never use PS 7-only syntax (`??`, `?:`, named hashtables in class properties, etc.). When in doubt, test in `powershell.exe` (5.1) first.
 

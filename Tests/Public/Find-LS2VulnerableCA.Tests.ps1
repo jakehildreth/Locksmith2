@@ -117,6 +117,55 @@ InModuleScope 'Locksmith2' {
             }
         }
 
+        Context 'Path B — CDPExtensionDisabled condition-based scan' {
+            BeforeEach {
+                Mock 'Test-IssueExists' { $false }
+            }
+
+            It 'should return an LS2Issue when the CA has the CDP extension disabled' {
+                $mockCA = New-MockLS2AdcsObject -Properties @{
+                    objectClass          = @('top', 'pKIEnrollmentService')
+                    SchemaClassName      = 'pKIEnrollmentService'
+                    CAFullName           = 'CONTOSO\CA01'
+                    cn                   = 'CA01'
+                    distinguishedName    = 'CN=CA01,CN=Enrollment Services,CN=Public Key Services,CN=Services,CN=Configuration,DC=contoso,DC=com'
+                    CDPExtensionDisabled = $true
+                }
+                $script:AdcsObjectStore = @{ $mockCA.distinguishedName = $mockCA }
+                $result = @(Find-LS2VulnerableCA -Technique 'CDPExtensionDisabled')
+                $result.Count | Should -Be 1
+                $result[0].Technique | Should -Be 'CDPExtensionDisabled'
+            }
+
+            It 'should skip a CA with the CDP extension enabled' {
+                $safeCA = New-MockLS2AdcsObject -Properties @{
+                    objectClass          = @('top', 'pKIEnrollmentService')
+                    SchemaClassName      = 'pKIEnrollmentService'
+                    CAFullName           = 'CONTOSO\SafeCA'
+                    cn                   = 'SafeCA'
+                    distinguishedName    = 'CN=SafeCA,...'
+                    CDPExtensionDisabled = $false
+                }
+                $script:AdcsObjectStore = @{ $safeCA.distinguishedName = $safeCA }
+                $result = @(Find-LS2VulnerableCA -Technique 'CDPExtensionDisabled')
+                $result.Count | Should -Be 0
+            }
+
+            It 'should skip a CA whose DisableExtensionList query failed' {
+                $unknownCA = New-MockLS2AdcsObject -Properties @{
+                    objectClass          = @('top', 'pKIEnrollmentService')
+                    SchemaClassName      = 'pKIEnrollmentService'
+                    CAFullName           = 'CONTOSO\UnknownCA'
+                    cn                   = 'UnknownCA'
+                    distinguishedName    = 'CN=UnknownCA,...'
+                    CDPExtensionDisabled = $null
+                }
+                $script:AdcsObjectStore = @{ $unknownCA.distinguishedName = $unknownCA }
+                $result = @(Find-LS2VulnerableCA -Technique 'CDPExtensionDisabled')
+                $result.Count | Should -Be 0
+            }
+        }
+
         Context 'Path B — ESC7a role-based scan' {
             BeforeEach {
                 Mock 'Test-IssueExists' { $false }

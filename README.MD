@@ -13,7 +13,7 @@ Locksmith 2 is a comprehensive PowerShell module for auditing Active Directory C
 
 Built for AD administrators, security professionals, and penetration testers, Locksmith 2 provides:
 
-- **Automated vulnerability scanning** for ESC1-ESC16 techniques
+- **Automated vulnerability scanning** for ESC1-ESC16 techniques plus AD CS misconfigurations (Auditing, SchemaV1, CDPExtensionDisabled)
 - **Detailed remediation scripts** for each discovered issue
 - **Granular cmdlets** for targeted security assessments
 - **Comprehensive reporting** with human-readable output
@@ -80,6 +80,7 @@ New-LS2Dashboard
 | **ESC11** | Missing RPC Encryption | CAs | — |
 | **ESC13** | Group-Linked OID Application Policy | Templates | — |
 | **ESC16** | Disabled CRL/AIA Security Extensions | CAs | — |
+| **CDPExtensionDisabled** | CDP Extension Disabled (Zombie Certificate prerequisite) | CAs | — |
 
 For detailed information on ESC techniques, see [Certified Pre-Owned](https://posts.specterops.io/certified-pre-owned-d95910965cd2) by SpecterOps.
 
@@ -118,7 +119,7 @@ Scans certification authorities for configuration issues and dangerous role assi
 
 ```powershell
 Find-LS2VulnerableCA -Technique <String>
-# Supported: ESC6, ESC7a, ESC7m, ESC8, ESC11, ESC16
+# Supported: ESC6, ESC7a, ESC7m, ESC8, ESC11, ESC16, CDPExtensionDisabled
 ```
 
 Returns: LS2Issue objects for programmatic use

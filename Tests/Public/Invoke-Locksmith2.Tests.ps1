@@ -217,6 +217,7 @@ InModuleScope 'Locksmith2' {
                     $Scans -contains 'ESC13' -and
                     $Scans -contains 'ESC15' -and
                     $Scans -contains 'ESC16' -and
+                    $Scans -contains 'CDPExtensionDisabled' -and
                     $Scans -contains 'Auditing' -and
                     $Scans -contains 'SchemaV1'
                 }

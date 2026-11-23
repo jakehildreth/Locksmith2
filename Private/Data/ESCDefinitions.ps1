@@ -475,6 +475,59 @@ $script:ESCDefinitions = data {
         }
 
         # ============================================================================
+        # CDPExtensionDisabled: CDP extension disabled on CA (Zombie Certificates)
+        # ============================================================================
+        CDPExtensionDisabled = @{
+            Technique      = 'CDPExtensionDisabled'
+
+            # Conditions that CAs must match to be vulnerable
+            Conditions     = @(
+                @{ Property = 'CDPExtensionDisabled'; Value = $true }
+            )
+
+            # Issue description template
+            IssueTemplate  = @(
+                "The Certification Authority `$(CAName) has disabled the CRL Distribution Points (CDP) extension (OID: 2.5.29.31).`n`n"
+                "Certificates issued by this CA contain no CDP extension, so no verifier can locate the CRL needed to "
+                "check their revocation status.`n`n"
+                "On its own, this breaks PKINIT authentication with these certificates: the KDC cannot determine "
+                "revocation status and rejects the logon (fail-closed).`n`n"
+                "However, if any Domain Controller has the registry value "
+                "HKLM\SYSTEM\CurrentControlSet\Services\Kdc\UseCachedCRLOnlyAndIgnoreRevocationUnknownErrors set to 1, "
+                "PKINIT fails OPEN on unknown revocation status. In that state, certificates issued without a CDP "
+                "extension become Zombie Certificates: they remain usable for authentication even after revocation, "
+                "because no verifier can ever find their revocation entry.`n`n"
+                "ACTION REQUIRED: Check every Domain Controller for "
+                "UseCachedCRLOnlyAndIgnoreRevocationUnknownErrors. Any value other than absent or 0 means Zombie "
+                "Certificates may be active. Locksmith2 does not check Domain Controller registry values yet.`n`n"
+                "More info:`n"
+                "  - https://www.semperis.com/blog/how-to-battle-zombie-certificates-persistent-ad-cs-risk/"
+            )
+
+            # Remediation script template
+            FixTemplate    = @(
+                "# Re-enable the CDP extension on the CA"
+                "# NOTE: -delreg removes the ENTIRE DisableExtensionList value. If other extensions are"
+                "# intentionally disabled on this CA, re-add them after removal:"
+                "# certutil -config `$(CAFullName) -setreg policy\\DisableExtensionList <OID>[,<OID>...]"
+                "certutil -config `$(CAFullName) -delreg policy\\DisableExtensionList"
+                "# Restart Certificate Services"
+                "Restart-Service -Name CertSvc -Force"
+                "# NOTE: Certificates already issued without a CDP extension are permanently immune to"
+                "# revocation. Identify every certificate issued while 2.5.29.31 was disabled, revoke them"
+                "# for audit trail, and force re-enrollment for affected accounts (privileged accounts first)."
+            )
+
+            # Revert script template
+            RevertTemplate = @(
+                "# Re-disable the CDP extension (use with caution)"
+                "certutil -config `$(CAFullName) -setreg policy\\DisableExtensionList 2.5.29.31"
+                "# Restart Certificate Services"
+                "Restart-Service -Name CertSvc -Force"
+            )
+        }
+
+        # ============================================================================
         # ESC4a: Vulnerable Certificate Template Access Control (ACE-based)
         # ============================================================================
         ESC4a  = @{
@@ -1208,6 +1261,17 @@ $script:ESCScoringMetadata = @{
                 OnlyEnabledMatches       = $false
             }
         )
+    }
+    CDPExtensionDisabled = @{
+        BaseScore             = 3
+        TechniqueBonus        = 0
+        ApplyEnabledModifier  = $false
+        ApplyPrincipalRisk    = $false
+        ApplyObjectClassBonus = $false
+        ObjectClassBonuses    = @{}
+        NtAuthBonus           = 0
+        EndpointBonuses       = @{}
+        CrossESCModifiers     = @()
     }
     SchemaV1 = @{
         BaseScore             = 1

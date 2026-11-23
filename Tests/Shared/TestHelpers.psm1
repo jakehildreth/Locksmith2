@@ -109,6 +109,7 @@ function New-MockLS2AdcsObject {
     $obj.AuditingIncomplete       = $null
     $obj.DisableExtensionList     = @()
     $obj.SecurityExtensionDisabled = $null
+    $obj.CDPExtensionDisabled     = $null
     $obj.IsCATemplate             = $false
     $obj.HasLinkedGroupOIDPolicy  = $null
     $obj.LinkedGroupOIDPolicies   = @()
