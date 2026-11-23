@@ -69,8 +69,9 @@
                 # or $null if no extensions are disabled
                 # Force array wrapping with @() for PS 5.1 compatibility (.Count on single objects)
                 if ($disableExtensionListResult -and @($disableExtensionListResult).Count -gt 0) {
-                    # Extract the extension OIDs/names into an array
-                    $disabledExtensions = $disableExtensionListResult | ForEach-Object { $_.DisabledExtension }
+                    # Extract the extension OIDs into an array. certutil returns each entry as
+                    # "OID FriendlyName" (e.g. "2.5.29.31 CRL Distribution Points"); keep only the OID.
+                    $disabledExtensions = $disableExtensionListResult | ForEach-Object { ($_.DisabledExtension -split ' ')[0] }
                     Write-Verbose "  Retrieved $($disabledExtensions.Count) disabled extension(s): $($disabledExtensions -join ', ')"
 
                     # Check if the Microsoft Certificate Template Information extension is disabled
